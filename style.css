@@ -851,6 +851,20 @@
   .calc-modal .mm-cell:nth-child(2n+1){border-left:none;}
   .calc-modal .mm-cell:nth-child(n+3){border-top:1px solid var(--line-soft);}
 
+  /* ---------- Ringkasan: lencana DD saat ini & ajakan catatan psikologi (v1.1.115) ---------- */
+  .eq-dd-badge-row{margin:0 0 10px;}
+  .eq-dd-badge-row:empty{display:none;}
+  .eq-dd-badge{display:inline-flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;padding:5px 11px;border:1px solid var(--line);border-radius:999px;font-size:11.5px;color:var(--paper-dim);}
+  .eq-dd-badge b{font-family:'IBM Plex Mono',monospace;font-weight:500;}
+  .eq-dd-badge.down{border-color:var(--loss);} .eq-dd-badge.down b{color:var(--loss);}
+  .eq-dd-badge.up{border-color:var(--gain);} .eq-dd-badge.up b{color:var(--gain);}
+  .eq-dd-badge .eq-dd-sub{color:var(--paper-faint);font-size:10.5px;}
+  .psy-prompt{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
+  .psy-prompt[hidden]{display:none;}
+  .psy-prompt-text{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1 1 220px;}
+  .psy-prompt-text strong{font-size:13px;font-weight:500;color:var(--paper);}
+  .psy-prompt-text span{font-size:11.5px;color:var(--paper-faint);line-height:1.4;}
+
   @media print{
     body.printing-laporan .lap-range-nav-btn{display:none;}
     body.printing-laporan .main-tabs, body.printing-laporan .bottom-nav, body.printing-laporan .fab-wrap,

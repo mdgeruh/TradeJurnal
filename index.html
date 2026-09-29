@@ -111,10 +111,19 @@ var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('co
       <div class="cr-field"><label>Sampai</label><div class="dt-picker" id="dtp_customTo" aria-label="Sampai tanggal"></div></div>
       <span class="cr-note" id="customNote"></span>
     </div>
+    <div class="eq-dd-badge-row" id="eqDdBadge" aria-live="polite"></div>
     <div class="chart-box" id="chartBox"></div>
   </section>
 
   <section class="stats" id="statStrip" aria-live="polite"></section>
+
+  <section class="psy-prompt" id="psyPromptCard" hidden>
+    <div class="psy-prompt-text">
+      <strong id="psyPromptTitle"></strong>
+      <span id="psyPromptSub"></span>
+    </div>
+    <button type="button" class="ledger-reset-btn modal-btn-primary" id="psyPromptBtn">Isi sekarang</button>
+  </section>
 
   <section>
     <div class="quote-box" id="quoteBox"></div>

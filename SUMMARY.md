@@ -5,11 +5,11 @@ Riwayat per rilis/tema: `CHANGELOG.md`. Fitur & cara pakai: `README.md`. File in
 ## Apa ini
 Dashboard trading journal single-file HTML untuk akun cent XAUUSD. Tab: Ringkasan, Analisis PNL, Performa, Laporan, Transaksi, Deposit + Setelan (⚙); Kalkulator berupa modal dari tombol "Kalkulator lot" di tab Transaksi (bukan tab, sejak v1.1.114); navigasi desktop ≥ 1100px berupa sidebar kiri yang bisa diciutkan lewat tombol melayang (v1.1.110). File utama: `index.html` + `style.css` + `app.js` + `sync.js` + `config.js` (v1.1.105).
 
-## Status (v1.1.114)
+## Status (v1.1.115)
 - Data aktif ada di localStorage (`jurnalXauusdData_v1`), bukan di file. File baru kosong (`kurs` = 0, mode Rp tampil Rp 0) sampai JSON diimpor lewat Setelan.
 - JSON ekspor terbaru (441 transaksi, sudah berisi `waktu_buka`) siap diimpor manual. Angka ringkasan dihitung otomatis, tidak dicatat di sini.
 - Tab Laporan: Paket A/B/Optimalisasi, style cetak PDF, dan L1–L17 selesai (v1.1.78–1.1.101); L18 juga sudah selesai (tombol Ekspor CSV). Tooltip kurva drawdown yang melebar keluar kartu sudah diperbaiki (v1.1.102); tooltip rolling & distribusi ditambahkan sekalian. Tidak ada bug fungsional terbuka; dua cek tampilan tooltip tercatat di Rawan bug.
-- Sejak v1.1.105: kode dipecah jadi folder datar dan ada sinkron Supabase manual (`sync.js`); v1.1.106: bisa dipasang sebagai PWA. v1.1.108: layout desktop ≥ 1100px (lebar 1240px, 2 kolom di Ringkasan/Performa/Setelan). v1.1.109–1.1.110: navigasi desktop berupa sidebar kiri yang bisa diciutkan lewat tombol bulat melayang (pilihan di `jurnalSidebar`). v1.1.111: kurva Ringkasan default All Time. v1.1.112: status batas harian di kartu PNL Hari Ini. v1.1.113: Setelan → Tentang aplikasi (versi + modal Riwayat perubahan bahasa pengguna; versi tak lagi di footer). v1.1.114: tab Kalkulator dihapus dari nav; kalkulator jadi modal dari tab Transaksi (id `calc*`/`mmGridQuick` tetap, logika hitung tidak berubah).
+- Sejak v1.1.105: kode dipecah jadi folder datar dan ada sinkron Supabase manual (`sync.js`); v1.1.106: bisa dipasang sebagai PWA. v1.1.108: layout desktop ≥ 1100px (lebar 1240px, 2 kolom di Ringkasan/Performa/Setelan). v1.1.109–1.1.110: navigasi desktop berupa sidebar kiri yang bisa diciutkan lewat tombol bulat melayang (pilihan di `jurnalSidebar`). v1.1.111: kurva Ringkasan default All Time. v1.1.112: status batas harian di kartu PNL Hari Ini. v1.1.113: Setelan → Tentang aplikasi (versi + modal Riwayat perubahan bahasa pengguna; versi tak lagi di footer). v1.1.114: tab Kalkulator dihapus dari nav; kalkulator jadi modal dari tab Transaksi (id `calc*`/`mmGridQuick` tetap, logika hitung tidak berubah). v1.1.115: lencana DD saat ini + garis puncak di kurva Ringkasan dan kartu ajakan catatan psikologi (P1 Ringkasan tuntas).
 - Belum diuji ke proyek Supabase asli dan belum dicek di perangkat asli (sentuhan, PWA, sidebar); daftar cek manual ada di Todo.
 
 ## Arsitektur singkat
@@ -39,15 +39,16 @@ Dashboard trading journal single-file HTML untuk akun cent XAUUSD. Tab: Ringkasa
 - **Format nominal:** tanda minus selalu di depan simbol (`-$x`, `-Rp x`); pakai `fmtMoney`/`fmtRp`, jangan tulis `'Rp ' + n` sendiri.
 - **Field turunan:** semua field hasil hitung dari `DATA.trades` harus ikut `recomputeAll()`.
 - **Alur rilis:** versi hanya ada di `APP_VERSION` (`app.js`, tampil di Setelan → Tentang aplikasi) dan `CACHE` di `sw.js`; keduanya harus dinaikkan bersama. Tiap rilis juga tambah entri berbahasa pengguna akhir di `USER_CHANGELOG` (`app.js`, tanggal ISO; tanggal sama = gabung ke entri itu) selain `CHANGELOG.md` teknis.
+- **Lencana DD Ringkasan:** basis All Time (bukan periode kurva) agar sama dengan Laporan L7; garis puncak dipotong (`clipPath`) dan sengaja tidak ikut skala Y. Puncak per titik dipetakan lewat `series[].i` dari `computeLapDD`.
 - **Verifikasi:** render & error konsol dicek tiap rilis lewat Playwright + Chromium (390/768/1280px); interaksi kompleks hanya dicek bila ada dugaan bug.
 
 ## Todo
 **Ringkasan — improvement (prioritas, diusulkan 29 Sep; belum dikerjakan)**
-Kondisi sekarang: kartu hero (saldo, PNL kumulatif, Hari Ini, 7H, 30H), kurva ekuitas + pemilih periode (default All Time), stat strip 6 metrik, kutipan acak.
+Kondisi sekarang: kartu hero (saldo, PNL kumulatif, Hari Ini, 7H, 30H), kurva ekuitas + lencana DD saat ini & garis puncak + pemilih periode (default All Time), stat strip 6 metrik, kartu ajakan catatan psikologi, kutipan acak.
 - **P1 — tinggi, usaha kecil**
   - [x] **Status batas harian di kartu "PNL Hari Ini"** (selesai v1.1.112; `renderDayLimitStatus`, `#dayLimitBox`): bar progres rugi hari ini vs `DAY_LIMITS.maxLoss` dan jumlah transaksi vs `maxTrades` (data sudah ada, sekarang hanya tampil di Laporan). Warna berubah di ≥ 80% dan saat terlampaui; tersembunyi bila batas belum diisi.
-  - [ ] **Drawdown saat ini + garis puncak di kurva ekuitas:** lencana "DD saat ini −x% dari puncak" dan garis putus-putus puncak berjalan; pakai perhitungan drawdown yang sudah ada di Laporan (L7) supaya angkanya konsisten.
-  - [ ] **Ajakan isi catatan psikologi:** kartu kecil "N transaksi belum ada catatan" dengan tombol ke alur "Simpan & lanjut". Cakupan data asli baru ±1%, dan itu menahan filter/silang psikologi di Laporan (L16).
+  - [x] **Drawdown saat ini + garis puncak di kurva ekuitas** (selesai v1.1.115; `eqDrawdownAllTime`, `renderEqDdBadge`, `#eqDdBadge`): lencana "DD saat ini −x% dari puncak" dan garis putus-putus puncak berjalan; pakai perhitungan drawdown yang sudah ada di Laporan (L7) supaya angkanya konsisten.
+  - [x] **Ajakan isi catatan psikologi** (selesai v1.1.115; `renderPsyPrompt`, `#psyPromptCard`): kartu kecil "N transaksi belum ada catatan" dengan tombol ke alur "Simpan & lanjut". Cakupan data asli baru ±1%, dan itu menahan filter/silang psikologi di Laporan (L16).
 - **P2 — sedang**
   - [ ] **Toggle kurva: Ekuitas / PNL kumulatif (tanpa deposit):** lonjakan deposit dan penarikan kini menyamarkan performa trading di kurva ekuitas.
   - [ ] **PNL Bulan Ini** (dan opsional Minggu Ini, kalender GMT+8) di samping 7H/30H yang rolling; bulan berjalan lebih sering dipakai untuk evaluasi.

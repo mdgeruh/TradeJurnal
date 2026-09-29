@@ -3,10 +3,17 @@
 Perubahan Jurnal XAUUSD, terbaru di atas. Semua rilis 22–29 Sep 2026. Versi berbahasa pengguna akhir ada di aplikasi (Setelan → Tentang aplikasi). v1.1.66–v1.1.102 dicatat per versi; v1.0.0–v1.1.65 diringkas per tema. Status & todo: `SUMMARY.md`.
 
 ## Rilis terbaru
-### 1.1.114 — 30 Sep
+### 1.1.115 — 29 Sep
+- Ringkasan (todo P1): **lencana "DD saat ini"** di atas kurva ekuitas ("DD saat ini -x% dari puncak · -nominal · sejak tanggal", atau "Ekuitas di puncak" hijau) dan **garis puncak berjalan** putus-putus di kurva (legenda "Puncak berjalan"; hanya digambar bila ada jarak dari kurva; dipotong ke area plot dan tidak ikut skala Y, jadi kurva periode pendek tidak gepeng).
+- Angka memakai `computeLapDD` yang sama dengan Laporan L7 (All Time, deposit/penarikan menggeser puncak), sehingga konsisten dengan "DD saat ini" di Laporan. Lencana tidak mengikuti pemilih periode kurva (tooltip menjelaskan). `computeLapDD` kini menyimpan indeks titik ekuitas (`series[].i`) untuk memetakan puncak ke kurva. Fungsi baru `eqDrawdownAllTime()`, `renderEqDdBadge()`.
+- Ringkasan (todo P1): **kartu ajakan catatan psikologi** di bawah stat strip: "N transaksi belum ada catatan psikologi" + cakupan (%) dan tombol **Isi sekarang**. Tombol mengurutkan transaksi tanpa catatan (`hasNote`) dari yang terbaru, mengisi antrean `jurnalFillQueue`, lalu membuka transaksi pertama dalam mode edit di tab Transaksi (alur "Simpan & lanjut" yang sudah ada). Kartu tersembunyi bila semua transaksi sudah punya catatan atau data kosong. Fungsi `renderPsyPrompt()`.
+- **Koreksi tanggal:** entri 1.1.114 (dan entri riwayat pengguna Kalkulator) sebelumnya tertulis 30 Sep; yang benar 29 Sep. Sudah diperbaiki di sini dan di `USER_CHANGELOG`.
+- Diperiksa statis: sintaks JS valid; logika puncak/DD diuji di Node dengan data sintetis (drawdown 16,7%; deposit menggeser puncak sehingga DD 11,8%; kasus di puncak = tanpa DD). **Belum diuji di browser** (sandbox tanpa Chromium): tampilan lencana & garis puncak, tombol Isi sekarang, layar 390/1280px, tema terang/gelap.
+- `sw.js`: `CACHE` dinaikkan ke `jurnal-v1.1.115`.
+### 1.1.114 — 29 Sep
 - **Kalkulator pindah dari tab ke modal.** Tab "Kalkulator" dihapus dari sidebar/tab atas dan bottom nav (kini 6 tab + Setelan). Di tab **Transaksi** ada tombol baru **Kalkulator lot** (di atas filter, rata kanan, gaya emas) yang membuka modal `#calcModalOverlay` berisi kalkulator yang sama: Saldo (baca-saja, ikut saldo terkini), Risiko/trade, Stop loss, R:R, tombol Reset, enam kartu hasil (risiko, lot ideal, SL, TP, target profit, R:R) dan peringatan risiko. Modal 2 kolom, bisa digulir di layar kecil, ditutup lewat Tutup, ketuk latar, atau Esc (fokus kembali ke tombol).
 - Markup kalkulator dipindah apa adanya; semua id (`calcSaldo`, `calcRisk`, `calcSl`, `calcRr`, `mmGridQuick`, `calcWarn`, `calcResetBtn`) dipertahankan sehingga logika hitung di `app.js` tidak diubah. Modul buka/tutup modal baru di akhir `app.js`; CSS `.ledger-toolbar`, `.ledger-calc-btn`, `.calc-modal` di `style.css`.
-- Riwayat pengguna (`USER_CHANGELOG`) bertambah entri 30 Sep. `APP_VERSION` → 1.1.114.
+- Riwayat pengguna (`USER_CHANGELOG`) bertambah entri Kalkulator. `APP_VERSION` → 1.1.114.
 - Diperiksa statis: sintaks JS valid, id HTML↔JS cocok, tidak ada sisa referensi `kalkulator` sebagai tab. **Belum diuji di browser** (sandbox tanpa Chromium): buka/tutup modal, hasil hitung, tampilan 390/1280px, tema terang/gelap.
 - `sw.js`: `CACHE` dinaikkan ke `jurnal-v1.1.114`.
 ### 1.1.113 — 29 Sep
