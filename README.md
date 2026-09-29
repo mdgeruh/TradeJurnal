@@ -54,13 +54,14 @@ Navigasi: layar ≥ 1100px memakai **sidebar kiri** yang bisa diciutkan (tombol 
 - Kurva SVG digambar manual (monotone cubic Hermite); dropdown, date-time picker, dan filter memakai komponen kustom yang bisa dioperasikan keyboard.
 
 ## File terkait
-`CHANGELOG.md` (riwayat teknis per rilis), `SUMMARY.md` (status, jebakan bug, todo). Riwayat versi untuk pengguna ada di aplikasi (`USER_CHANGELOG` di `app.js`).
+`CHANGELOG.md` (riwayat teknis per rilis), `SUMMARY.md` (status, jebakan bug, todo), `schema.sql` (skema Supabase), `query-user-supabase.sql` (query admin Supabase). Riwayat versi untuk pengguna ada di aplikasi (`USER_CHANGELOG` di `app.js`).
 
 ## Sinkron Supabase (v1.1.105)
 1. Jalankan `schema.sql` sekali di Supabase → SQL Editor. Aktifkan Auth email (Authentication → Providers).
 2. `config.js` berisi URL proyek dan kunci publishable. Jangan pernah memakai kunci service_role.
-3. Setelan (⚙) → Sinkron Supabase: Daftar/Masuk, lalu **Kirim ke awan** (awan disamakan dengan browser) atau **Ambil dari awan** (menimpa browser, cadangan JSON otomatis).
+3. Setelan (⚙) → Sinkron Supabase: Daftar/Masuk, lalu **Sinkronkan ke cloud** (cloud disamakan dengan browser) atau **Pulihkan dari cloud** (menimpa browser, cadangan JSON otomatis). Tanggal & jam sinkron/pemulihan terakhir tampil di bawah tiap tombol (waktu perangkat; disimpan di localStorage `jurnalSyncInfo`, per browser, tidak ikut ekspor JSON).
 4. Yang disinkron: transaksi, deposit/penarikan, kurs. `jurnalDayLimits` tetap lokal.
+5. `query-user-supabase.sql` (v1.1.116–117): kumpulan query admin untuk Supabase → SQL Editor — buat akun login (ganti email/password di placeholder), daftar user, ringkasan performa, cek anomali, cek RLS, reset password. Jalankan per blok.
 
 ## Pasang sebagai aplikasi (PWA, v1.1.106)
 Butuh alamat https (Vercel sudah otomatis). Android: Chrome → menu ⋮ → **Instal aplikasi**. iOS: Safari → Bagikan → **Tambah ke Layar Utama**. Data aplikasi terpasang terpisah dari browser; masuk lalu **Ambil dari awan**. Naikkan `CACHE` di `sw.js` bila ingin memaksa cache lama dibuang.

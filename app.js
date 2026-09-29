@@ -4137,9 +4137,13 @@ renderPsyPrompt();
 // ---------- Tentang aplikasi: versi + riwayat perubahan bahasa awam (v1.1.113) ----------
 // SETIAP RILIS: naikkan APP_VERSION, tambah entri di USER_CHANGELOG (tanggal ISO, bahasa pengguna akhir),
 // naikkan CACHE di sw.js, dan tambah entri di CHANGELOG.md. Versi hanya tampil di Setelan (bukan di footer).
-const APP_VERSION = '1.1.115';
+const APP_VERSION = '1.1.118';
 const USER_CHANGELOG = [
   { date:'2026-09-29', items:[
+    'Di Setelan → Sinkron Supabase kini tampil <strong>tanggal dan jam terakhir disinkronkan</strong> ke cloud, dan terakhir dipulihkan dari cloud (waktu perangkat ini).',
+    'Tombol sinkron di Setelan kini berbunyi <strong>Sinkronkan ke cloud</strong> dan <strong>Pulihkan dari cloud</strong> (sebelumnya "Kirim ke awan" dan "Tarik dari awan"); semua tulisan "awan" diganti "cloud". Fungsinya sama.',
+    'Query pembuatan akun di <strong>query-user-supabase.sql</strong> diperbaiki agar mudah disalin dan dijalankan di Supabase, termasuk dari HP.',
+    'Tersedia file <strong>query-user-supabase.sql</strong> untuk membuat akun login dan memeriksa data di Supabase (daftar user, ringkasan performa, cek keamanan). Dijalankan manual di Supabase, tidak mengubah tampilan aplikasi.',
     'Kurva ekuitas di Ringkasan kini punya lencana <strong>DD saat ini</strong> (turun berapa persen dari puncak) dan <strong>garis puncak</strong> putus-putus. Angkanya sama dengan yang ada di Laporan.',
     'Ringkasan menampilkan kartu <strong>ajakan mengisi catatan psikologi</strong>: jumlah transaksi yang belum dicatat, dengan tombol <strong>Isi sekarang</strong> untuk mengisinya satu per satu dari yang terbaru.',
     '<strong>Kalkulator</strong> tidak lagi jadi tab sendiri. Buka lewat tombol <strong>Kalkulator lot</strong> di tab Transaksi; hasilnya muncul di jendela kecil, jadi Anda tidak perlu pindah halaman.',
@@ -4148,7 +4152,7 @@ const USER_CHANGELOG = [
     'Di layar lebar, menu pindah ke <strong>sidebar kiri</strong> yang bisa diciutkan, dan tampilan memakai lebih banyak kolom.',
     'Kurva Ringkasan langsung menampilkan <strong>seluruh riwayat (All Time)</strong> saat dibuka.',
     'Aplikasi bisa <strong>dipasang di HP</strong> (Android dan iOS) seperti aplikasi biasa.',
-    'Data bisa <strong>disinkronkan ke awan</strong> untuk cadangan dan pindah perangkat (Setelan → Sinkron Supabase).',
+    'Data bisa <strong>disinkronkan ke cloud</strong> untuk cadangan dan pindah perangkat (Setelan → Sinkron Supabase).',
     'Perbaikan: layar tidak lagi berkedip gelap saat memakai tema terang.'
   ]},
   { date:'2026-09-28', items:[
