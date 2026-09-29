@@ -3,13 +3,15 @@
 Riwayat per rilis/tema: `CHANGELOG.md`. Fitur & cara pakai: `README.md`. File ini hanya memuat status, arsitektur, jebakan bug, dan todo.
 
 ## Apa ini
-Dashboard trading journal single-file HTML untuk akun cent XAUUSD. Tab: Ringkasan, Analisis PNL, Performa, Laporan, Transaksi, Deposit + Setelan (⚙); Kalkulator berupa modal dari tombol "Kalkulator lot" di tab Transaksi (bukan tab, sejak v1.1.114); navigasi desktop ≥ 1100px berupa sidebar kiri yang bisa diciutkan lewat tombol melayang (v1.1.110). File utama: `index.html` + `style.css` + `app.js` + `sync.js` + `config.js` (v1.1.105).
+Dashboard trading journal single-file HTML untuk akun cent XAUUSD. Tab: Ringkasan, Analisis PNL, Performa, Laporan, Transaksi, Deposit + Setelan (⚙); Kalkulator berupa modal dari tombol "Kalkulator lot" di tab Transaksi (bukan tab, sejak v1.1.114); navigasi desktop ≥ 1100px berupa sidebar kiri yang bisa diciutkan lewat tombol melayang (v1.1.110). File utama: `index.html` + `style.css` + `app.js` + `sync.js` + `config.js` (v1.1.105); Supabase: `schema.sql` + `query-user-supabase.sql` (v1.1.116).
 
-## Status (v1.1.115)
+## Status (v1.1.118)
 - Data aktif ada di localStorage (`jurnalXauusdData_v1`), bukan di file. File baru kosong (`kurs` = 0, mode Rp tampil Rp 0) sampai JSON diimpor lewat Setelan.
 - JSON ekspor terbaru (441 transaksi, sudah berisi `waktu_buka`) siap diimpor manual. Angka ringkasan dihitung otomatis, tidak dicatat di sini.
 - Tab Laporan: Paket A/B/Optimalisasi, style cetak PDF, dan L1–L17 selesai (v1.1.78–1.1.101); L18 juga sudah selesai (tombol Ekspor CSV). Tooltip kurva drawdown yang melebar keluar kartu sudah diperbaiki (v1.1.102); tooltip rolling & distribusi ditambahkan sekalian. Tidak ada bug fungsional terbuka; dua cek tampilan tooltip tercatat di Rawan bug.
 - Sejak v1.1.105: kode dipecah jadi folder datar dan ada sinkron Supabase manual (`sync.js`); v1.1.106: bisa dipasang sebagai PWA. v1.1.108: layout desktop ≥ 1100px (lebar 1240px, 2 kolom di Ringkasan/Performa/Setelan). v1.1.109–1.1.110: navigasi desktop berupa sidebar kiri yang bisa diciutkan lewat tombol bulat melayang (pilihan di `jurnalSidebar`). v1.1.111: kurva Ringkasan default All Time. v1.1.112: status batas harian di kartu PNL Hari Ini. v1.1.113: Setelan → Tentang aplikasi (versi + modal Riwayat perubahan bahasa pengguna; versi tak lagi di footer). v1.1.114: tab Kalkulator dihapus dari nav; kalkulator jadi modal dari tab Transaksi (id `calc*`/`mmGridQuick` tetap, logika hitung tidak berubah). v1.1.115: lencana DD saat ini + garis puncak di kurva Ringkasan dan kartu ajakan catatan psikologi (P1 Ringkasan tuntas).
+- v1.1.118 (lanjutan): info tanggal/jam sinkron & pemulihan terakhir di Setelan (`jurnalSyncInfo`, localStorage, per browser). Indikator di Ringkasan (todo P3) belum.
+- v1.1.116–117: tambah `query-user-supabase.sql` (query admin + buat akun login; dijalankan manual, tidak dimuat aplikasi). Blok buat akun v1.1.117 memakai satu perintah CTE (tanpa `do $$`). Belum diuji ke proyek Supabase asli.
 - Belum diuji ke proyek Supabase asli dan belum dicek di perangkat asli (sentuhan, PWA, sidebar); daftar cek manual ada di Todo.
 
 ## Arsitektur singkat
@@ -53,7 +55,7 @@ Kondisi sekarang: kartu hero (saldo, PNL kumulatif, Hari Ini, 7H, 30H), kurva ek
   - [ ] **Toggle kurva: Ekuitas / PNL kumulatif (tanpa deposit):** lonjakan deposit dan penarikan kini menyamarkan performa trading di kurva ekuitas.
   - [ ] **PNL Bulan Ini** (dan opsional Minggu Ini, kalender GMT+8) di samping 7H/30H yang rolling; bulan berjalan lebih sering dipakai untuk evaluasi.
   - [ ] **Metrik stat strip tambahan:** streak saat ini, rata-rata menang/rugi dan rasio menang/rugi; serta judul kecil "Periode: …" di atas stat strip karena strip mengikuti pemilih periode sedangkan kartu hero tidak.
-  - [ ] **Keadaan kosong yang bisa ditindaklanjuti:** tombol "Impor JSON" dan "Masuk & Ambil dari awan" langsung di Ringkasan (sekarang hanya teks petunjuk).
+  - [ ] **Keadaan kosong yang bisa ditindaklanjuti:** tombol "Impor JSON" dan "Masuk & Pulihkan dari cloud" langsung di Ringkasan (sekarang hanya teks petunjuk).
 - **P3 — rendah**
   - [ ] Indikator sinkron Supabase di Ringkasan (terakhir dikirim/diambil; ada perubahan lokal yang belum dikirim). Sinkron masih manual, jadi mudah lupa.
   - [ ] Ganti kutipan acak dengan checklist/aturan trading pribadi yang bisa diedit (atau hapus kartunya).

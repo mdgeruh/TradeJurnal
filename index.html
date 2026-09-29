@@ -476,17 +476,19 @@ var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('co
     <div class="sync-box" id="syncActionBox" hidden>
       <div class="settings-row">
         <div class="settings-desc">
-          <strong>Kirim data ke awan</strong>
-          <span>Awan dibuat sama dengan browser ini. Data di awan yang sudah tidak ada di sini ikut dihapus.</span>
+          <strong>Sinkronkan data ke cloud</strong>
+          <span>Cloud dibuat sama dengan browser ini. Data di cloud yang sudah tidak ada di sini ikut dihapus.</span>
+          <span id="syncLastPush"></span>
         </div>
-        <button type="button" id="syncPushBtn" class="ledger-reset-btn">Kirim ke awan</button>
+        <button type="button" id="syncPushBtn" class="ledger-reset-btn">Sinkronkan ke cloud</button>
       </div>
       <div class="settings-row">
         <div class="settings-desc">
-          <strong>Ambil data dari awan</strong>
-          <span>Menimpa data browser ini dengan data awan. Cadangan JSON otomatis didownload dulu.</span>
+          <strong>Pulihkan data dari cloud</strong>
+          <span>Menimpa data browser ini dengan data cloud. Cadangan JSON otomatis didownload dulu.</span>
+          <span id="syncLastPull"></span>
         </div>
-        <button type="button" id="syncPullBtn" class="ledger-reset-btn">Tarik dari awan</button>
+        <button type="button" id="syncPullBtn" class="ledger-reset-btn">Pulihkan dari cloud</button>
       </div>
       <div class="settings-row">
         <div class="settings-desc"><strong id="syncUser"></strong></div>

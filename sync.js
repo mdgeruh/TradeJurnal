@@ -25,6 +25,21 @@
   const str = v => (v === null || v === undefined) ? '' : String(v);
   const num = v => (v === null || v === undefined || v === '') ? null : Number(v);
   const depKey = l => `${l.tanggal}|${l.tipe}|${Number(l.cent)}`;
+  // Info sinkron terakhir (waktu perangkat), disimpan terpisah dari DATA supaya tidak ikut ekspor/impor JSON.
+  const INFO_KEY = 'jurnalSyncInfo';
+  const BLN = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  const p2 = n => String(n).padStart(2, '0');
+  const fmtWhen = iso => { const d = new Date(iso); return isNaN(d) ? '' : `${d.getDate()} ${BLN[d.getMonth()]} ${d.getFullYear()}, ${p2(d.getHours())}:${p2(d.getMinutes())}`; };
+  const readInfo = () => { try{ return JSON.parse(localStorage.getItem(INFO_KEY)) || {}; }catch(e){ return {}; } };
+  function showLast(){
+    const i = readInfo();
+    $('syncLastPush').textContent = i.push ? 'Terakhir disinkronkan: ' + fmtWhen(i.push) : 'Belum pernah disinkronkan dari browser ini.';
+    $('syncLastPull').textContent = i.pull ? 'Terakhir dipulihkan: ' + fmtWhen(i.pull) : '';
+  }
+  function markSync(kind){
+    try{ const i = readInfo(); i[kind] = new Date().toISOString(); localStorage.setItem(INFO_KEY, JSON.stringify(i)); }catch(e){}
+    showLast();
+  }
   const chunks = (a, n) => { const o = []; for(let i = 0; i < a.length; i += n) o.push(a.slice(i, i + n)); return o; };
   const must = ({ error }) => { if(error) throw new Error(error.message); };
 
@@ -54,6 +69,7 @@
     $('syncActionBox').hidden = !on;
     $('syncStatus').textContent = 'Belum masuk';
     $('syncUser').textContent = on ? 'Masuk sebagai ' + session.user.email : '';
+    showLast();
   }
 
   async function auth(kind){
@@ -78,8 +94,8 @@
     const uid = session.user.id;
     const trades = [...new Map(DATA.trades.map(t => [str(t.id), tradeRow(t, uid)])).values()];
     const deps = [...new Map(DATA.deposit.log.map(l => [depKey(l), depRow(l, uid)])).values()];
-    const warn = (!trades.length && !deps.length) ? ' Browser ini KOSONG, jadi semua data di awan akan terhapus.' : '';
-    if(!await showConfirmModal(`Kirim ${trades.length} transaksi & ${deps.length} deposit ke awan? Data di awan yang tidak ada di browser ini akan dihapus.${warn}`)) return;
+    const warn = (!trades.length && !deps.length) ? ' Browser ini KOSONG, jadi semua data di cloud akan terhapus.' : '';
+    if(!await showConfirmModal(`Sinkronkan ${trades.length} transaksi & ${deps.length} deposit ke cloud? Data di cloud yang tidak ada di browser ini akan dihapus.${warn}`)) return;
     setBusy(true); say('Mengirim…');
     try{
       for(const c of chunks(trades, 500)) must(await sb.from('trades').upsert(c, { onConflict: 'user_id,id' }));
@@ -94,7 +110,8 @@
       const goneDep = (await fetchAll('deposit_log', 'tanggal,tipe,cent')).filter(r => !localDep.has(depKey(r)));
       for(const r of goneDep) must(await sb.from('deposit_log').delete().eq('tanggal', r.tanggal).eq('tipe', r.tipe).eq('cent', r.cent));
 
-      say(`Terkirim: ${trades.length} transaksi, ${deps.length} deposit. Dihapus dari awan: ${gone.length + goneDep.length}.`, true);
+      markSync('push');
+      say(`Tersinkron: ${trades.length} transaksi, ${deps.length} deposit. Dihapus dari cloud: ${gone.length + goneDep.length}.`, true);
     }catch(e){ say('Gagal kirim: ' + e.message, false); }
     finally{ setBusy(false); }
   }
@@ -105,9 +122,9 @@
       const [tr, dp, cfgRows] = await Promise.all([
         fetchAll('trades', '*'), fetchAll('deposit_log', '*'), fetchAll('pengaturan', '*')
       ]);
-      if(!tr.length && !dp.length){ say('Awan masih kosong. Tidak ada yang diambil.', false); return; }
+      if(!tr.length && !dp.length){ say('Cloud masih kosong. Tidak ada yang dipulihkan.', false); return; }
       setBusy(false);
-      if(!await showConfirmModal(`Timpa data browser ini dengan data awan (${tr.length} transaksi, ${dp.length} deposit)? Cadangan JSON data sekarang didownload otomatis dulu.`)){ say(''); return; }
+      if(!await showConfirmModal(`Timpa data browser ini dengan data cloud (${tr.length} transaksi, ${dp.length} deposit)? Cadangan JSON data sekarang didownload otomatis dulu.`)){ say(''); return; }
       setBusy(true);
       if(DATA.trades.length || DATA.deposit.log.length){
         downloadTextFile(`jurnal-xauusd-data-${dateStampNow()}-sebelum-tarik.json`, JSON.stringify(DATA, null, 2), 'application/json;charset=utf-8;');
@@ -122,7 +139,8 @@
       rebuildEquitySeries();
       recomputeAll();
       if(!saveActiveData(DATA)){ say('Gagal menyimpan ke penyimpanan lokal browser (penuh atau diblokir).', false); return; }
-      queueNotifyAfterReload(`Data dari awan dimuat: ${tr.length} transaksi, ${dp.length} deposit.`, 'success');
+      markSync('pull');
+      queueNotifyAfterReload(`Data dari cloud dimuat: ${tr.length} transaksi, ${dp.length} deposit.`, 'success');
       try{ sessionStorage.setItem('jurnalPendingTab', 'setelan'); }catch(e){}
       say('Tersimpan, memuat ulang…', true);
       setTimeout(() => location.reload(), 500);
