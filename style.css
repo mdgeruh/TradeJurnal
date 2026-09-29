@@ -830,6 +830,27 @@
     #laporanStatStrip .stat:nth-child(3){border-top:1px solid var(--line-soft);}
     #laporanStatStrip .stat:last-child{grid-column:auto;}
   }
+  /* ---------- Tentang aplikasi & riwayat perubahan (v1.1.113) ---------- */
+  .app-version-badge{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--gold);border:1px solid var(--line);padding:5px 12px;border-radius:999px;}
+  .changelog-modal-box{max-width:460px;}
+  .changelog-list{max-height:60vh;max-height:60dvh;overflow-y:auto;overscroll-behavior:contain;padding-right:4px;}
+  .cl-date{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--gold);margin:14px 0 6px;padding-bottom:5px;border-bottom:1px solid var(--line-soft);}
+  .cl-date:first-child{margin-top:0;}
+  .cl-items{margin:0;padding:0 0 0 18px;font-size:12.5px;line-height:1.5;color:var(--paper);}
+  .cl-items li{margin:0 0 6px;}
+  .cl-items li strong{font-weight:500;color:var(--paper);}
+
+  /* ---------- Kalkulator dalam modal di tab Transaksi (v1.1.114) ---------- */
+  .ledger-toolbar{display:flex;justify-content:flex-end;margin:-4px 0 12px;}
+  .ledger-calc-btn{display:inline-flex;align-items:center;gap:7px;color:var(--gold);border-color:var(--gold);}
+  .ledger-calc-btn .lc-icon{width:15px;height:15px;flex:none;}
+  .calc-modal{max-width:480px;}
+  .calc-modal .calc-grid{grid-template-columns:repeat(2,1fr);}
+  .calc-modal .mm-grid{grid-template-columns:repeat(2,1fr);}
+  .calc-modal .mm-cell{border-left:1px solid var(--line-soft);border-top:none;}
+  .calc-modal .mm-cell:nth-child(2n+1){border-left:none;}
+  .calc-modal .mm-cell:nth-child(n+3){border-top:1px solid var(--line-soft);}
+
   @media print{
     body.printing-laporan .lap-range-nav-btn{display:none;}
     body.printing-laporan .main-tabs, body.printing-laporan .bottom-nav, body.printing-laporan .fab-wrap,

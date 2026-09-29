@@ -2675,7 +2675,7 @@ window.renderSplitArah = renderSplitArah;
 // ---------- Money management ----------
 const mm = DATA.dashboard.mm;
 
-// ---------- Kalkulator money management (interaktif) ----------
+// ---------- Kalkulator money management (interaktif; tampil di modal dari tab Transaksi, v1.1.114) ----------
 (function(){
   const elSaldo = document.getElementById('calcSaldo');
   const elRisk = document.getElementById('calcRisk');
@@ -3355,7 +3355,7 @@ function recomputeAll(){
 
   Object.assign(DATA.summary, { total, win, loss, winrate, pl_cent, pl_rp, saldo_akhir, pct_pl });
   DATA.dashboard.saldo = saldo_akhir;
-  // Saldo di tab Kalkulator ikut dibaca dari sini (mm.equity) — dulu cuma snapshot statis dari
+  // Saldo di modal Kalkulator ikut dibaca dari sini (mm.equity) — dulu cuma snapshot statis dari
   // data ekspor/impor terakhir, tidak pernah disentuh recomputeAll(), jadi tetap menunjukkan
   // saldo lama walau sudah ada transaksi/deposit/penarikan manual baru lewat FAB.
   DATA.dashboard.mm.equity = saldo_akhir;
@@ -4074,4 +4074,85 @@ selectPeriod(Math.max(0, LIVE_PERIODS.findIndex(p=>p.label==='All Time'))); // d
   if(tabBtn) tabBtn.click();
   window.openTradeDetail(id);
   const eb = document.getElementById('detailEditBtn'); if(eb) eb.click();
+})();
+
+// ---------- Tentang aplikasi: versi + riwayat perubahan bahasa awam (v1.1.113) ----------
+// SETIAP RILIS: naikkan APP_VERSION, tambah entri di USER_CHANGELOG (tanggal ISO, bahasa pengguna akhir),
+// naikkan CACHE di sw.js, dan tambah entri di CHANGELOG.md. Versi hanya tampil di Setelan (bukan di footer).
+const APP_VERSION = '1.1.114';
+const USER_CHANGELOG = [
+  { date:'2026-09-30', items:[
+    '<strong>Kalkulator</strong> tidak lagi jadi tab sendiri. Buka lewat tombol <strong>Kalkulator lot</strong> di tab Transaksi; hasilnya muncul di jendela kecil, jadi Anda tidak perlu pindah halaman.'
+  ]},
+  { date:'2026-09-29', items:[
+    '<strong>Riwayat perubahan</strong> kini bisa dibuka dari Setelan, lengkap dengan info versi aplikasi.',
+    'Kartu <strong>PNL Hari Ini</strong> menampilkan sisa batas rugi harian dan batas jumlah transaksi (bar hijau, emas, lalu merah saat hampir atau sudah tercapai). Batasnya diatur di Setelan.',
+    'Di layar lebar, menu pindah ke <strong>sidebar kiri</strong> yang bisa diciutkan, dan tampilan memakai lebih banyak kolom.',
+    'Kurva Ringkasan langsung menampilkan <strong>seluruh riwayat (All Time)</strong> saat dibuka.',
+    'Aplikasi bisa <strong>dipasang di HP</strong> (Android dan iOS) seperti aplikasi biasa.',
+    'Data bisa <strong>disinkronkan ke awan</strong> untuk cadangan dan pindah perangkat (Setelan → Sinkron Supabase).',
+    'Perbaikan: layar tidak lagi berkedip gelap saat memakai tema terang.'
+  ]},
+  { date:'2026-09-28', items:[
+    'Pilihan mata uang <strong>USD / USC / Rp</strong> di kartu saldo, berlaku di semua tab. Setara rupiah tampil kecil di bawah angka.',
+    'Tab Laporan jauh lebih lengkap: <strong>heatmap jam × hari</strong>, sesi pasar (Asia, London, New York), grafik drawdown, tren performa, sebaran hasil, analisis ukuran lot, dan <strong>temuan otomatis</strong> dari data Anda.',
+    'Laporan bisa <strong>membandingkan dua periode</strong> berdampingan, dan disaring berdasarkan arah, sesi, emosi, trigger, dan jenis entry.',
+    'Periode Laporan kini mulai dari <strong>All Time</strong>. Hasil laporan bisa dicetak atau disimpan ke PDF dengan tata letak A4 yang rapi.',
+    'Batas harian pribadi (maks rugi dan maks transaksi) bisa diisi di Setelan.',
+    'Tab Transaksi punya filter catatan psikologi dan tombol <strong>Simpan &amp; lanjut</strong> untuk mengisi catatan berurutan.',
+    'Perbaikan: tooltip grafik tidak lagi keluar dari kartu di layar sempit, Max Drawdown tidak lagi melebihi 100%, dan beberapa tampilan cetak dirapikan.'
+  ]},
+  { date:'2026-09-27', items:[
+    'Perbaikan: saldo di Kalkulator dan rekor transaksi kini ikut terhitung ulang setelah data berubah.'
+  ]},
+  { date:'2026-09-26', items:[
+    'Tab baru <strong>Analisis PNL</strong>: statistik rentang waktu (7 hari sampai 1 tahun) dan kalender PNL harian. Ketuk tanggal untuk melihat transaksinya.',
+    'Menu diperbarui, Setelan kini lewat ikon ⚙. Semua dropdown dan kalender bisa dipakai lewat keyboard.',
+    'Halaman jadi lebih ringan dan cepat, dan label di Analisis PNL tidak lagi saling menimpa.'
+  ]},
+  { date:'2026-09-25', items:[
+    'Tab <strong>Laporan</strong> pertama hadir: tren laba/rugi, ringkasan periode, analisis psikologi trading, dan cetak PDF.',
+    'Kurva dibuat lebih halus. Ada jendela detail per hari, tema terang/gelap yang tersimpan, dan pilihan zona waktu.',
+    'Perbaikan: tab "1 Tahun" tidak lagi membuat halaman macet.'
+  ]},
+  { date:'2026-09-23', items:[
+    'Tombol <strong>+</strong> untuk menambah transaksi, deposit, atau penarikan secara manual, lengkap dengan catatan psikologi (trigger, emosi, jenis entry). Transaksi bisa dilihat, diedit, dan dihapus.'
+  ]},
+  { date:'2026-09-22', items:[
+    'Versi awal: Ringkasan, Performa, Deposit, Transaksi, dan Kalkulator (sekarang dibuka dari tab Transaksi).',
+    'Data tersimpan otomatis di browser. Ada tombol Reset ke Bawaan yang mengunduh cadangan dulu.'
+  ]}
+];
+(function(){
+  const monthNames = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const overlay = document.getElementById('changelogModalOverlay');
+  const listEl = document.getElementById('changelogList');
+  const verEl = document.getElementById('appVersionVal');
+  if(verEl) verEl.textContent = 'v' + APP_VERSION;
+  function fmtDate(iso){ const [y,m,d] = iso.split('-').map(Number); return `${d} ${monthNames[m-1]} ${y}`; }
+  function render(){
+    const rows = USER_CHANGELOG.slice().sort((a,b) => a.date < b.date ? 1 : a.date > b.date ? -1 : 0);
+    listEl.innerHTML = rows.map(r =>
+      `<div class="cl-date">${fmtDate(r.date)}</div><ul class="cl-items">${r.items.map(i => `<li>${i}</li>`).join('')}</ul>`
+    ).join('');
+  }
+  function open(){ render(); listEl.scrollTop = 0; overlay.classList.add('show'); }
+  function close(){ overlay.classList.remove('show'); }
+  document.getElementById('changelogBtn').addEventListener('click', open);
+  document.getElementById('changelogCloseBtn').addEventListener('click', close);
+  overlay.addEventListener('click', e => { if(e.target === overlay) close(); });
+  document.addEventListener('keydown', e => { if(e.key === 'Escape' && overlay.classList.contains('show')) close(); });
+})();
+
+// ---------- Modal Kalkulator: tombol di tab Transaksi (v1.1.114) ----------
+(function(){
+  const overlay = document.getElementById('calcModalOverlay');
+  const openBtn = document.getElementById('openCalcBtn');
+  if(!overlay || !openBtn) return;
+  function open(){ overlay.classList.add('show'); }
+  function close(){ overlay.classList.remove('show'); openBtn.focus(); }
+  openBtn.addEventListener('click', open);
+  document.getElementById('calcModalCloseBtn').addEventListener('click', close);
+  overlay.addEventListener('click', e => { if(e.target === overlay) close(); });
+  document.addEventListener('keydown', e => { if(e.key === 'Escape' && overlay.classList.contains('show')) close(); });
 })();
