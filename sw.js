@@ -1,6 +1,6 @@
 // Service worker: network-first supaya update deploy langsung terbaca, cache sebagai cadangan offline.
 // Panggilan ke Supabase (domain lain) tidak pernah di-cache.
-const CACHE = 'jurnal-v1.1.126';
+const CACHE = 'jurnal-v1.1.130';
 const SHELL = ['./', 'index.html', 'style.css', 'app.js', 'sync.js', 'config.js', 'pwa.js',
   'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 const CDN = ['cdn.jsdelivr.net', 'fonts.googleapis.com', 'fonts.gstatic.com'];

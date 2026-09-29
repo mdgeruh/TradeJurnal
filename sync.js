@@ -47,7 +47,7 @@
     return { user_id: uid, id: str(t.id), arah: str(t.arah), lot: num(t.lot), buka: num(t.buka), tutup: num(t.tutup),
       pips: num(t.pips), laba: num(t.laba), tanggal: str(t.tanggal), tanggal_gmt8: str(t.tanggal_gmt8),
       waktu_buka: str(t.waktu_buka), trigger: str(t.trigger), trigger_exit: str(t.trigger_exit),
-      emosi: str(t.emosi), jenis_entry: str(t.jenis_entry) };
+      emosi: str(t.emosi), jenis_entry: str(t.jenis_entry), catatan: str(t.catatan) };
   }
   function depRow(l, uid){
     return { user_id: uid, tanggal: str(l.tanggal), tipe: str(l.tipe), jenis: str(l.jenis), usd: num(l.usd), cent: num(l.cent) };
@@ -98,7 +98,14 @@
     if(!await showConfirmModal(`Sinkronkan ${trades.length} transaksi & ${deps.length} deposit ke cloud? Data di cloud yang tidak ada di browser ini akan dihapus.${warn}`)) return;
     setBusy(true); say('Mengirim…');
     try{
-      for(const c of chunks(trades, 500)) must(await sb.from('trades').upsert(c, { onConflict: 'user_id,id' }));
+      // Bila kolom `catatan` belum ada di Supabase (migrasi belum dijalankan), kirim ulang tanpa kolom itu supaya sinkron tetap jalan.
+      let noCatatan = false;
+      const stripCat = rows => rows.map(({ catatan, ...r }) => r);
+      for(const c of chunks(trades, 500)){
+        let res = await sb.from('trades').upsert(noCatatan ? stripCat(c) : c, { onConflict: 'user_id,id' });
+        if(res.error && !noCatatan && /catatan/i.test(res.error.message)){ noCatatan = true; res = await sb.from('trades').upsert(stripCat(c), { onConflict: 'user_id,id' }); }
+        must(res);
+      }
       for(const c of chunks(deps, 500)) must(await sb.from('deposit_log').upsert(c, { onConflict: 'user_id,tanggal,tipe,cent' }));
       must(await sb.from('pengaturan').upsert({ user_id: uid, kurs: num(DATA.kurs) || 0 }, { onConflict: 'user_id' }));
 
@@ -111,7 +118,9 @@
       for(const r of goneDep) must(await sb.from('deposit_log').delete().eq('tanggal', r.tanggal).eq('tipe', r.tipe).eq('cent', r.cent));
 
       markSync('push');
-      say(`Tersinkron: ${trades.length} transaksi, ${deps.length} deposit. Dihapus dari cloud: ${gone.length + goneDep.length}.`, true);
+      const lostCat = noCatatan ? trades.filter(t => t.catatan).length : 0;
+      say(`Tersinkron: ${trades.length} transaksi, ${deps.length} deposit. Dihapus dari cloud: ${gone.length + goneDep.length}.` +
+        (noCatatan ? ` Kolom "catatan" belum ada di Supabase, jadi catatan bebas${lostCat ? ` (${lostCat} transaksi)` : ''} belum ikut terkirim. Jalankan migrasi-catatan.sql di SQL Editor lalu sinkronkan lagi.` : ''), noCatatan ? false : true);
     }catch(e){ say('Gagal kirim: ' + e.message, false); }
     finally{ setBusy(false); }
   }
@@ -130,8 +139,14 @@
         downloadTextFile(`jurnal-xauusd-data-${dateStampNow()}-sebelum-tarik.json`, JSON.stringify(DATA, null, 2), 'application/json;charset=utf-8;');
       }
       const strCols = ['arah','tanggal','tanggal_gmt8','waktu_buka','trigger','trigger_exit','emosi','jenis_entry'];
+      // Bila cloud belum punya kolom `catatan`, jangan hapus catatan lokal: pertahankan per ID.
+      const cloudHasCat = !tr.length || ('catatan' in tr[0]);
+      const localCat = new Map(DATA.trades.filter(t => t.catatan).map(t => [String(t.id), t.catatan]));
       DATA.trades = tr.map(r => { const t = { id: r.id }; ['arah','lot','buka','tutup','pips','laba','tanggal','tanggal_gmt8','waktu_buka','trigger','trigger_exit','emosi','jenis_entry']
-        .forEach(k => { t[k] = strCols.includes(k) ? str(r[k]) : Number(r[k]); }); return t; })
+        .forEach(k => { t[k] = strCols.includes(k) ? str(r[k]) : Number(r[k]); });
+        const cat = cloudHasCat ? str(r.catatan) : (localCat.get(String(r.id)) || '');
+        if(cat) t.catatan = cat;
+        return t; })
         .sort((a, b) => a.tanggal_gmt8 < b.tanggal_gmt8 ? -1 : a.tanggal_gmt8 > b.tanggal_gmt8 ? 1 : 0);
       DATA.deposit.log = dp.map(r => ({ tanggal: r.tanggal, jenis: str(r.jenis), tipe: r.tipe, usd: Number(r.usd), cent: Number(r.cent) }))
         .sort((a, b) => a.tanggal < b.tanggal ? -1 : a.tanggal > b.tanggal ? 1 : 0);

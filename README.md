@@ -22,7 +22,7 @@ Navigasi: layar ≥ 1100px memakai **sidebar kiri** yang bisa diciutkan (tombol 
 2. **Analisis PNL:** statistik rentang bergulir (7H–1T/Sesuaikan) dan kalender PNL Harian (klik tanggal untuk detail).
 3. **Performa:** bulanan & mingguan, rekor menang/rugi terbesar, donut Split arah Beli vs Jual.
 4. **Laporan:** lihat bagian berikut.
-5. **Transaksi:** buku transaksi (cari ID posisi; filter Arah/Hasil/Catatan psikologi/Emosi/Trigger/Jenis entry/Sesi/tanggal/lot, chip cepat Hari Ini/Minggu Ini/7 Hari/30 Hari/Bulan Ini/Bulan Lalu, kolom Waktu buka & Durasi, tombol Pilih untuk isi massal emosi/trigger/jenis entry, ringkasan hasil filter, tombol Batalkan hapus (30 menit); ekspor dan **impor CSV** — impor hanya menambah transaksi baru, ID yang sudah ada dilewati, ada konfirmasi dulu). Klik baris untuk detail (lihat, edit, hapus); "Simpan & lanjut" mengisi catatan psikologi berurutan. Tombol **Kalkulator lot** (di baris judul, kanan) membuka modal kalkulator money management: risiko per trade (%), stop loss (pips), R:R → lot & target sesuai saldo terkini (tutup lewat Tutup, ketuk latar, atau Esc).
+5. **Transaksi:** buku transaksi (cari ID posisi atau isi catatan bebas; filter Arah/Hasil/Catatan psikologi/Emosi/Trigger/Jenis entry/Sesi/tanggal/lot, chip cepat Hari Ini/Minggu Ini/7 Hari/30 Hari/Bulan Ini/Bulan Lalu, kolom Waktu buka & Durasi, tombol Pilih untuk isi massal emosi/trigger/jenis entry, ringkasan hasil filter, tombol Batalkan hapus (30 menit); ekspor dan **impor CSV** — impor hanya menambah transaksi baru, ID yang sudah ada dilewati, ada konfirmasi dulu). Klik baris untuk detail (lihat, edit, hapus); "Simpan & lanjut" mengisi catatan psikologi berurutan. Tombol **Kalkulator lot** (di baris judul, kanan) membuka modal kalkulator money management: risiko per trade (%), stop loss (pips), R:R → lot & target sesuai saldo terkini (tutup lewat Tutup, ketuk latar, atau Esc).
 6. **Deposit:** log deposit, penarikan, kompensasi margin call; ringkasan modal bersih.
 
 **Setelan** (⚙): batas harian pribadi (maks rugi & maks transaksi per hari), sinkron Supabase, ekspor HTML/JSON, impor JSON (konfirmasi sebelum menimpa), Reset ke Bawaan (auto-backup JSON dulu), dan **Tentang aplikasi**: versi aplikasi serta tombol **Lihat riwayat** untuk membuka daftar perubahan berbahasa awam, diurutkan dari tanggal terbaru.
@@ -54,7 +54,7 @@ Navigasi: layar ≥ 1100px memakai **sidebar kiri** yang bisa diciutkan (tombol 
 - Kurva SVG digambar manual (monotone cubic Hermite); dropdown, date-time picker, dan filter memakai komponen kustom yang bisa dioperasikan keyboard.
 
 ## File terkait
-`CHANGELOG.md` (riwayat teknis per rilis), `SUMMARY.md` (status, jebakan bug, todo), `schema.sql` (skema Supabase), `query-user-supabase.sql` (query admin Supabase). Riwayat versi untuk pengguna ada di aplikasi (`USER_CHANGELOG` di `app.js`).
+`CHANGELOG.md` (riwayat teknis per rilis), `SUMMARY.md` (status, jebakan bug, todo), `schema.sql` (skema Supabase), `migrasi-catatan.sql` (tambah kolom `catatan`; jalankan sekali bila proyek Supabase dibuat sebelum v1.1.129), `query-user-supabase.sql` (query admin Supabase). Riwayat versi untuk pengguna ada di aplikasi (`USER_CHANGELOG` di `app.js`).
 
 ## Sinkron Supabase (v1.1.105)
 1. Jalankan `schema.sql` sekali di Supabase → SQL Editor. Aktifkan Auth email (Authentication → Providers).

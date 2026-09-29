@@ -6,8 +6,12 @@ create table if not exists trades (
   pips numeric, laba numeric,
   tanggal text, tanggal_gmt8 text, waktu_buka text,
   "trigger" text, trigger_exit text, emosi text, jenis_entry text,
+  catatan text,
   primary key (user_id, id)
 );
+-- v1.1.129: untuk tabel trades yang sudah ada sebelum kolom catatan (catatan bebas per transaksi). Aman dijalankan ulang.
+alter table trades add column if not exists catatan text;
+
 create table if not exists deposit_log (
   user_id uuid not null default auth.uid() references auth.users,
   tanggal text not null, tipe text not null,

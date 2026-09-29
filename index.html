@@ -8,10 +8,10 @@
 <script>
 // Terapkan tema tersimpan SEBELUM halaman pertama digambar, supaya tidak berkedip gelap saat reload (mis. ganti mata uang).
 (function(){try{var d=document.documentElement,mode=localStorage.getItem('jurnalTheme')||'dark',sc=localStorage.getItem('jurnalScheme')||'emas';
-var C={emas:'#1B1712',ocean:'#071B33',teal:'#0B1B1C',grafit:'#121212',kontras:'#0A0A0A'};if(!C[sc])sc='emas';
+var C={emas:'#1B1712',ocean:'#071B33',teal:'#0B1B1C',grafit:'#121212',kontras:'#0A0A0A'};if(!C[sc])sc='emas';var LC={emas:'#F3EDE0',ocean:'#EEF5FB',teal:'#EDF6F5',grafit:'#F4F4F4',kontras:'#FFFFFF'};
 var light=mode==='light'||(mode==='auto'&&window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches);
 if(sc!=='emas')d.setAttribute('data-scheme',sc);if(light)d.setAttribute('data-theme','light');
-var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',light?'#F3EDE0':C[sc]);}catch(e){}})();
+var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',light?LC[sc]:C[sc]);}catch(e){}})();
 </script>
 <script>
 // Status sidebar desktop (v1.1.109): diterapkan sebelum render pertama supaya tidak melompat. Tanpa pilihan tersimpan: layar < 1280px mulai ciut.
@@ -240,7 +240,7 @@ var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('co
       <button type="button" class="quick-chip" id="quickLastMonth" data-range="lastmonth">Bulan Lalu</button>
     </div>
     <div class="ledger-controls">
-      <input type="text" id="searchBox" placeholder="Cari ID posisi…">
+      <input type="text" id="searchBox" placeholder="Cari ID atau catatan…">
       <div class="custom-select" id="csw_filterArah"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter arah"><span class="cs-label">Semua arah</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Filter arah"></ul></div>
       <div class="custom-select" id="csw_filterHasil"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter hasil"><span class="cs-label">Semua hasil</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Filter hasil"></ul></div>
       <div class="custom-select" id="csw_filterCatatan"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter catatan psikologi"><span class="cs-label">Semua catatan</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Filter catatan psikologi"></ul></div>
@@ -270,8 +270,17 @@ var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('co
       <div class="custom-select" id="csw_bulkJenis"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Isi jenis entry massal"><span class="cs-label">Isi jenis entry</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Isi jenis entry massal"></ul></div>
       <button type="button" class="ledger-reset-btn modal-btn-primary" id="bulkApplyBtn">Terapkan</button>
     </div>
+    <div class="ledger-sort-m" id="ledgerSortM">
+      <label for="ledgerSortSel">Urutkan</label>
+      <select id="ledgerSortSel" aria-label="Urutkan transaksi">
+        <option value="tanggal:-1">Terbaru dulu</option><option value="tanggal:1">Terlama dulu</option>
+        <option value="laba:-1">Laba terbesar</option><option value="laba:1">Rugi terbesar</option>
+        <option value="lot:-1">Lot terbesar</option><option value="pips:-1">Pips tertinggi</option><option value="pips:1">Pips terendah</option>
+        <option value="durasi:-1">Durasi terlama</option>
+      </select>
+    </div>
     <div class="ledger-scroll">
-      <table class="ledger">
+      <table class="ledger ledger-tx">
         <thead>
           <tr>
             <th class="sortable" data-key="tanggal">Tanggal tutup<span class="sort-ind"></span></th>
@@ -701,6 +710,7 @@ var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('co
         <label>Jenis Entry</label>
         <div class="custom-select" id="csw_entryJenisEntry"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Jenis entry"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Jenis entry"></ul></div>
       </div>
+      <div class="calc-field"><label for="entryCatatan">Catatan bebas</label><textarea id="entryCatatan" rows="3" maxlength="1000" placeholder="Alasan entry, pelajaran, apa yang akan diubah (opsional)"></textarea></div>
       <div class="entry-preview" id="entryPreviewTrade"></div>
     </div>
     <div id="entryFormDeposit" class="entry-form" style="display:none;">
@@ -734,6 +744,7 @@ var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('co
       <div class="detail-row"><span class="detail-lbl">Trigger exit</span><span class="detail-val" id="dvTriggerExit"></span></div>
       <div class="detail-row"><span class="detail-lbl">Kondisi emosi</span><span class="detail-val" id="dvEmosi"></span></div>
       <div class="detail-row"><span class="detail-lbl">Jenis entry</span><span class="detail-val" id="dvJenisEntry"></span></div>
+      <div class="detail-row detail-row-note"><span class="detail-lbl">Catatan bebas</span><span class="detail-val detail-note" id="dvCatatan"></span></div>
     </div>
     <div id="detailEdit" class="entry-form" style="display:none;">
       <div class="calc-field">
@@ -762,6 +773,7 @@ var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('co
         <label>Jenis Entry</label>
         <div class="custom-select" id="csw_editJenisEntry"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Jenis entry"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Jenis entry"></ul></div>
       </div>
+      <div class="calc-field"><label for="editCatatan">Catatan bebas</label><textarea id="editCatatan" rows="3" maxlength="1000" placeholder="Alasan entry, pelajaran, apa yang akan diubah (opsional)"></textarea></div>
     </div>
     <p class="modal-message" id="detailModalError" style="display:none;color:var(--loss);margin:10px 0 0;"></p>
     <div class="modal-actions" id="detailViewActions" style="margin-top:18px;justify-content:space-between;">
