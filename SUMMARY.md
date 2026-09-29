@@ -3,12 +3,14 @@
 Riwayat per rilis/tema: `CHANGELOG.md`. Fitur & cara pakai: `README.md`. File ini hanya memuat status, arsitektur, jebakan bug, dan todo.
 
 ## Apa ini
-Dashboard trading journal single-file HTML untuk akun cent XAUUSD. Tab: Ringkasan, Analisis PNL, Performa, Laporan, Transaksi, Deposit, Kalkulator + Setelan (⚙); navigasi desktop ≥ 1100px berupa sidebar kiri yang bisa diciutkan (v1.1.109). File utama: `index.html` + `style.css` + `app.js` + `sync.js` + `config.js` (v1.1.105).
+Dashboard trading journal single-file HTML untuk akun cent XAUUSD. Tab: Ringkasan, Analisis PNL, Performa, Laporan, Transaksi, Deposit, Kalkulator + Setelan (⚙); navigasi desktop ≥ 1100px berupa sidebar kiri yang bisa diciutkan lewat tombol melayang (v1.1.110). File utama: `index.html` + `style.css` + `app.js` + `sync.js` + `config.js` (v1.1.105).
 
-## Status (v1.1.102)
+## Status (v1.1.112)
 - Data aktif ada di localStorage (`jurnalXauusdData_v1`), bukan di file. File baru kosong (`kurs` = 0, mode Rp tampil Rp 0) sampai JSON diimpor lewat Setelan.
 - JSON ekspor terbaru (441 transaksi, sudah berisi `waktu_buka`) siap diimpor manual. Angka ringkasan dihitung otomatis, tidak dicatat di sini.
 - Tab Laporan: Paket A/B/Optimalisasi, style cetak PDF, dan L1–L17 selesai (v1.1.78–1.1.101); L18 juga sudah selesai (tombol Ekspor CSV). Tooltip kurva drawdown yang melebar keluar kartu sudah diperbaiki (v1.1.102); tooltip rolling & distribusi ditambahkan sekalian. Tidak ada bug fungsional terbuka; dua cek tampilan tooltip tercatat di Rawan bug.
+- Sejak v1.1.105: kode dipecah jadi folder datar dan ada sinkron Supabase manual (`sync.js`); v1.1.106: bisa dipasang sebagai PWA. v1.1.108: layout desktop ≥ 1100px (lebar 1240px, 2 kolom di Ringkasan/Performa/Setelan). v1.1.109–1.1.110: navigasi desktop berupa sidebar kiri yang bisa diciutkan lewat tombol bulat melayang (pilihan di `jurnalSidebar`). v1.1.111: kurva Ringkasan default All Time. v1.1.112: status batas harian di kartu PNL Hari Ini.
+- Belum diuji ke proyek Supabase asli dan belum dicek di perangkat asli (sentuhan, PWA, sidebar); daftar cek manual ada di Todo.
 
 ## Arsitektur singkat
 - Satu file `.html`; fallback data di `<script id="journal-data">`, data aktif di localStorage. Nominal internal dalam sen (¢); tampilan lewat `fmtMoney`, estimasi rupiah lewat `approxRp()`.
@@ -39,6 +41,23 @@ Dashboard trading journal single-file HTML untuk akun cent XAUUSD. Tab: Ringkasa
 - **Verifikasi:** render & error konsol dicek tiap rilis lewat Playwright + Chromium (390/768/1280px); interaksi kompleks hanya dicek bila ada dugaan bug.
 
 ## Todo
+**Ringkasan — improvement (prioritas, diusulkan 29 Sep; belum dikerjakan)**
+Kondisi sekarang: kartu hero (saldo, PNL kumulatif, Hari Ini, 7H, 30H), kurva ekuitas + pemilih periode (default All Time), stat strip 6 metrik, kutipan acak.
+- **P1 — tinggi, usaha kecil**
+  - [x] **Status batas harian di kartu "PNL Hari Ini"** (selesai v1.1.112; `renderDayLimitStatus`, `#dayLimitBox`): bar progres rugi hari ini vs `DAY_LIMITS.maxLoss` dan jumlah transaksi vs `maxTrades` (data sudah ada, sekarang hanya tampil di Laporan). Warna berubah di ≥ 80% dan saat terlampaui; tersembunyi bila batas belum diisi.
+  - [ ] **Drawdown saat ini + garis puncak di kurva ekuitas:** lencana "DD saat ini −x% dari puncak" dan garis putus-putus puncak berjalan; pakai perhitungan drawdown yang sudah ada di Laporan (L7) supaya angkanya konsisten.
+  - [ ] **Ajakan isi catatan psikologi:** kartu kecil "N transaksi belum ada catatan" dengan tombol ke alur "Simpan & lanjut". Cakupan data asli baru ±1%, dan itu menahan filter/silang psikologi di Laporan (L16).
+- **P2 — sedang**
+  - [ ] **Toggle kurva: Ekuitas / PNL kumulatif (tanpa deposit):** lonjakan deposit dan penarikan kini menyamarkan performa trading di kurva ekuitas.
+  - [ ] **PNL Bulan Ini** (dan opsional Minggu Ini, kalender GMT+8) di samping 7H/30H yang rolling; bulan berjalan lebih sering dipakai untuk evaluasi.
+  - [ ] **Metrik stat strip tambahan:** streak saat ini, rata-rata menang/rugi dan rasio menang/rugi; serta judul kecil "Periode: …" di atas stat strip karena strip mengikuti pemilih periode sedangkan kartu hero tidak.
+  - [ ] **Keadaan kosong yang bisa ditindaklanjuti:** tombol "Impor JSON" dan "Masuk & Ambil dari awan" langsung di Ringkasan (sekarang hanya teks petunjuk).
+- **P3 — rendah**
+  - [ ] Indikator sinkron Supabase di Ringkasan (terakhir dikirim/diambil; ada perubahan lokal yang belum dikirim). Sinkron masih manual, jadi mudah lupa.
+  - [ ] Ganti kutipan acak dengan checklist/aturan trading pribadi yang bisa diedit (atau hapus kartunya).
+  - [ ] Daftar 5 transaksi terakhir dengan hasil dan emosi, bergaya ringkas.
+Catatan pengerjaan: tiap butir mengubah `app.js`/`style.css`, jadi ikuti alur rilis biasa (naikkan versi footer dan `CACHE` di `sw.js`, entri `CHANGELOG.md`, cek Playwright 390/1280px, data kosong dan data sintetis).
+
 **Laporan (putaran 2)** — L1–L17 selesai (rincian di `CHANGELOG.md`, v1.1.85–1.1.100). Sisa:
 - [x] L18 (sudah ada di kode: tombol "Ekspor CSV" di tab Laporan). Ekspor ringkasan Laporan periode terpilih ke CSV (KPI, kelompok psikologi, sesi, heatmap) untuk analisis di luar aplikasi; nominal tetap ¢ seperti ekspor lain.
 

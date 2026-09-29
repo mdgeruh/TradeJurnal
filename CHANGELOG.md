@@ -3,6 +3,19 @@
 Perubahan Jurnal XAUUSD, terbaru di atas. Semua rilis 22–29 Sep 2026. v1.1.66–v1.1.102 dicatat per versi; v1.0.0–v1.1.65 diringkas per tema. Status & todo: `SUMMARY.md`.
 
 ## Rilis terbaru
+### 1.1.112 — 29 Sep
+- Ringkasan: **status batas harian** di kartu "PNL hari ini". Dua bar progres: **Rugi harian** (rugi kumulatif terdalam hari ini vs "Maks rugi harian") dan **Transaksi hari ini** (jumlah vs "Maks transaksi per hari"), masing-masing dengan sisa atau "Batas tercapai" / "Terlampaui (+n)". Warna hijau, emas di ≥ 80%, merah di ≥ 100%. Tersembunyi bila kedua batas belum diisi; tiap baris hanya muncul bila batasnya diisi. Berubah langsung saat batas diedit di Setelan.
+- Definisi sama dengan Laporan: hari = tanggal tutup GMT+8, urutan = waktu tutup, rugi = titik rugi kumulatif terdalam hari itu (jadi tetap "tercapai" walau kemudian pulih). Nominal mengikuti mata uang tampilan (USD/USC/Rp). Tombol mata ikut memburamkan nominal rugi.
+- Diverifikasi Playwright (1280 dan 390px) dengan transaksi sintetis: tanpa batas (tersembunyi), aman, ≥ 80%, tercapai/terlampaui, hanya salah satu batas, ubah dan kosongkan batas dari Setelan, tombol mata; tanpa error JS. Belum diuji dengan data asli 441 transaksi. "Hari ini" dihitung saat halaman dibuka (tidak berganti otomatis lewat tengah malam).
+- `sw.js`: `CACHE` dinaikkan ke `jurnal-v1.1.112`.
+### 1.1.111 — 29 Sep
+- Ringkasan: periode awal kurva ekuitas kini **All Time** (sebelumnya Minggu Ini), jadi kurva langsung menampilkan seluruh riwayat saat halaman dibuka. Pemilih periode tetap sama dan bisa diganti kapan saja. Catatan: pemilih ini juga menentukan stat strip di bawah kurva, sehingga stat strip ikut menampilkan All Time saat pertama dibuka; setelah ganti mata uang (reload), periode kembali ke All Time.
+- Diverifikasi Playwright (1280 dan 390px): label awal "All Time", ganti periode berfungsi, tanpa error JS. Belum diuji dengan data asli 441 transaksi.
+- `sw.js`: `CACHE` dinaikkan ke `jurnal-v1.1.111`.
+### 1.1.110 — 29 Sep
+- Sidebar desktop: tombol ciut/perluas kini **tombol bulat melayang** (ikon panah saja, tanpa label "Ciutkan/Perluas") di tepi kanan sidebar, dekat dasar; ikut bergeser saat sidebar berubah lebar. Nama aksesibel dan tooltip tetap ada (`aria-label`/`title`: Ciutkan/Perluas sidebar). Perilaku, penyimpanan (`jurnalSidebar`), dan breakpoint tidak berubah.
+- Diverifikasi Playwright (1920/1280/1100/900/390px): ciut/perluas, ganti tab, dan pilihan bertahan setelah reload berfungsi; tanpa error JS dan tanpa overflow horizontal.
+- `sw.js`: `CACHE` dinaikkan ke `jurnal-v1.1.110`.
 ### 1.1.109 — 29 Sep
 - Navbar atas jadi **sidebar kiri dinamis** di desktop (≥ 1100px): tiap tab punya ikon + label, tab aktif ditandai garis emas di kiri. Tombol **Ciutkan/Perluas** di dasar sidebar (224px ↔ 68px, hanya ikon dengan tooltip saat ciut); konten dan tombol + bergeser mengikuti dengan transisi halus. Pilihan disimpan di `localStorage` key `jurnalSidebar`; tanpa pilihan tersimpan, layar < 1280px mulai dalam keadaan ciut agar kolom 2 dari v1.1.108 tetap lega. Status diterapkan lewat skrip kecil di `<head>` (class `sb-collapsed` pada `<html>`) sebelum render pertama, jadi tidak melompat saat reload.
 - Layar < 1100px tidak berubah: 721–1099px tetap tab horizontal di atas, ≤ 720px tetap bottom nav. Cetak Laporan tidak terpengaruh. Logika tab di `app.js` tidak diubah (tombol `.main-tab-btn` yang sama); ditambah modul kecil untuk tombol ciut.

@@ -1228,6 +1228,45 @@ try{
     if(v.maxTrades >= 1) DAY_LIMITS.maxTrades = Math.floor(+v.maxTrades);
   }
 }catch(e){}
+// ---------- Status batas harian di kartu PNL Hari Ini (v1.1.112) ----------
+// Memakai definisi yang sama dengan Laporan: hari = tanggal tutup GMT+8, urutan = waktu tutup, rugi = rugi kumulatif
+// terdalam hari itu. Tersembunyi bila kedua batas belum diisi. Halaman selalu reload setelah transaksi berubah, jadi
+// cukup digambar saat muat dan saat batas diubah di Setelan.
+function renderDayLimitStatus(){
+  const box = document.getElementById('dayLimitBox');
+  if(!box) return;
+  const lim = DAY_LIMITS;
+  if(!lim.maxLoss && !lim.maxTrades){ box.hidden = true; box.innerHTML = ''; return; }
+  const r = LIVE_RANGES[0]; // Hari Ini
+  const list = DATA.trades
+    .filter(t=>{ const tt = parseGmt8(t.tanggal_gmt8); return tt>=r.start && tt<=r.end; })
+    .sort((a,b)=>parseGmt8(a.tanggal_gmt8) - parseGmt8(b.tanggal_gmt8));
+  let cum = 0, worst = 0;
+  for(const t of list){ cum += t.laba; if(-cum > worst) worst = -cum; }
+  const amt = c => HERO_CURRENCY==='IDR' ? fmtRp(c/100*DATA.kurs)
+    : (HERO_CURRENCY==='USC' ? fmtCent(c) + ' USC' : fmtCent(c/100) + ' USD');
+  const row = (label, valTxt, ratio, note, money) => {
+    const cls = ratio>=1 ? 'over' : (ratio>=0.8 ? 'warn' : 'ok');
+    const pct = Math.min(100, Math.round(ratio*100));
+    const m = money ? ' dl-money' : '';
+    return `<div class="dl-row ${cls}"><div class="dl-top"><span class="dl-lbl">${label}</span><span class="dl-val${m}">${valTxt}</span></div>`
+      + `<div class="dl-bar" role="progressbar" aria-label="${label}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i style="width:${pct}%"></i></div>`
+      + `<div class="dl-note${m}">${note}</div></div>`;
+  };
+  const rows = [];
+  if(lim.maxLoss){
+    const ratio = worst / lim.maxLoss;
+    rows.push(row('Rugi harian', `${amt(worst)} / ${amt(lim.maxLoss)}`, ratio,
+      ratio>=1 ? 'Batas tercapai' : `Sisa ${amt(lim.maxLoss - worst)}`, true));
+  }
+  if(lim.maxTrades){
+    const n = list.length, ratio = n / lim.maxTrades;
+    rows.push(row('Transaksi hari ini', `${n} / ${lim.maxTrades}`, ratio,
+      n>lim.maxTrades ? `Terlampaui (+${n - lim.maxTrades})` : (n===lim.maxTrades ? 'Batas tercapai' : `Sisa ${lim.maxTrades - n} transaksi`), false));
+  }
+  box.innerHTML = rows.join('');
+  box.hidden = false;
+}
 (function setupDayLimits(){
   const lossEl = document.getElementById('limMaxLoss'), trEl = document.getElementById('limMaxTrades'), hint = document.getElementById('limMaxLossHint');
   if(!lossEl || !trEl) return;
@@ -1245,11 +1284,13 @@ try{
     DAY_LIMITS = {maxLoss: l>0 ? l : null, maxTrades: n>=1 ? n : null};
     try{ localStorage.setItem('jurnalDayLimits', JSON.stringify(DAY_LIMITS)); }catch(e){}
     showHint();
+    renderDayLimitStatus();
     if(typeof renderLap2 === 'function') renderLap2();
   };
   lossEl.addEventListener('input', onChange);
   trEl.addEventListener('input', onChange);
 })();
+renderDayLimitStatus();
 
 // ---------- Laporan: tren profit/rugi mandiri (periode & filter sendiri, tidak terikat pemilih periode di tab Ringkasan) ----------
 const ID_HARI_PENDEK = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
@@ -3066,19 +3107,17 @@ window.renderTrades = renderTrades;
   }
 })();
 
-// ---------- Sidebar desktop (v1.1.109): ciut/perluas, pilihan disimpan ----------
+// ---------- Sidebar desktop (v1.1.109): tombol melayang ciut/perluas, pilihan disimpan ----------
 (function(){
   const btn = document.getElementById('sidebarToggle');
   if(!btn) return;
   const root = document.documentElement;
-  const lbl = btn.querySelector('.mt-label');
   function sync(){
     const c = root.classList.contains('sb-collapsed');
     const txt = c ? 'Perluas sidebar' : 'Ciutkan sidebar';
     btn.setAttribute('aria-expanded', c ? 'false' : 'true');
     btn.setAttribute('aria-label', txt);
     btn.title = txt;
-    if(lbl) lbl.textContent = c ? 'Perluas' : 'Ciutkan';
   }
   btn.addEventListener('click', ()=>{
     const c = root.classList.toggle('sb-collapsed');
@@ -4026,7 +4065,7 @@ function gmt8ToServerIso(val){
 
 // Pemicu render awal dipindah ke sini (paling akhir skrip) supaya modul CS/DTP
 // (dipakai filter tab Transaksi) sudah selesai dibangun sebelum renderTrades() pertama jalan.
-selectPeriod(1);
+selectPeriod(Math.max(0, LIVE_PERIODS.findIndex(p=>p.label==='All Time'))); // default Ringkasan: All Time (v1.1.111)
 (function(){
   let id = null;
   try{ id = sessionStorage.getItem('jurnalFillOpen'); sessionStorage.removeItem('jurnalFillOpen'); }catch(e){}
