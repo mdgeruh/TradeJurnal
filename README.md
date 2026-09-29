@@ -57,3 +57,6 @@ Dashboard jurnal trading akun **cent XAUUSD**: satu folder datar (`index.html`, 
 2. `config.js` berisi URL proyek dan kunci publishable. Jangan pernah memakai kunci service_role.
 3. Setelan (⚙) → Sinkron Supabase: Daftar/Masuk, lalu **Kirim ke awan** (awan disamakan dengan browser) atau **Ambil dari awan** (menimpa browser, cadangan JSON otomatis).
 4. Yang disinkron: transaksi, deposit/penarikan, kurs. `jurnalDayLimits` tetap lokal.
+
+## Pasang sebagai aplikasi (PWA, v1.1.106)
+Butuh alamat https (Vercel sudah otomatis). Android: Chrome → menu ⋮ → **Instal aplikasi**. iOS: Safari → Bagikan → **Tambah ke Layar Utama**. Data aplikasi terpasang terpisah dari browser; masuk lalu **Ambil dari awan**. Naikkan `CACHE` di `sw.js` bila ingin memaksa cache lama dibuang.

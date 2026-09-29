@@ -3,6 +3,9 @@
 Perubahan Jurnal XAUUSD, terbaru di atas. Semua rilis 22–28 Sep 2026. v1.1.66–v1.1.102 dicatat per versi; v1.0.0–v1.1.65 diringkas per tema. Status & todo: `SUMMARY.md`.
 
 ## Rilis terbaru
+### 1.1.106 — 29 Sep
+- PWA: bisa dipasang di Android (Chrome) dan iOS (Safari → Tambah ke Layar Utama). Baru: `manifest.webmanifest`, `sw.js` (network-first, cadangan offline), `pwa.js`, ikon 192/512/180 px. Service worker hanya aktif di https/localhost. Panggilan Supabase tidak di-cache.
+- Catatan iOS: data localStorage aplikasi terpasang terpisah dari Safari, jadi isi lewat Ambil dari awan.
 ### 1.1.105 — 29 Sep
 - Kode dipecah jadi folder datar: `index.html`, `style.css`, `app.js` (isi identik dengan v1.1.104), `sync.js`, `config.js`, `schema.sql`.
 - Baru: sinkron Supabase (Auth email+password, Kirim ke awan dengan mirror, Ambil dari awan dengan backup otomatis). Tabel `trades`, `deposit_log`, `pengaturan` dengan RLS per pengguna.
