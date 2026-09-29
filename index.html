@@ -8,7 +8,7 @@
 <script>
 // Terapkan tema tersimpan SEBELUM halaman pertama digambar, supaya tidak berkedip gelap saat reload (mis. ganti mata uang).
 (function(){try{var d=document.documentElement,mode=localStorage.getItem('jurnalTheme')||'dark',sc=localStorage.getItem('jurnalScheme')||'emas';
-var C={emas:'#1B1712',ocean:'#071B33',teal:'#0B1B1C',grafit:'#121212',kontras:'#0A0A0A'};if(!C[sc])sc='emas';var LC={emas:'#F3EDE0',ocean:'#EEF5FB',teal:'#EDF6F5',grafit:'#F4F4F4',kontras:'#FFFFFF'};
+var C={emas:'#1B1712',ocean:'#071B33',teal:'#0B1B1C',grafit:'#121212',kontras:'#0A0A0A',midnight:'#0F1720',ungu:'#17131F',kertas:'#1C1B19'};if(!C[sc])sc='emas';var LC={emas:'#F3EDE0',ocean:'#EEF5FB',teal:'#EDF6F5',grafit:'#F4F4F4',kontras:'#FFFFFF',midnight:'#EFF3F8',ungu:'#F5F2FB',kertas:'#FAFAF8'};
 var light=mode==='light'||(mode==='auto'&&window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches);
 if(sc!=='emas')d.setAttribute('data-scheme',sc);if(light)d.setAttribute('data-theme','light');
 var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',light?LC[sc]:C[sc]);
@@ -67,6 +67,17 @@ var ac=JSON.parse(localStorage.getItem('jurnalAccent')||'null'),a=ac&&ac[light?'
 
   <div class="tab-panel active" data-panel="grafik" id="tabpanel-grafik" role="tabpanel" aria-labelledby="tabbtn-grafik">
 
+  <section class="psy-prompt backup-nudge" id="backupNudge" hidden>
+    <div class="psy-prompt-text">
+      <strong>Data belum aman dicadangkan</strong>
+      <span id="backupNudgeText"></span>
+    </div>
+    <div class="backup-nudge-actions">
+      <button type="button" class="ledger-reset-btn modal-btn-primary" id="backupNudgeBtn">Ekspor JSON</button>
+      <button type="button" class="quick-chip" id="backupNudgeLater">Nanti</button>
+    </div>
+  </section>
+
   <section class="hero">
     <p class="hero-label">Saldo akhir akun</p>
     <div class="hero-figure">
@@ -111,10 +122,15 @@ var ac=JSON.parse(localStorage.getItem('jurnalAccent')||'null'),a=ac&&ac[light?'
       <div class="cr-field"><label>Sampai</label><div class="dt-picker" id="dtp_customTo" aria-label="Sampai tanggal"></div></div>
       <span class="cr-note" id="customNote"></span>
     </div>
+    <div class="eq-mode" id="eqMode" role="group" aria-label="Jenis kurva">
+      <button type="button" class="quick-chip" data-eqmode="equity" title="Saldo akun termasuk deposit dan penarikan">Ekuitas</button>
+      <button type="button" class="quick-chip" data-eqmode="pnl" title="Hasil trading saja, tanpa deposit dan penarikan">PNL kumulatif</button>
+    </div>
     <div class="eq-dd-badge-row" id="eqDdBadge" aria-live="polite"></div>
     <div class="chart-box" id="chartBox"></div>
   </section>
 
+  <div class="stat-period" id="statPeriod"></div>
   <section class="stats" id="statStrip" aria-live="polite"></section>
 
   <section class="psy-prompt" id="psyPromptCard" hidden>
@@ -393,7 +409,8 @@ var ac=JSON.parse(localStorage.getItem('jurnalAccent')||'null'),a=ac&&ac[light?'
     <div class="psy-group"><h3>Sesi pasar (waktu buka, GMT+8)</h3><div id="lapSession"></div><div class="psy-cover" id="lapSessionNote" style="margin-top:8px;"></div></div>
     <div class="psy-group"><h3>Durasi posisi vs hasil</h3><div id="lapDur"></div></div>
     <div class="psy-group"><h3>Beli vs Jual</h3><div id="lapArahSplit"></div><div class="stats" id="lapArahStats" style="margin-top:10px;"></div><div class="psy-cover" id="lapArahNote" style="margin-top:8px;"></div></div>
-    <div class="psy-group"><h3>Distribusi hasil per transaksi</h3><div class="stats" id="lapDist"></div>
+    <div class="psy-group"><h3>Distribusi hasil per transaksi</h3>
+      <div class="theme-modes" id="lapDistUnit" role="group" aria-label="Satuan distribusi" style="margin:6px 0 10px;"><button type="button" class="quick-chip active" data-u="pnl" aria-pressed="true">PNL</button><button type="button" class="quick-chip" data-u="pips" aria-pressed="false">Pips</button></div><div class="stats" id="lapDist"></div>
       <div class="chart-box" id="lapDistBox" style="margin-top:10px;"></div><div class="psy-cover" id="lapDistNote" style="margin-top:8px;"></div></div>
     <div class="psy-group"><h3>Lot &amp; ukuran posisi</h3><div class="stats" id="lapLot"></div>
       <div class="psy-cover" style="margin-top:10px;">Setelah rugi: apakah lot dinaikkan? (dibanding transaksi sebelumnya)</div><div id="lapLotAfterLoss"></div>
@@ -489,10 +506,47 @@ var ac=JSON.parse(localStorage.getItem('jurnalAccent')||'null'),a=ac&&ac[light?'
     </div>
   </section>
 
+  <section id="kursSection">
+    <div class="section-head">
+      <h2>Kurs</h2>
+      <div class="section-note">Dipakai untuk mode Rp dan semua angka &quot;≈ Rp&quot;. Ikut ekspor JSON dan sinkron Supabase.</div>
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc">
+        <strong>Kurs (Rp per USD)</strong>
+        <span>Isi kurs yang Anda pakai, mis. 16500. Setelah disimpan, tampilan dimuat ulang.</span>
+      </div>
+      <div class="accent-ctl">
+        <input type="number" id="kursInput" class="settings-input" min="1" step="any" inputmode="decimal" placeholder="mis. 16500" aria-label="Kurs Rupiah per USD">
+        <button type="button" class="quick-chip" id="kursSaveBtn">Simpan</button>
+      </div>
+    </div>
+    <div class="section-note accent-msg" id="kursNote" role="status" aria-live="polite" style="text-align:left;"></div>
+  </section>
+
+  <section id="prefSection">
+    <div class="section-head">
+      <h2>Preferensi</h2>
+      <div class="section-note">Sama dengan pintasan di header dan kartu Ringkasan; keduanya selalu selaras. Mengganti mata uang memuat ulang aplikasi.</div>
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc"><strong>Mata uang</strong><span>Tampilan nominal di seluruh aplikasi. Data tetap disimpan dalam sen (¢).</span></div>
+      <div class="theme-modes" id="prefCurrency" role="group" aria-label="Mata uang"></div>
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc"><strong>Zona waktu</strong><span>Hanya mengubah tampilan jam transaksi; periode laporan tetap GMT+8.</span></div>
+      <select id="prefTz" class="pref-select" aria-label="Zona waktu"></select>
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc"><strong>Format tanggal</strong><span>Berlaku di tabel transaksi dan riwayat deposit.</span></div>
+      <div class="theme-modes" id="prefDate" role="group" aria-label="Format tanggal"></div>
+    </div>
+  </section>
+
   <section>
     <div class="section-head">
       <h2>Batas harian</h2>
-      <div class="section-note">Batas pribadi untuk analisis overtrading di tab Laporan. Kosongkan untuk menonaktifkan. Tersimpan di browser ini (localStorage), tidak ikut ekspor JSON.</div>
+      <div class="section-note">Batas pribadi untuk analisis overtrading di tab Laporan. Kosongkan untuk menonaktifkan. Hari dihitung menurut GMT+8. Tersimpan di browser ini (localStorage), tidak ikut ekspor JSON.</div>
     </div>
     <div class="settings-row">
       <div class="settings-desc">
@@ -547,6 +601,13 @@ var ac=JSON.parse(localStorage.getItem('jurnalAccent')||'null'),a=ac&&ac[light?'
           <button type="button" id="syncSignupBtn" class="ledger-reset-btn has-ic"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M19 8v6"/><path d="M16 11h6"/></svg><span>Daftar</span></button>
         </div>
       </div>
+          <div class="settings-row">
+        <div class="settings-desc">
+          <strong>Lupa password?</strong>
+          <span>Isi email di atas, lalu kami kirim tautan untuk membuat password baru ke email itu.</span>
+        </div>
+        <button type="button" id="syncForgotBtn" class="quick-chip">Kirim tautan reset</button>
+      </div>
     </div>
     <div class="sync-box" id="syncActionBox" hidden>
       <div class="settings-row">
@@ -565,6 +626,17 @@ var ac=JSON.parse(localStorage.getItem('jurnalAccent')||'null'),a=ac&&ac[light?'
         </div>
         <button type="button" id="syncPullBtn" class="ledger-reset-btn has-ic ic-only" aria-label="Pulihkan dari cloud" title="Pulihkan dari cloud"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a4 4 0 0 1-.5-7.97A5.5 5.5 0 0 1 17 8.5a4.5 4.5 0 0 1 .5 9.5H7z"/><path d="M12 11v5"/><path d="M9.5 13.5l2.5 2.5 2.5-2.5"/></svg><span class="btn-sr">Pulihkan dari cloud</span></button>
       </div>
+      <div class="settings-row" id="syncPassRow">
+        <div class="settings-desc">
+          <strong>Ganti password</strong>
+          <span>Minimal 6 karakter. Password tidak disimpan di browser ini.</span>
+        </div>
+        <div class="sync-fields">
+          <input type="password" id="syncNewPass" class="settings-input" placeholder="password baru" autocomplete="new-password" aria-label="Password baru">
+          <input type="password" id="syncNewPass2" class="settings-input" placeholder="ulangi password baru" autocomplete="new-password" aria-label="Ulangi password baru">
+          <button type="button" id="syncChangePassBtn" class="quick-chip">Simpan password</button>
+        </div>
+      </div>
       <div class="settings-row">
         <div class="settings-desc"><strong id="syncUser"></strong></div>
         <button type="button" id="syncLogoutBtn" class="ledger-reset-btn has-ic ic-only" aria-label="Keluar" title="Keluar"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg><span class="btn-sr">Keluar</span></button>
@@ -578,10 +650,17 @@ var ac=JSON.parse(localStorage.getItem('jurnalAccent')||'null'),a=ac&&ac[light?'
       <h2>Ekspor data</h2>
       <div class="section-note">Simpan salinan jurnal ini sebagai cadangan (backup) dari data yang sedang aktif di browser ini.</div>
     </div>
+    <div class="settings-row backup-status" id="backupStatusRow">
+      <div class="settings-desc">
+        <strong>Status cadangan</strong>
+        <span id="backupStatusText"></span>
+      </div>
+      <button type="button" class="quick-chip" id="backupNowBtn">Ekspor JSON sekarang</button>
+    </div>
     <div class="settings-row">
       <div class="settings-desc">
         <strong>Salinan dashboard (.html)</strong>
-        <span>Halaman + data saat ini. Karena kode kini terpisah, simpan di folder yang sama dengan style.css, app.js, sync.js, dan config.js. Untuk cadangan, JSON lebih praktis.</span>
+        <span>Satu berkas mandiri: halaman, gaya, kode, dan data saat ini ada di dalamnya, jadi bisa dibuka langsung tanpa folder proyek (font dan sinkron tetap butuh internet). Untuk cadangan, JSON lebih praktis.</span>
       </div>
       <button type="button" id="exportHtmlBtn" class="ledger-reset-btn has-ic"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M5 21h14"/></svg><span>Download HTML</span></button>
     </div>
@@ -608,10 +687,10 @@ var ac=JSON.parse(localStorage.getItem('jurnalAccent')||'null'),a=ac&&ac[light?'
     </div>
     <div class="settings-row">
       <div class="settings-desc">
-        <strong>Hapus data tersimpan</strong>
+        <strong>Hapus semua data di perangkat ini</strong>
         <span>Kembali ke data bawaan file HTML ini (data yang terakhir diimpor di browser ini akan dihapus). Cadangan JSON otomatis didownload dulu sebelum dihapus.</span>
       </div>
-      <button type="button" id="clearLocalDataBtn" class="ledger-reset-btn has-ic"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg><span>Reset ke Bawaan</span></button>
+      <button type="button" id="clearLocalDataBtn" class="ledger-reset-btn has-ic"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg><span>Hapus &amp; Reset</span></button>
     </div>
     <div class="section-note" id="importNote" style="text-align:left;"></div>
   </section>
@@ -877,7 +956,6 @@ var ac=JSON.parse(localStorage.getItem('jurnalAccent')||'null'),a=ac&&ac[light?'
 
 <script id="journal-data" type="application/json">{"summary": {"total": 0, "win": 0, "loss": 0, "winrate": 0, "pl_cent": 0, "pl_rp": 0, "saldo_akhir": 0, "pct_pl": null}, "periods": [], "kurs": 0, "dashboard": {"update": "Update terakhir: -", "saldo": 0, "stats": {"total": 0, "winrate": 0, "pf": 0, "maxdd": 0, "expectancy": 0}, "top_win": [], "top_loss": [], "mm": {"equity": 0, "risk": 0.01, "sl": 150, "pipval": 10, "lot": 0, "tp_pips": 0, "tp_cent": 0}}, "maxdd_note": "", "equity": [], "months": [], "weeks": [], "trades": [], "deposit": {"total_deposit": 0, "total_penarikan": 0, "total_mc": 0, "modal_bersih": 0, "log": []}, "period_ranges": [], "modal_kumulatif": []}</script>
 <script src="config.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="app.js"></script>
 <script src="sync.js"></script>
 <script src="pwa.js"></script>

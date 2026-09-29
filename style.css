@@ -16,6 +16,9 @@
   html[data-scheme="teal"]{--ink:#0B1B1C;--ink-raised:#112628;--paper:#E2F0EF;--paper-dim:#8DAEAC;--paper-faint:#66807E;--gold:#2EC4B6;--gold-dim:#1F8A80;--gain:#A6D96A;--loss:#F0806A;--line:#1F3A3B;--line-soft:#163031;}
   html[data-scheme="grafit"]{--ink:#121212;--ink-raised:#1B1B1B;--paper:#ECECEC;--paper-dim:#A0A0A0;--paper-faint:#767676;--gold:#E0B84D;--gold-dim:#9C823A;--gain:#79B98A;--loss:#D9736A;--line:#333333;--line-soft:#262626;}
   html[data-scheme="kontras"]{--ink:#0A0A0A;--ink-raised:#151515;--paper:#FFFFFF;--paper-dim:#B8B8B8;--paper-faint:#8A8A8A;--gold:#FFD166;--gold-dim:#B8974A;--gain:#4DA3FF;--loss:#FF9F43;--line:#4A4A4A;--line-soft:#2E2E2E;}
+  html[data-scheme="midnight"]{--ink:#0F1720;--ink-raised:#16212D;--paper:#E4EAF1;--paper-dim:#8FA0B3;--paper-faint:#6C7F94;--gold:#5AA9E6;--gold-dim:#3C7DB3;--gain:#5FBF8F;--loss:#E0705F;--line:#243444;--line-soft:#1B2A38;}
+  html[data-scheme="ungu"]{--ink:#17131F;--ink-raised:#1F1A2B;--paper:#ECE8F5;--paper-dim:#9D95B0;--paper-faint:#7A7290;--gold:#B392F0;--gold-dim:#7C5FC0;--gain:#7BC49A;--loss:#E07A8B;--line:#2D2640;--line-soft:#231D33;}
+  html[data-scheme="kertas"]{--ink:#1C1B19;--ink-raised:#262522;--paper:#F0EFEA;--paper-dim:#A5A29A;--paper-faint:#7C7A73;--gold:#D98E4A;--gold-dim:#9C6630;--gain:#86B58A;--loss:#D9776A;--line:#363430;--line-soft:#2C2B28;}
   html[data-theme="light"]{
     --ink:#F3EDE0;
     --ink-raised:#E8E0CC;
@@ -34,6 +37,9 @@
   html[data-theme="light"][data-scheme="teal"]{--ink:#EDF6F5;--ink-raised:#DCECEA;--paper:#10292A;--paper-dim:#476664;--paper-faint:#5C7B79;--gold:#09726A;--gold-dim:#4FA79F;--gain:#4A7419;--loss:#B0442C;--line:#C2DAD7;--line-soft:#D2E5E2;}
   html[data-theme="light"][data-scheme="grafit"]{--ink:#F4F4F4;--ink-raised:#E8E8E8;--paper:#1C1C1C;--paper-dim:#595959;--paper-faint:#6B6B6B;--gold:#856410;--gold-dim:#B0954A;--gain:#2C7742;--loss:#A63E29;--line:#D4D4D4;--line-soft:#E2E2E2;}
   html[data-theme="light"][data-scheme="kontras"]{--ink:#FFFFFF;--ink-raised:#F0F0F0;--paper:#000000;--paper-dim:#404040;--paper-faint:#575757;--gold:#855300;--gold-dim:#B08A3E;--gain:#0A58C0;--loss:#B04400;--line:#B0B0B0;--line-soft:#D6D6D6;}
+  html[data-theme="light"][data-scheme="midnight"]{--ink:#EFF3F8;--ink-raised:#DFE7F0;--paper:#111C28;--paper-dim:#4A5D72;--paper-faint:#5E7187;--gold:#1F6FB5;--gold-dim:#5C93C4;--gain:#1B7550;--loss:#B23F2B;--line:#C5D2E0;--line-soft:#D5DFEA;}
+  html[data-theme="light"][data-scheme="ungu"]{--ink:#F5F2FB;--ink-raised:#E8E2F4;--paper:#1E1730;--paper-dim:#5A5070;--paper-faint:#6B6180;--gold:#6D45C4;--gold-dim:#9E82DC;--gain:#1F7A4B;--loss:#B0364A;--line:#D3C9E8;--line-soft:#E1D9F1;}
+  html[data-theme="light"][data-scheme="kertas"]{--ink:#FAFAF8;--ink-raised:#F0EFEA;--paper:#1F1E1B;--paper-dim:#5E5C55;--paper-faint:#706E66;--gold:#8A5F12;--gold-dim:#B58B3F;--gain:#2F7A45;--loss:#A8402B;--line:#D9D7CE;--line-soft:#E7E5DC;}
   /* Ramah buta warna (v1.1.131): menimpa untung/rugi skema apa pun; harus setelah blok skema terang di atas */
   html[data-cb="1"]{--gain:#4DA3FF;--loss:#FF9F43;}
   html[data-cb="1"][data-theme="light"]{--gain:#0A58C0;--loss:#B04400;}
@@ -1085,3 +1091,36 @@
 .accent-ctl input[type="color"]{width:44px;height:34px;padding:2px;background:var(--ink-raised);border:1px solid var(--line);border-radius:6px;cursor:pointer;}
 .accent-msg{min-height:1.2em;margin:4px 0 0;}
 .accent-msg.warn{color:var(--loss);}
+
+/* ---------- Setelan P1 (v1.1.135): status cadangan, nudge, kurs ---------- */
+.backup-status.warn .settings-desc span{color:var(--gold);}
+.backup-nudge{border-color:var(--gold);}
+.backup-nudge-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+#kursInput{width:150px;}
+#syncPassRow .sync-fields{align-items:center;}
+
+/* Toggle jenis kurva Ringkasan (v1.1.136) */
+.eq-mode{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 6px;}
+
+/* Stat strip Ringkasan 9 kartu (v1.1.137): desktop membungkus 6+3, mobile grid 3 kolom */
+.stat-period{font-size:10.5px;color:var(--paper-faint);text-transform:uppercase;letter-spacing:.06em;margin:14px 0 -6px;}
+@media (min-width:721px){
+  #statStrip{flex-wrap:wrap;}
+  #statStrip .stat{flex:1 1 15%;}
+  #statStrip .stat:nth-child(n+7){border-top:1px solid var(--line-soft);}
+  #statStrip .stat:nth-child(6n+1){border-left:none;padding-left:0;}
+}
+
+/* Setelan → Preferensi (v1.1.138) */
+.pref-select{background:var(--ink-raised);color:var(--paper);border:1px solid var(--line);font:inherit;font-size:12.5px;padding:8px 10px;min-height:36px;max-width:100%;}
+.pref-select:focus-visible{outline:1px solid var(--gold);}
+
+/* Banner versi baru (v1.1.139) */
+.update-banner{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 10px);z-index:9999;
+  display:flex;align-items:center;gap:10px;background:var(--ink-raised);color:var(--paper);border:1px solid var(--gold);
+  padding:8px 10px 8px 14px;font-size:12.5px;box-shadow:0 8px 24px rgba(0,0,0,.4);max-width:calc(100% - 20px);}
+
+/* Keadaan kosong kurva Ringkasan (v1.1.141) */
+.eq-empty{padding:34px 12px;text-align:center;color:var(--paper-faint);}
+.eq-empty p{margin:0;}
+.eq-empty-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px;}

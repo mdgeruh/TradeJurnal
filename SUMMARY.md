@@ -5,16 +5,22 @@ Riwayat per rilis/tema: `CHANGELOG.md`. Fitur & cara pakai: `README.md`. File in
 ## Apa ini
 Dashboard trading journal (folder datar, tanpa build tool) untuk akun cent XAUUSD. Tab: Ringkasan, Analisis PNL, Performa, Laporan, Transaksi, Deposit + Setelan (⚙). Kalkulator lot berupa modal dari tombol di tab Transaksi. Navigasi desktop ≥ 1100px berupa sidebar kiri yang bisa diciutkan. File utama: `index.html`, `style.css`, `app.js`, `sync.js`, `config.js`, `pwa.js`, `sw.js`; Supabase: `schema.sql`, `query-user-supabase.sql`, `migrasi-catatan.sql`.
 
-## Status (v1.1.134)
+## Status (v1.1.141)
 - Semua fitur di README berjalan; tab Transaksi, Laporan (L1–L18, cetak PDF), Setelan → Tampilan (mode + 5 skema + aksen custom + mode buta warna), catatan bebas per transaksi, impor/ekspor CSV, sinkron Supabase manual, dan PWA sudah selesai. Tidak ada bug fungsional terbuka.
-- Rilis terakhir (v1.1.134): chip periode 7H·1B·3B·1T·All·Sesuaikan (Ringkasan, Analisis PNL default All; chip All di Transaksi), tombol mata uang tanpa border; belum diuji perangkat asli/mode terang/1280px. Sebelumnya v1.1.133: 10 perbaikan kurva ekuitas Ringkasan (lihat `CHANGELOG.md`; diuji Playwright, belum di perangkat sentuh asli/mode terang/cetak). Sebelumnya v1.1.132: optimalisasi P1 (font non-blocking, supabase-js dikunci `@2.45.4`, service worker cache-dulu, `Permissions-Policy`); belum diuji di browser/perangkat.
-- **Perlu tindakan manual:** jalankan `migrasi-catatan.sql` sekali di Supabase SQL Editor (tanpa itu sinkron tetap jalan, tapi catatan tidak ikut ke cloud dan aplikasi menampilkan peringatan).
-- Data aktif ada di localStorage (`jurnalXauusdData_v1`), bukan di file. File baru kosong (`kurs` = 0, mode Rp tampil Rp 0) sampai JSON diimpor lewat Setelan.
+- v1.1.141: keadaan kosong Ringkasan punya tombol Impor JSON / Masuk & Pulihkan dari cloud; penamaan reset di Setelan diperjelas ("Hapus semua data di perangkat ini", tombol "Hapus & Reset"); render malas Laporan diturunkan ke P3; belum diuji di browser.
+- v1.1.140: L14 Distribusi hasil per transaksi punya pilihan satuan PNL/Pips (`lapDistUnit`, `lapDistPipsData`); belum diuji di browser.
+- v1.1.139: supabase-js dimuat malas (Setelan dibuka / sesi tersimpan / token di URL) dan banner "Versi baru siap" (`pwa.js`); belum diuji di browser maupun Supabase asli.
+- v1.1.138: Setelan → Preferensi (mata uang, zona waktu, format tanggal `jurnalDateFmt`; format tanggal hanya `fmtDate`/`fmtDateTime` di tabel transaksi & deposit, belum kalender/laporan) dan 3 skema rilis 2 (Midnight Biru, Ungu Senja, Kertas Putih; tiap skema = blok gelap + terang + entri `SCHEMES` + peta `C`/`LC` di skrip `<head>`); belum diuji di browser.
+- v1.1.137: PNL Minggu Ini/Bulan Ini di hero (2×2) dan stat strip 9 kartu (Streak, Rata² menang/rugi + RR, label Periode); belum diuji di browser.
+- v1.1.136: toggle kurva Ekuitas / PNL kumulatif di Ringkasan (`eqMode`, `DATA.pnl_kumulatif`, kunci `jurnalEqMode`); belum diuji di browser.
+- Rilis terakhir (v1.1.135): todo Setelan P1 selesai (ekspor HTML mandiri, isian Kurs, status/pengingat cadangan, lupa/ganti password); diuji Playwright dengan stub Supabase (44 tes), belum diuji Supabase asli, mode terang/1280px, atau perangkat sentuh. Sebelumnya v1.1.134: chip periode 7H·1B·3B·1T·All·Sesuaikan (Ringkasan, Analisis PNL default All; chip All di Transaksi), tombol mata uang tanpa border; belum diuji perangkat asli/mode terang/1280px. Sebelumnya v1.1.133: 10 perbaikan kurva ekuitas Ringkasan (lihat `CHANGELOG.md`; diuji Playwright, belum di perangkat sentuh asli/mode terang/cetak). Sebelumnya v1.1.132: optimalisasi P1 (font non-blocking, supabase-js dikunci `@2.45.4`, service worker cache-dulu, `Permissions-Policy`); belum diuji di browser/perangkat.
+- **Perlu tindakan manual:** (a) tambahkan alamat aplikasi ke Supabase → Authentication → URL Configuration → **Redirect URLs** (dan Site URL) supaya tautan email reset password kembali ke aplikasi; (b) jalankan `migrasi-catatan.sql` sekali di Supabase SQL Editor (tanpa itu sinkron tetap jalan, tapi catatan tidak ikut ke cloud dan aplikasi menampilkan peringatan).
+- Data aktif ada di localStorage (`jurnalXauusdData_v1`), bukan di file. File baru kosong (`kurs` = 0, mode Rp tampil Rp 0) sampai JSON diimpor atau kurs diisi di Setelan → Kurs.
 - Belum diuji ke proyek Supabase asli dan belum dicek di perangkat asli (sentuhan, PWA, sidebar, mode Otomatis, cetak per skema); daftar cek ada di **Verifikasi manual**.
 
 ## Arsitektur singkat
 - Folder datar; fallback data di `<script id="journal-data">`, data aktif di localStorage. Nominal internal dalam sen (¢); tampilan lewat `fmtMoney`, estimasi rupiah lewat `approxRp()`.
-- Sumber daya eksternal: Google Fonts (non-blocking; font cadangan saat offline) dan supabase-js `@2.45.4` dari jsDelivr. Service worker cache-dulu (stale-while-revalidate); respons Supabase tidak di-cache.
+- Sumber daya eksternal: Google Fonts (non-blocking; font cadangan saat offline) dan supabase-js `@2.45.4` dari jsDelivr (dimuat malas oleh `sync.js` sejak v1.1.139). Service worker cache-dulu (stale-while-revalidate); respons Supabase tidak di-cache.
 - Periode ("Hari Ini", kalender, Laporan) berpatokan GMT+8 tetap; dropdown zona waktu hanya mengubah tampilan jam. `tanggal` = broker GMT+3; `tanggal_gmt8`/`waktu_buka` = GMT+8.
 - Ekspor/impor lewat Setelan (HTML & JSON); impor menimpa data aktif dengan konfirmasi. Tabel key penyimpanan ada di `README.md`.
 - Kurva ekuitas di-crop sesuai periode; sebelum data ada → seluruh riwayat, setelah transaksi terakhir → garis datar di saldo terakhir.
@@ -24,6 +30,9 @@ Dashboard trading journal (folder datar, tanpa build tool) untuk akun cent XAUUS
 ## Rawan bug
 **Umum**
 - **Alur rilis:** naikkan `APP_VERSION` (`app.js`, tampil di Setelan → Tentang aplikasi) dan `CACHE` (`sw.js`) bersama; tambah entri berbahasa pengguna di `USER_CHANGELOG` (tanggal ISO; tanggal sama = gabung) dan entri teknis di `CHANGELOG.md`; perbarui `README.md`/`SUMMARY.md`. Cek Playwright + Chromium 390/768/1280px, data kosong dan data sintetis (±445 transaksi); interaksi kompleks hanya bila ada dugaan bug.
+- **Ekspor HTML mandiri (v1.1.135):** `buildFullHtmlString()` mengambil `index.html` asli lewat `fetch` (tidak jalan dari `file://`), meng-inline `style.css`/`config.js`/`app.js`/`sync.js`, dan membuang `pwa.js` + manifest. Berkas baru yang dimuat `index.html` harus ikut dipertimbangkan di sini. Escape `</script` dan `</` (data) wajib dipertahankan.
+- **Pengingat cadangan (v1.1.135):** `saveActiveData(data, silent)` menulis `jurnalLastChange` kecuali `silent`; simpan otomatis saat muat (`saveActiveData(DATA, true)`) jangan diubah, kalau tidak pengingat selalu menyala. Penanda cadangan baru harus memanggil `markBackup(kind)` atau menulis `jurnalSyncInfo` + event `jurnalBackupChanged`.
+- **Akun Supabase (v1.1.135):** `PASSWORD_RECOVERY` diproses di `sync.js` (`recoveryMode()`); jangan `await` di dalam `onAuthStateChange`. Password tidak boleh masuk localStorage/`DATA`.
 - **Urutan skrip:** modul `CS`/`DTP` harus didefinisikan sebelum render awal yang memakainya (blank page v1.1.64).
 - **Field turunan:** semua field hasil hitung dari `DATA.trades` harus ikut `recomputeAll()`.
 - **Format nominal:** tanda minus di depan simbol (`-$x`, `-Rp x`); pakai `fmtMoney`/`fmtRp`, jangan tulis `'Rp ' + n` sendiri.
@@ -73,10 +82,6 @@ Kelompok berdasarkan area; prioritas P1 tinggi, P2 sedang, P3 rendah. Setiap but
 - Rawan bug: skala Y/area jangan mengubah skala garis puncak; cetak memakai variabel terang sendiri. Struktur kurva: `#chartBox` > `.eq-plot` (svg + tooltip + label) + `.eq-legend`; tooltip berada di strip `padding-top` `#chartBox`, jadi jangan ubah `top`/padding tanpa cek 390px. Chip Transaksi memakai selektor `.ledger-quick-range .quick-chip` (jangan global: `.quick-chip` juga dipakai Setelan → Tampilan).
 
 **P2**
-- [ ] Toggle kurva Ekuitas / PNL kumulatif (tanpa deposit): lonjakan deposit/penarikan menyamarkan performa trading.
-- [ ] PNL Bulan Ini (opsional Minggu Ini, kalender GMT+8) di samping 7H/30H rolling.
-- [ ] Stat strip: streak saat ini, rata-rata menang/rugi dan rasionya; judul kecil "Periode: …" karena strip mengikuti pemilih periode sedangkan kartu hero tidak.
-- [ ] Keadaan kosong yang bisa ditindaklanjuti: tombol "Impor JSON" dan "Masuk & Pulihkan dari cloud" langsung di Ringkasan.
 
 **P3**
 - [ ] Indikator sinkron Supabase di Ringkasan (terakhir dikirim/diambil; ada perubahan lokal belum dikirim).
@@ -84,17 +89,11 @@ Kelompok berdasarkan area; prioritas P1 tinggi, P2 sedang, P3 rendah. Setiap but
 - [ ] Daftar 5 transaksi terakhir dengan hasil dan emosi.
 
 ### 2. Setelan
-**P1**
-- [ ] **Bug: "Salinan dashboard (.html)" tidak lagi mandiri.** `buildFullHtmlString()` (`app.js` ±baris 3486) mengekspor `outerHTML`, sedangkan CSS/JS ada di berkas terpisah sejak v1.1.105, jadi hasil unduhan tanpa gaya di luar folder proyek. Pilihan: (a) inline `style.css`+`app.js` saat ekspor, atau (b) hapus tombolnya dan sediakan JSON saja. Sampai diputuskan, jangan andalkan HTML sebagai cadangan.
-- [ ] Kurs Rp tidak bisa diatur: `DATA.kurs` = 0 sampai JSON diimpor, jadi mode Rp/"≈ Rp" tampil Rp 0. Tambah "Kurs (Rp per USD)" di Setelan (validasi > 0, efek langsung; sudah ikut ekspor/sinkron).
-- [ ] Pengingat cadangan: "Terakhir dicadangkan: N hari lalu" (ekspor JSON/sinkron), peringatan bila > 7 hari atau ada perubahan setelah sinkron terakhir (`jurnalSyncInfo`), plus tombol pintas.
-- [ ] Kelola akun: "Lupa password" (`resetPasswordForEmail`) dan ganti password (`updateUser`) di kartu Sinkron; pesan bila konfirmasi email diperlukan. Jangan simpan password di localStorage.
+(P1 selesai di v1.1.135 dan dihapus dari daftar.)
 
 **P2**
-- [ ] Pindahkan/duplikasi mata uang (`jurnalHeroCurrency`), zona waktu (`jurnalTzOffset`), dan format tanggal ke Setelan ("Preferensi"); kontrol header/hero tetap sebagai pintasan, satu sumber kebenaran.
 - [ ] Kelompokkan Setelan dengan sub-navigasi/akordeon (Tampilan · Trading · Data · Akun · Tentang): Data = Ekspor + Impor + Reset; Akun = Sinkron.
 - [ ] Ekspor/impor pengaturan (`jurnalDayLimits`, `jurnalBigLossPct`, tema/skema/aksen, mata uang, zona waktu): opsi "Sertakan pengaturan" atau berkas terpisah; sinkron ke tabel `pengaturan` bila diinginkan.
-- [ ] Bersihkan penamaan: "Hapus data tersimpan" → "Reset ke bawaan"/"Hapus semua data di perangkat ini" dengan ringkasan yang terhapus; catatan GMT+8 di label Batas harian.
 - [ ] Ukuran lot/kontrak & parameter akun (nilai pip, ukuran kontrak) dan default risiko kalkulator (`mm.risk` 1%, `sl` 150 pips) sebagai isian (kini tertanam di `DATA.dashboard.mm`).
 - [ ] Data & privasi: ringkasan penyimpanan (jumlah transaksi, ukuran localStorage, batas ±5 MB), "Ekspor lalu hapus riwayat lama", mode sembunyi angka default.
 
@@ -103,25 +102,13 @@ Kelompok berdasarkan area; prioritas P1 tinggi, P2 sedang, P3 rendah. Setiap but
 - [ ] Bahasa & format angka (Indonesia/Inggris), ukuran font (kecil/normal/besar).
 - [ ] Notifikasi pengingat isi catatan psikologi atau batas harian (izin Notification; PWA saja).
 
-**Tema (sisa)**
-- [ ] Skema rilis 2: Midnight Biru, Ungu Senja, Kertas Putih (tiap skema = blok gelap + terang + entri `SCHEMES`; `--paper-faint`, `--gold-dim`, `--line`, `--line-soft` diturunkan, jadi cukup 7 warna):
-
-| Skema | `--ink` | `--ink-raised` | `--paper` | `--paper-dim` | Aksen (`--gold`) | `--gain` | `--loss` |
-|---|---|---|---|---|---|---|---|
-| **Midnight Biru** (abu-biru gelap ala terminal; mirip Blue Ocean, boleh dibuang bila dobel) | #0F1720 | #16212D | #E4EAF1 | #8FA0B3 | #5AA9E6 | #5FBF8F | #E0705F |
-| **Ungu Senja** (lembut untuk sesi panjang) | #17131F | #1F1A2B | #ECE8F5 | #9D95B0 | #B392F0 | #7BC49A | #E07A8B |
-| **Kertas Putih** (terang, siang hari/cetak layar) | #FAFAF8 | #F0EFEA | #1F1E1B | #5E5C55 | #8A5F12 | #2F7A45 | #A8402B |
-
 ### 3. Laporan
-- [ ] Distribusi pips (L14 baru untuk PNL).
+(Semua butir Laporan selesai; distribusi pips selesai di v1.1.140.)
 
 ### 4. Optimalisasi (audit kode v1.1.131)
 Ukuran gzip: `app.js` 270 KB → ±79 KB, `style.css` 68 KB → ±14 KB, `index.html` 70 KB → ±13 KB. `app.js` memuat 11 `location.reload()` dan merender semua tab saat dibuka (mis. `renderLap2()` ±baris 1809).
 
 **P1**
-- [ ] Muat supabase-js hanya saat perlu (dinamis saat Setelan → Sinkron dibuka atau sesi tersimpan ada); versi sudah dikunci `@2.45.4` tapi masih sinkron di `index.html`. Cek `sync.js` tidak memanggil `supabase` sebelum siap.
-- [ ] Banner "Versi baru siap, muat ulang" untuk service worker cache-dulu (memakai `CACHE`).
-- [ ] Render tab secara malas: Laporan (heatmap, drawdown, silang psikologi, bandingkan) dihitung saat halaman dibuka walau tersembunyi; render saat tab dibuka (atau `requestIdleCallback`) dan ulang hanya bila data/filter berubah. Awas Drawdown (L7): lebar > 0 dan urutan skrip `CS`/`DTP`.
 - [ ] Opsional: host sendiri font (Fraunces, IBM Plex Mono) sebagai `woff2` subset Latin + tambah ke `SHELL` di `sw.js` (offline penuh, tanpa dependensi luar).
 
 **P2**
@@ -132,12 +119,13 @@ Ukuran gzip: `app.js` 270 KB → ±79 KB, `style.css` 68 KB → ±14 KB, `index.
 - [ ] `Content-Security-Policy` di `vercel.json` (self, jsDelivr, Google Fonts, `*.supabase.co`; perlu `unsafe-inline` selama ada skrip inline di `<head>`/`journal-data`, atau pindahkan ke berkas). Wajib uji browser.
 
 **P3**
-- [ ] Ubah `journal-data` (fallback kosong sejak v1.1.15) jadi berkas kecil atau hapus (dipakai `buildFullHtmlString`; lihat Setelan P1).
+- [ ] Render tab Laporan secara malas (turun dari P1 di v1.1.141): `renderLap2` hanya ±12 ms dari muat ±175 ms (v1.1.81), risikonya (lebar 0 saat tersembunyi, urutan `CS`/`DTP`, Drawdown L7) lebih besar dari manfaat; kerjakan bila ukur ulang menunjukkan Laporan dominan atau data > ±2.000 transaksi.
+- [ ] Ubah `journal-data` (fallback kosong sejak v1.1.15) jadi berkas kecil atau hapus. Kini dipakai `buildFullHtmlString()` sebagai tempat menaruh data pada salinan HTML mandiri, jadi bila dihapus ekspor perlu mekanisme lain.
 - [ ] Satu handler global `keydown` Escape yang menutup modal teratas (kini dipasang per modal di banyak IIFE).
 - [ ] Lighthouse (mobile, throttling 4G) sebelum/sesudah; catat LCP/TBT di file ini.
 
 ### 5. Verifikasi manual
-Cek ulang cetak PDF data asli (terakhir v1.1.83; baru diuji di Chromium; cek margin box nomor halaman), cetak per skema, tooltip kurva ekuitas (termasuk "Kustom…") dan grafik Tren (garis & bar), heatmap, blok sesi pasar dan KPI Max DD % dengan data asli, data kosong, mode terang dan Otomatis di perangkat asli, tampilan aksen custom di grafik/heatmap, kartu HP Transaksi (mode terang, mode Pilih), sinkron ke Supabase asli (termasuk kolom `catatan`), pembaruan PWA terpasang (Android/iOS), font tanpa kedip setelah v1.1.132.
+Cek ulang cetak PDF data asli (terakhir v1.1.83; baru diuji di Chromium; cek margin box nomor halaman), cetak per skema, tooltip kurva ekuitas (termasuk "Kustom…") dan grafik Tren (garis & bar), heatmap, blok sesi pasar dan KPI Max DD % dengan data asli, data kosong, mode terang dan Otomatis di perangkat asli, tampilan aksen custom di grafik/heatmap, kartu HP Transaksi (mode terang, mode Pilih), sinkron ke Supabase asli (termasuk kolom `catatan`, email reset password dan Redirect URLs, ganti password), salinan HTML mandiri dibuka dari `file://` di perangkat asli, pengingat cadangan (mode terang, 1280px), pembaruan PWA terpasang (Android/iOS), font tanpa kedip setelah v1.1.132.
 
 ### 6. Ide lanjutan (opsional)
 - **Impor CSV:** pratinjau baris, pilihan zona waktu, impor deposit, opsi perbarui transaksi ber-ID sama. **Indikator sinkron** di Ringkasan (lihat Ringkasan P3).
