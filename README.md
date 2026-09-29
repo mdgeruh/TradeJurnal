@@ -16,6 +16,8 @@ Dashboard jurnal trading akun **cent XAUUSD**: satu folder datar (`index.html`, 
 - **Arah & Pips:** Arah = arah entry sebenarnya; Pips bertanda +/- mengikuti laba/rugi.
 
 ## Tab
+Navigasi: layar ≥ 1100px memakai **sidebar kiri** yang bisa diciutkan (tombol di dasar sidebar); 721–1099px tab horizontal di atas; ≤ 720px bottom nav.
+
 1. **Ringkasan:** kartu hero (saldo, PNL Kumulatif/Hari Ini/7H/30H, tombol 👁 untuk menyembunyikan angka), pemilih periode, kurva ekuitas, stat strip (Transaksi, Win Rate, Laba/Rugi, PF, Max DD, Expectancy).
 2. **Analisis PNL:** statistik rentang bergulir (7H–1T/Sesuaikan) dan kalender PNL Harian (klik tanggal untuk detail).
 3. **Performa:** bulanan & mingguan, rekor menang/rugi terbesar, donut Split arah Beli vs Jual.
@@ -45,6 +47,7 @@ Dashboard jurnal trading akun **cent XAUUSD**: satu folder datar (`index.html`, 
 | `jurnalHeroCurrency` | localStorage | Pilihan USD / USC / Rp |
 | `jurnalTheme` | localStorage | Tema terang/gelap |
 | `jurnalTzOffset` | localStorage | Zona waktu tampilan |
+| `jurnalSidebar` | localStorage | Sidebar desktop: `collapsed` / `expanded` |
 | `jurnalPendingTab`, `jurnalFillOpen` | sessionStorage | Tab tujuan setelah muat ulang; antrean "Simpan & lanjut" |
 
 ## Arsitektur singkat

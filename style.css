@@ -248,6 +248,7 @@
   }
   .main-tab-btn:hover{color:var(--paper);}
   .main-tab-btn.active{color:var(--gold);border-bottom-color:var(--gold);}
+  .main-tab-btn .mt-icon, .sb-toggle{display:none;}
 
   /* ---------- Bottom nav (mobile) ---------- */
   .bottom-nav{
@@ -872,3 +873,55 @@
   .sync-fields .settings-input{width:190px;}
   .sync-actions{display:flex;gap:8px;flex-wrap:wrap;}
   .sync-actions button[disabled]{opacity:.5;cursor:default;}
+
+  /* ---------- Desktop (v1.1.108): layar lebar memakai 2 kolom ---------- */
+  @media screen and (min-width:1100px){
+    .wrap{max-width:1240px;padding:0 32px 80px;}
+    .tab-panel.active[data-panel="grafik"],
+    .tab-panel.active[data-panel="statistik"],
+    .tab-panel.active[data-panel="setelan"]{
+      display:grid;gap:20px;align-items:stretch;
+    }
+    .tab-panel.active[data-panel="grafik"]{grid-template-columns:minmax(340px,400px) minmax(0,1fr);}
+    .tab-panel.active[data-panel="statistik"],
+    .tab-panel.active[data-panel="setelan"]{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .tab-panel.active[data-panel="grafik"] > section,
+    .tab-panel.active[data-panel="statistik"] > section,
+    .tab-panel.active[data-panel="setelan"] > section{margin-bottom:0;min-width:0;}
+    /* Ringkasan: kartu saldo di kiri, kurva ekuitas di kanan; sisanya selebar penuh */
+    .tab-panel.active[data-panel="grafik"] > section:nth-child(n+3){grid-column:1 / -1;}
+    .fab-wrap{right:max(24px,calc((100vw - 1240px)/2 + 8px));}
+  }
+
+  /* ---------- Sidebar desktop (v1.1.109): navbar atas jadi sidebar kiri yang bisa diciutkan ---------- */
+  @media screen and (min-width:1100px){
+    body{--sb-cur:224px;padding-left:var(--sb-cur);transition:background .2s,color .2s,padding-left .22s ease;}
+    html.sb-collapsed body{--sb-cur:68px;}
+    .main-tabs{
+      position:fixed;top:0;left:0;bottom:0;z-index:40;width:var(--sb-cur);margin:0;
+      flex-direction:column;gap:4px;padding:32px 12px 68px;
+      border-bottom:none;border-right:1px solid var(--line);background:var(--ink);
+      overflow-y:auto;overflow-x:hidden;transition:width .22s ease,background .2s;
+    }
+    .main-tab-btn, .sb-toggle{
+      display:flex;align-items:center;gap:12px;width:100%;flex-shrink:0;
+      padding:11px 14px;border:none;border-radius:12px;text-align:left;
+      font-family:'IBM Plex Mono',monospace;font-size:12.5px;letter-spacing:.02em;
+    }
+    .main-tab-btn .mt-icon, .sb-toggle .mt-icon{display:block;width:19px;height:19px;flex-shrink:0;}
+    .main-tab-btn:hover{background:var(--ink-raised);}
+    .main-tab-btn.active{background:var(--ink-raised);box-shadow:inset 3px 0 0 var(--gold);}
+    .main-tab-btn:focus-visible, .sb-toggle:focus-visible{outline:2px solid var(--gold);outline-offset:-2px;}
+    .mt-label{white-space:nowrap;overflow:hidden;transition:opacity .15s;}
+    .sb-toggle{
+      position:fixed;left:12px;bottom:14px;z-index:41;width:calc(var(--sb-cur) - 24px);
+      background:none;color:var(--paper-faint);cursor:pointer;transition:width .22s ease,color .15s,background .15s;
+    }
+    .sb-toggle:hover{color:var(--gold);background:var(--ink-raised);}
+    .sb-chev{transition:transform .22s ease;}
+    html.sb-collapsed .sb-chev{transform:rotate(180deg);}
+    html.sb-collapsed .main-tabs{padding-left:10px;padding-right:10px;}
+    html.sb-collapsed .main-tab-btn, html.sb-collapsed .sb-toggle{justify-content:center;padding-left:0;padding-right:0;gap:0;}
+    html.sb-collapsed .mt-label{opacity:0;width:0;}
+    .fab-wrap{right:max(24px,calc((100vw - var(--sb-cur) - 1240px)/2 + 8px));}
+  }

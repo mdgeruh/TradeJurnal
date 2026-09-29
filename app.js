@@ -3066,6 +3066,30 @@ window.renderTrades = renderTrades;
   }
 })();
 
+// ---------- Sidebar desktop (v1.1.109): ciut/perluas, pilihan disimpan ----------
+(function(){
+  const btn = document.getElementById('sidebarToggle');
+  if(!btn) return;
+  const root = document.documentElement;
+  const lbl = btn.querySelector('.mt-label');
+  function sync(){
+    const c = root.classList.contains('sb-collapsed');
+    const txt = c ? 'Perluas sidebar' : 'Ciutkan sidebar';
+    btn.setAttribute('aria-expanded', c ? 'false' : 'true');
+    btn.setAttribute('aria-label', txt);
+    btn.title = txt;
+    if(lbl) lbl.textContent = c ? 'Perluas' : 'Ciutkan';
+  }
+  btn.addEventListener('click', ()=>{
+    const c = root.classList.toggle('sb-collapsed');
+    try{ localStorage.setItem('jurnalSidebar', c ? 'collapsed' : 'expanded'); }catch(e){}
+    sync();
+    // Grafik yang memakai ResizeObserver menggambar ulang sendiri; sinyal ini untuk yang lain.
+    setTimeout(()=>window.dispatchEvent(new Event('resize')), 260);
+  });
+  sync();
+})();
+
 // ---------- Modal konfirmasi & notifikasi ----------
 const NOTIFY_SESSION_KEY = 'jurnalNotifyPending';
 

@@ -3,12 +3,12 @@
 Riwayat per rilis/tema: `CHANGELOG.md`. Fitur & cara pakai: `README.md`. File ini hanya memuat status, arsitektur, jebakan bug, dan todo.
 
 ## Apa ini
-Dashboard trading journal single-file HTML untuk akun cent XAUUSD. Tab: Ringkasan, Analisis PNL, Performa, Laporan, Transaksi, Deposit, Kalkulator + Setelan (⚙). File utama: `index.html` + `style.css` + `app.js` + `sync.js` + `config.js` (v1.1.105).
+Dashboard trading journal single-file HTML untuk akun cent XAUUSD. Tab: Ringkasan, Analisis PNL, Performa, Laporan, Transaksi, Deposit, Kalkulator + Setelan (⚙); navigasi desktop ≥ 1100px berupa sidebar kiri yang bisa diciutkan (v1.1.109). File utama: `index.html` + `style.css` + `app.js` + `sync.js` + `config.js` (v1.1.105).
 
 ## Status (v1.1.102)
 - Data aktif ada di localStorage (`jurnalXauusdData_v1`), bukan di file. File baru kosong (`kurs` = 0, mode Rp tampil Rp 0) sampai JSON diimpor lewat Setelan.
 - JSON ekspor terbaru (441 transaksi, sudah berisi `waktu_buka`) siap diimpor manual. Angka ringkasan dihitung otomatis, tidak dicatat di sini.
-- Tab Laporan: Paket A/B/Optimalisasi, style cetak PDF, dan L1–L17 selesai (v1.1.78–1.1.101); tinggal L18. Tooltip kurva drawdown yang melebar keluar kartu sudah diperbaiki (v1.1.102); tooltip rolling & distribusi ditambahkan sekalian. Tidak ada bug fungsional terbuka; dua cek tampilan tooltip tercatat di Rawan bug.
+- Tab Laporan: Paket A/B/Optimalisasi, style cetak PDF, dan L1–L17 selesai (v1.1.78–1.1.101); L18 juga sudah selesai (tombol Ekspor CSV). Tooltip kurva drawdown yang melebar keluar kartu sudah diperbaiki (v1.1.102); tooltip rolling & distribusi ditambahkan sekalian. Tidak ada bug fungsional terbuka; dua cek tampilan tooltip tercatat di Rawan bug.
 
 ## Arsitektur singkat
 - Satu file `.html`; fallback data di `<script id="journal-data">`, data aktif di localStorage. Nominal internal dalam sen (¢); tampilan lewat `fmtMoney`, estimasi rupiah lewat `approxRp()`.
@@ -40,7 +40,7 @@ Dashboard trading journal single-file HTML untuk akun cent XAUUSD. Tab: Ringkasa
 
 ## Todo
 **Laporan (putaran 2)** — L1–L17 selesai (rincian di `CHANGELOG.md`, v1.1.85–1.1.100). Sisa:
-- [ ] L18. Ekspor ringkasan Laporan periode terpilih ke CSV (KPI, kelompok psikologi, sesi, heatmap) untuk analisis di luar aplikasi; nominal tetap ¢ seperti ekspor lain.
+- [x] L18 (sudah ada di kode: tombol "Ekspor CSV" di tab Laporan). Ekspor ringkasan Laporan periode terpilih ke CSV (KPI, kelompok psikologi, sesi, heatmap) untuk analisis di luar aplikasi; nominal tetap ¢ seperti ekspor lain.
 
 **Sisa catatan dari selesai:** distribusi pips (L14 hanya PNL); hover/tooltip grafik rolling (L12).
 
