@@ -6,8 +6,8 @@ Dashboard jurnal trading akun **cent XAUUSD**: satu folder datar (`index.html`, 
 
 ## Cara pakai
 1. Buka `index.html` di browser (dobel klik atau `file://`). Semua file harus tetap satu folder.
-2. File baru kosong (data bawaan sengaja kosong sejak v1.1.15, `kurs` = 0 sehingga mode Rp tampil Rp 0): gear (⚙) → **Setelan → Impor data** dengan JSON hasil ekspor.
-3. Cadangkan berkala lewat **Setelan → Ekspor data** (HTML atau JSON).
+2. File baru kosong (data bawaan sengaja kosong sejak v1.1.15): gear (⚙) → **Setelan → Impor data** dengan JSON hasil ekspor, lalu isi **Setelan → Kurs** bila `kurs` masih 0 (selama 0, mode Rp dan angka "≈ Rp" tampil Rp 0).
+3. Cadangkan berkala lewat **Setelan → Ekspor data** (HTML atau JSON) atau sinkron ke cloud. **Status cadangan** di sana menampilkan kapan terakhir dicadangkan; bila belum pernah, lebih dari 7 hari, atau ada perubahan sesudahnya, kartu pengingat muncul di Ringkasan (tombol **Ekspor JSON** / **Nanti**; Nanti berlaku selama sesi).
 
 ## Konsep dasar
 - **Akun cent:** 1 USD = 100¢. Nominal internal dalam sen; kurs rupiah di `DATA.kurs`.
@@ -26,11 +26,12 @@ Navigasi: layar ≥ 1100px memakai **sidebar kiri** yang bisa diciutkan (tombol 
 6. **Deposit:** log deposit, penarikan, kompensasi margin call; ringkasan modal bersih.
 
 **Setelan** (⚙), berurutan dari atas:
+- **Kurs:** Rupiah per 1 USD (validasi > 0), dipakai mode Rp dan semua angka "≈ Rp"; ikut ekspor JSON dan sinkron. Setelah disimpan tampilan dimuat ulang.
 - **Batas harian pribadi:** maks rugi & maks transaksi per hari.
 - **Buku transaksi:** ambang garis merah "rugi besar" (1–50%, kosong = nonaktif).
 - **Tampilan:** mode Gelap / Terang / Otomatis, 5 skema warna (Emas Klasik, Blue Ocean, Teal Green, Grafit Netral, Kontras Tinggi), warna aksen sendiri per mode (ditolak bila kontras rendah atau mirip warna untung/rugi), opsi untung biru / rugi oranye (ramah buta warna), dan tombol **Atur ulang tampilan**.
-- **Sinkron Supabase**, **ekspor HTML/JSON**, **impor JSON** (konfirmasi sebelum menimpa), dan **Reset ke Bawaan** (auto-backup JSON dulu).
-- **Tentang aplikasi** (paling bawah): **versi aplikasi** (mis. `v1.1.134`; satu-satunya tempat versi ditampilkan) dan tombol **Lihat riwayat** yang membuka jendela **Riwayat perubahan** berbahasa pengguna akhir (tanpa istilah teknis), dikelompokkan per tanggal dan diurutkan dari yang **terbaru**. Tutup lewat ✕, ketuk latar, atau Esc.
+- **Sinkron Supabase** (Masuk/Daftar, **Lupa password**, **Ganti password**), **Status cadangan**, **ekspor HTML/JSON** (HTML = satu berkas mandiri: gaya, kode, dan data di dalamnya; butuh dibuka lewat http/https saat mengekspor), **impor JSON** (konfirmasi sebelum menimpa), dan **Reset ke Bawaan** (auto-backup JSON dulu).
+- **Tentang aplikasi** (paling bawah): **versi aplikasi** (mis. `v1.1.135`; satu-satunya tempat versi ditampilkan) dan tombol **Lihat riwayat** yang membuka jendela **Riwayat perubahan** berbahasa pengguna akhir (tanpa istilah teknis), dikelompokkan per tanggal dan diurutkan dari yang **terbaru**. Tutup lewat ✕, ketuk latar, atau Esc.
 
 **Input manual:** tombol FAB (+) untuk Tambah Transaksi (arah, lot, harga, waktu, ID Posisi opsional, field psikologi), Deposit, atau Penarikan. Semua agregat dihitung ulang dari data mentah.
 
@@ -50,6 +51,8 @@ Navigasi: layar ≥ 1100px memakai **sidebar kiri** yang bisa diciutkan (tombol 
 | `jurnalDayLimits` | localStorage | Batas harian; tidak ikut ekspor JSON |
 | `jurnalHeroCurrency` | localStorage | Pilihan USD / USC / Rp |
 | `jurnalTheme` | localStorage | Mode tampilan: `dark`/`light`/`auto` |
+| `jurnalEqMode` | localStorage | Jenis kurva Ringkasan: `equity`/`pnl` |
+| `jurnalDateFmt` | localStorage | Format tanggal tabel: `teks`/`angka` |
 | `jurnalScheme` | localStorage | Skema warna (`emas`, `ocean`, `teal`, `grafit`, `kontras`) |
 | `jurnalAccent` | localStorage | Aksen custom per mode: `{d:[gold,gold-dim], l:[gold,gold-dim]}` (opsional) |
 | `jurnalCB` | localStorage | `1` = untung biru / rugi oranye (ramah buta warna) |
@@ -70,7 +73,8 @@ Navigasi: layar ≥ 1100px memakai **sidebar kiri** yang bisa diciutkan (tombol 
 ## Sinkron Supabase (v1.1.105)
 1. Jalankan `schema.sql` sekali di Supabase → SQL Editor. Aktifkan Auth email (Authentication → Providers).
 2. `config.js` berisi URL proyek dan kunci publishable. Jangan pernah memakai kunci service_role.
-3. Setelan (⚙) → Sinkron Supabase: Daftar/Masuk, lalu **Sinkronkan ke cloud** (cloud disamakan dengan browser) atau **Pulihkan dari cloud** (menimpa browser, cadangan JSON otomatis). Tanggal & jam sinkron/pemulihan terakhir tampil di bawah tiap tombol (waktu perangkat; disimpan di localStorage `jurnalSyncInfo`, per browser, tidak ikut ekspor JSON).
+3. Setelan (⚙) → Sinkron Supabase: Daftar/Masuk (email sudah terdaftar → pesan jelas), **Lupa password** (kirim tautan reset ke email; tautan membawa Anda kembali ke aplikasi dan langsung ke kolom password baru) atau **Ganti password** setelah masuk (password tidak disimpan di browser). Lalu **Sinkronkan ke cloud** (cloud disamakan dengan browser) atau **Pulihkan dari cloud** (menimpa browser, cadangan JSON otomatis). Tanggal & jam sinkron/pemulihan terakhir tampil di bawah tiap tombol (waktu perangkat; disimpan di localStorage `jurnalSyncInfo`, per browser, tidak ikut ekspor JSON).
+3b. Agar tautan reset password bisa kembali ke aplikasi: Supabase → Authentication → URL Configuration, tambahkan alamat aplikasi (mis. `https://…vercel.app/`) ke **Redirect URLs** (dan set **Site URL**). Tanpa itu, email reset mengarah ke alamat lain.
 4. Yang disinkron: transaksi, deposit/penarikan, kurs. `jurnalDayLimits` tetap lokal.
 5. `query-user-supabase.sql` (v1.1.116–117): kumpulan query admin untuk Supabase → SQL Editor — buat akun login (ganti email/password di placeholder), daftar user, ringkasan performa, cek anomali, cek RLS, reset password. Jalankan per blok.
 

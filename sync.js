@@ -1,6 +1,25 @@
 // Sinkron Supabase (v1.1.105). Dimuat SETELAH app.js: memakai DATA, saveActiveData,
 // rebuildEquitySeries, recomputeAll, showConfirmModal, showNotifyModal, queueNotifyAfterReload.
 (function(){
+  // supabase-js (v1.1.139) dimuat malas: hanya saat Setelan dibuka, ada sesi tersimpan, atau URL berisi token/kode
+  // (tautan reset password). Sebelumnya dimuat sinkron di <head> pada setiap pembukaan aplikasi.
+  const LIB = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js';
+  let started = false, loading = false;
+  function loadLib(){
+    if(started || loading) return;
+    if(window.supabase){ started = true; return syncMain(); }
+    loading = true;
+    const s = document.createElement('script');
+    s.src = LIB;
+    s.onload = () => { loading = false; started = true; syncMain(); };
+    s.onerror = () => { loading = false; syncMain(); };   // syncMain menampilkan pesan gagal muat; buka Setelan lagi untuk mencoba ulang
+    document.head.appendChild(s);
+  }
+  const needNow = () => { try{ return /access_token|type=recovery|[?&]code=/.test(location.hash + location.search) || Object.keys(localStorage).some(k => /^sb-.*-auth-token$/.test(k)); }catch(e){ return false; } };
+  document.querySelectorAll('#settingsGearBtn, [data-tab="setelan"]').forEach(b => b.addEventListener('click', loadLib));
+  if(needNow()) loadLib();
+
+  function syncMain(){
   const $ = id => document.getElementById(id);
   const cfg = window.SUPABASE_CONFIG || {};
   const noteEl = $('syncNote');
@@ -8,8 +27,9 @@
     noteEl.textContent = msg;
     noteEl.style.color = ok === true ? 'var(--gain)' : ok === false ? 'var(--loss)' : '';
   };
-  const btns = ['syncLoginBtn','syncSignupBtn','syncLogoutBtn','syncPushBtn','syncPullBtn'].map($);
+  const btns = ['syncLoginBtn','syncSignupBtn','syncLogoutBtn','syncPushBtn','syncPullBtn','syncForgotBtn','syncChangePassBtn'].map($);
   const setBusy = b => btns.forEach(x => { x.disabled = b; });
+  btns.forEach(x => { x.disabled = false; });   // awal bersih (bila percobaan muat sebelumnya gagal)
 
   if(!window.supabase){
     say('Library Supabase gagal dimuat. Cek koneksi internet lalu muat ulang.', false);
@@ -39,6 +59,7 @@
   function markSync(kind){
     try{ const i = readInfo(); i[kind] = new Date().toISOString(); localStorage.setItem(INFO_KEY, JSON.stringify(i)); }catch(e){}
     showLast();
+    window.dispatchEvent(new Event('jurnalBackupChanged')); // segarkan status cadangan di app.js
   }
   const chunks = (a, n) => { const o = []; for(let i = 0; i < a.length; i += n) o.push(a.slice(i, i + n)); return o; };
   const must = ({ error }) => { if(error) throw new Error(error.message); };
@@ -80,6 +101,7 @@
       if(kind === 'signup'){
         const { data, error } = await sb.auth.signUp({ email, password });
         if(error) throw new Error(error.message);
+        if(data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0){ say('Email ini sudah terdaftar. Tekan Masuk, atau pakai Lupa password bila lupa.', false); return; }
         if(!data.session){ say('Akun dibuat. Buka email untuk konfirmasi, lalu tekan Masuk.', true); return; }
       } else {
         const { error } = await sb.auth.signInWithPassword({ email, password });
@@ -163,11 +185,46 @@
     finally{ setBusy(false); }
   }
 
+  async function forgot(){
+    const email = $('syncEmail').value.trim();
+    if(!/^\S+@\S+\.\S+$/.test(email)){ say('Isi email akun Anda dulu di kolom email di atas.', false); return; }
+    if(!/^https?:$/.test(location.protocol)){ say('Reset password butuh aplikasi dibuka lewat alamat web (http/https), bukan berkas lokal.', false); return; }
+    setBusy(true); say('Mengirim tautan…');
+    try{
+      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+      if(error) throw new Error(error.message);
+      say('Jika email itu terdaftar, tautan reset sudah dikirim. Buka email Anda (cek juga folder spam), ikuti tautannya, lalu Anda kembali ke sini untuk mengisi password baru.', true);
+    }catch(e){ say('Gagal: ' + e.message, false); }
+    finally{ setBusy(false); }
+  }
+  async function changePass(){
+    const p1 = $('syncNewPass').value, p2 = $('syncNewPass2').value;
+    if(p1.length < 6){ say('Password baru minimal 6 karakter.', false); return; }
+    if(p1 !== p2){ say('Ulangi password baru dengan sama persis.', false); return; }
+    setBusy(true); say('Menyimpan password…');
+    try{
+      const { error } = await sb.auth.updateUser({ password: p1 });
+      if(error) throw new Error(error.message);
+      $('syncNewPass').value = ''; $('syncNewPass2').value = '';
+      say('Password berhasil diganti. Pakai password baru saat masuk berikutnya.', true);
+    }catch(e){ say('Gagal ganti password: ' + e.message, false); }
+    finally{ setBusy(false); }
+  }
+  // Setelah membuka tautan reset dari email, supabase-js memicu PASSWORD_RECOVERY dengan sesi sementara: arahkan ke form ganti password.
+  function recoveryMode(){
+    const gear = document.getElementById('settingsGearBtn'); if(gear) gear.click();
+    say('Tautan reset diterima. Isi password baru di bawah, lalu tekan Simpan password.', true);
+    setTimeout(() => { const r = $('syncPassRow'); if(r && r.scrollIntoView) r.scrollIntoView({ block: 'center' }); $('syncNewPass').focus(); }, 350);
+  }
+
   $('syncLoginBtn').addEventListener('click', () => auth('login'));
+  $('syncForgotBtn').addEventListener('click', forgot);
+  $('syncChangePassBtn').addEventListener('click', changePass);
   $('syncSignupBtn').addEventListener('click', () => auth('signup'));
   $('syncLogoutBtn').addEventListener('click', async () => { await sb.auth.signOut(); say(''); });
   $('syncPushBtn').addEventListener('click', push);
   $('syncPullBtn').addEventListener('click', pull);
-  sb.auth.onAuthStateChange((_e, s) => { session = s; render(); });
+  sb.auth.onAuthStateChange((ev, s) => { session = s; render(); if(ev === 'PASSWORD_RECOVERY') recoveryMode(); });
   sb.auth.getSession().then(({ data }) => { session = data.session; render(); });
+  }
 })();
