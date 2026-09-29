@@ -2,7 +2,7 @@
 
 **Live:** https://trade-jurnal-eight.vercel.app/
 
-Dashboard jurnal trading akun **cent XAUUSD**: satu folder datar (`index.html`, `style.css`, `app.js`, `sync.js`, `config.js`), tanpa build tool. Sinkron opsional ke Supabase. Data tersimpan di **localStorage** browser. Satu-satunya sumber daya eksternal adalah Google Fonts (Fraunces, IBM Plex Mono); saat offline tampilan memakai font cadangan.
+Dashboard jurnal trading akun **cent XAUUSD**: satu folder datar (`index.html`, `style.css`, `app.js`, `sync.js`, `config.js`), tanpa build tool. Sinkron opsional ke Supabase. Data tersimpan di **localStorage** browser. Sumber daya eksternal: Google Fonts (Fraunces, IBM Plex Mono; dimuat tanpa menahan tampilan, font cadangan saat offline) dan supabase-js `@2.45.4` dari jsDelivr untuk sinkron. Service worker menampilkan aplikasi dari cache lebih dulu lalu memperbaruinya di latar; versi baru terbaca saat aplikasi dibuka lagi.
 
 ## Cara pakai
 1. Buka `index.html` di browser (dobel klik atau `file://`). Semua file harus tetap satu folder.
@@ -18,14 +18,19 @@ Dashboard jurnal trading akun **cent XAUUSD**: satu folder datar (`index.html`, 
 ## Tab
 Navigasi: layar ≥ 1100px memakai **sidebar kiri** yang bisa diciutkan (tombol bulat melayang di tepi sidebar); 721–1099px tab horizontal di atas; ≤ 720px bottom nav.
 
-1. **Ringkasan:** kartu hero (saldo, PNL Kumulatif/Hari Ini/7H/30H, status batas harian di bawah PNL Hari Ini bila batas diisi di Setelan, tombol 👁 untuk menyembunyikan angka), pemilih periode (default All Time), kurva ekuitas dengan lencana **DD saat ini** (dari puncak, basis All Time) dan garis **puncak berjalan** putus-putus, stat strip (Transaksi, Win Rate, Laba/Rugi, PF, Max DD, Expectancy), serta kartu **ajakan catatan psikologi** (jumlah transaksi belum dicatat + tombol "Isi sekarang" yang membuka alur "Simpan & lanjut", tersembunyi bila semua sudah dicatat).
+1. **Ringkasan:** kartu hero (saldo, PNL Kumulatif/Hari Ini/7H/30H, status batas harian di bawah PNL Hari Ini bila batas diisi di Setelan, tombol 👁 untuk menyembunyikan angka), chip periode 7H · 1B · 3B · 1T · All · Sesuaikan (default All; berdiri sendiri per tab), kurva ekuitas (sumbu Y berkelipatan bulat + satuan + garis nol, isian antara kurva dan modal, pita tipis drawdown terbesar di dasar, tooltip di atas plot yang hilang sendiri di layar sentuh, legenda 2 kolom yang bisa diketuk untuk sembunyikan modal/puncak atau sorot drawdown) dengan lencana **DD saat ini** (dari puncak, basis All Time) dan garis **puncak berjalan** putus-putus, stat strip (Transaksi, Win Rate, Laba/Rugi, PF, Max DD, Expectancy), serta kartu **ajakan catatan psikologi** (jumlah transaksi belum dicatat + tombol "Isi sekarang" yang membuka alur "Simpan & lanjut", tersembunyi bila semua sudah dicatat).
 2. **Analisis PNL:** statistik rentang bergulir (7H–1T/Sesuaikan) dan kalender PNL Harian (klik tanggal untuk detail).
 3. **Performa:** bulanan & mingguan, rekor menang/rugi terbesar, donut Split arah Beli vs Jual.
 4. **Laporan:** lihat bagian berikut.
-5. **Transaksi:** buku transaksi (cari ID posisi atau isi catatan bebas; filter Arah/Hasil/Catatan psikologi/Emosi/Trigger/Jenis entry/Sesi/tanggal/lot, chip cepat Hari Ini/Minggu Ini/7 Hari/30 Hari/Bulan Ini/Bulan Lalu, kolom Waktu buka & Durasi, tombol Pilih untuk isi massal emosi/trigger/jenis entry, ringkasan hasil filter, tombol Batalkan hapus (30 menit); ekspor dan **impor CSV** — impor hanya menambah transaksi baru, ID yang sudah ada dilewati, ada konfirmasi dulu). Klik baris untuk detail (lihat, edit, hapus); "Simpan & lanjut" mengisi catatan psikologi berurutan. Tombol **Kalkulator lot** (di baris judul, kanan) membuka modal kalkulator money management: risiko per trade (%), stop loss (pips), R:R → lot & target sesuai saldo terkini (tutup lewat Tutup, ketuk latar, atau Esc).
+5. **Transaksi:** buku transaksi (cari ID posisi atau isi catatan bebas; filter Arah/Hasil/Catatan psikologi/Emosi/Trigger/Jenis entry/Sesi/tanggal/lot, chip cepat Hari Ini/Minggu Ini/7 Hari/30 Hari/Bulan Ini/Bulan Lalu, kolom Waktu buka & Durasi, tombol Pilih untuk isi massal emosi/trigger/jenis entry, ringkasan hasil filter, tombol Batalkan hapus (30 menit); ekspor dan **impor CSV** — impor hanya menambah transaksi baru, ID yang sudah ada dilewati, ada konfirmasi dulu). Klik baris untuk detail (lihat, edit, hapus; tombol ‹ › pindah ke transaksi sebelumnya/berikutnya); di layar < 720px daftar tampil sebagai kartu ringkas dengan menu Urutkan sendiri; tiap transaksi bisa diberi **catatan bebas** (ikon ✎ di sel ID, ikut dicari dan diekspor CSV); "Simpan & lanjut" mengisi catatan psikologi berurutan. Tombol **Kalkulator lot** (di baris judul, kanan) membuka modal kalkulator money management: risiko per trade (%), stop loss (pips), R:R → lot & target sesuai saldo terkini (tutup lewat Tutup, ketuk latar, atau Esc).
 6. **Deposit:** log deposit, penarikan, kompensasi margin call; ringkasan modal bersih.
 
-**Setelan** (⚙): batas harian pribadi (maks rugi & maks transaksi per hari), sinkron Supabase, ekspor HTML/JSON, impor JSON (konfirmasi sebelum menimpa), Reset ke Bawaan (auto-backup JSON dulu), dan **Tentang aplikasi**: versi aplikasi serta tombol **Lihat riwayat** untuk membuka daftar perubahan berbahasa awam, diurutkan dari tanggal terbaru.
+**Setelan** (⚙), berurutan dari atas:
+- **Batas harian pribadi:** maks rugi & maks transaksi per hari.
+- **Buku transaksi:** ambang garis merah "rugi besar" (1–50%, kosong = nonaktif).
+- **Tampilan:** mode Gelap / Terang / Otomatis, 5 skema warna (Emas Klasik, Blue Ocean, Teal Green, Grafit Netral, Kontras Tinggi), warna aksen sendiri per mode (ditolak bila kontras rendah atau mirip warna untung/rugi), opsi untung biru / rugi oranye (ramah buta warna), dan tombol **Atur ulang tampilan**.
+- **Sinkron Supabase**, **ekspor HTML/JSON**, **impor JSON** (konfirmasi sebelum menimpa), dan **Reset ke Bawaan** (auto-backup JSON dulu).
+- **Tentang aplikasi** (paling bawah): **versi aplikasi** (mis. `v1.1.134`; satu-satunya tempat versi ditampilkan) dan tombol **Lihat riwayat** yang membuka jendela **Riwayat perubahan** berbahasa pengguna akhir (tanpa istilah teknis), dikelompokkan per tanggal dan diurutkan dari yang **terbaru**. Tutup lewat ✕, ketuk latar, atau Esc.
 
 **Input manual:** tombol FAB (+) untuk Tambah Transaksi (arah, lot, harga, waktu, ID Posisi opsional, field psikologi), Deposit, atau Penarikan. Semua agregat dihitung ulang dari data mentah.
 
@@ -44,17 +49,23 @@ Navigasi: layar ≥ 1100px memakai **sidebar kiri** yang bisa diciutkan (tombol 
 | `jurnalXauusdData_v1` | localStorage | Data aktif (transaksi, deposit, agregat) |
 | `jurnalDayLimits` | localStorage | Batas harian; tidak ikut ekspor JSON |
 | `jurnalHeroCurrency` | localStorage | Pilihan USD / USC / Rp |
-| `jurnalTheme` | localStorage | Tema terang/gelap |
+| `jurnalTheme` | localStorage | Mode tampilan: `dark`/`light`/`auto` |
+| `jurnalScheme` | localStorage | Skema warna (`emas`, `ocean`, `teal`, `grafit`, `kontras`) |
+| `jurnalAccent` | localStorage | Aksen custom per mode: `{d:[gold,gold-dim], l:[gold,gold-dim]}` (opsional) |
+| `jurnalCB` | localStorage | `1` = untung biru / rugi oranye (ramah buta warna) |
 | `jurnalTzOffset` | localStorage | Zona waktu tampilan |
 | `jurnalSidebar` | localStorage | Sidebar desktop: `collapsed` / `expanded` |
-| `jurnalPendingTab`, `jurnalFillOpen` | sessionStorage | Tab tujuan setelah muat ulang; antrean "Simpan & lanjut" |
+| `jurnalBigLossPct` | localStorage | Ambang garis merah rugi besar di Transaksi (%); tidak ikut ekspor |
+| `jurnalUndoDelete` | localStorage | Transaksi yang baru dihapus untuk "Batalkan hapus" (30 menit); tidak ikut sinkron/ekspor |
+| `jurnalSyncInfo` | localStorage | Waktu sinkron/pemulihan terakhir per browser |
+| `jurnalPendingTab`, `jurnalFillOpen`, `jurnalLedgerState` | sessionStorage | Tab tujuan setelah muat ulang; antrean "Simpan & lanjut"; filter, urutan, dan gulir buku transaksi |
 
 ## Arsitektur singkat
-- Satu file `.html`, CSS & JS inline. Data bawaan di `<script id="journal-data">`, data aktif di localStorage.
+- Folder datar tanpa build: `index.html` (markup), `style.css`, `app.js` (seluruh logika, termasuk `APP_VERSION` dan `USER_CHANGELOG`), `sync.js` (Supabase), `config.js`, `pwa.js`, `sw.js`. Data bawaan di `<script id="journal-data">`, data aktif di localStorage.
 - Kurva SVG digambar manual (monotone cubic Hermite); dropdown, date-time picker, dan filter memakai komponen kustom yang bisa dioperasikan keyboard.
 
 ## File terkait
-`CHANGELOG.md` (riwayat teknis per rilis), `SUMMARY.md` (status, jebakan bug, todo), `schema.sql` (skema Supabase), `migrasi-catatan.sql` (tambah kolom `catatan`; jalankan sekali bila proyek Supabase dibuat sebelum v1.1.129), `query-user-supabase.sql` (query admin Supabase). Riwayat versi untuk pengguna ada di aplikasi (`USER_CHANGELOG` di `app.js`).
+`CHANGELOG.md` (riwayat teknis per rilis), `SUMMARY.md` (status, jebakan bug, todo), `schema.sql` (skema Supabase), `migrasi-catatan.sql` (tambah kolom `catatan`; jalankan sekali bila proyek Supabase dibuat sebelum v1.1.129), `query-user-supabase.sql` (query admin Supabase). Riwayat versi untuk pengguna ada di aplikasi (Setelan → Tentang aplikasi → Lihat riwayat; datanya `USER_CHANGELOG` di `app.js`).
 
 ## Sinkron Supabase (v1.1.105)
 1. Jalankan `schema.sql` sekali di Supabase → SQL Editor. Aktifkan Auth email (Authentication → Providers).
@@ -67,4 +78,7 @@ Navigasi: layar ≥ 1100px memakai **sidebar kiri** yang bisa diciutkan (tombol 
 Butuh alamat https (Vercel sudah otomatis). Android: Chrome → menu ⋮ → **Instal aplikasi**. iOS: Safari → Bagikan → **Tambah ke Layar Utama**. Data aplikasi terpasang terpisah dari browser; masuk lalu **Ambil dari awan**. Naikkan `CACHE` di `sw.js` bila ingin memaksa cache lama dibuang.
 
 ## Alur rilis
-Naikkan `APP_VERSION` (`app.js`) dan `CACHE` (`sw.js`), tambah entri `USER_CHANGELOG` (`app.js`, bahasa pengguna) dan `CHANGELOG.md` (teknis), lalu perbarui `README.md`/`SUMMARY.md` bila fitur atau status berubah.
+1. Naikkan `APP_VERSION` (`app.js`) dan `CACHE` (`sw.js`) ke nomor yang sama.
+2. Tambah butir di `USER_CHANGELOG` (`app.js`): tanggal ISO `YYYY-MM-DD`, bahasa pengguna akhir tanpa istilah teknis atau nomor versi; tanggal yang sama digabung ke entri itu. Urutan array bebas, tampilan diurutkan otomatis dari tanggal terbaru.
+3. Tambah entri teknis di `CHANGELOG.md`.
+4. Perbarui `README.md`/`SUMMARY.md` bila fitur atau status berubah. Perubahan dokumen saja tidak menaikkan versi.

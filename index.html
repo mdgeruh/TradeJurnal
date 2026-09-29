@@ -11,7 +11,9 @@
 var C={emas:'#1B1712',ocean:'#071B33',teal:'#0B1B1C',grafit:'#121212',kontras:'#0A0A0A'};if(!C[sc])sc='emas';var LC={emas:'#F3EDE0',ocean:'#EEF5FB',teal:'#EDF6F5',grafit:'#F4F4F4',kontras:'#FFFFFF'};
 var light=mode==='light'||(mode==='auto'&&window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches);
 if(sc!=='emas')d.setAttribute('data-scheme',sc);if(light)d.setAttribute('data-theme','light');
-var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',light?LC[sc]:C[sc]);}catch(e){}})();
+var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',light?LC[sc]:C[sc]);
+if(localStorage.getItem('jurnalCB')==='1')d.setAttribute('data-cb','1');
+var ac=JSON.parse(localStorage.getItem('jurnalAccent')||'null'),a=ac&&ac[light?'l':'d'];if(a&&a.length===2){d.style.setProperty('--gold',a[0]);d.style.setProperty('--gold-dim',a[1]);}}catch(e){}})();
 </script>
 <script>
 // Status sidebar desktop (v1.1.109): diterapkan sebelum render pertama supaya tidak melompat. Tanpa pilihan tersimpan: layar < 1280px mulai ciut.
@@ -26,7 +28,8 @@ var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('co
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <title>Jurnal XAUUSD — Buku Trading</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -101,13 +104,7 @@ var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('co
       <h2>Kurva ekuitas</h2>
       <div class="section-note">Saldo berjalan dari transaksi pertama hingga saat ini, sudah termasuk deposit &amp; penarikan.</div>
     </div>
-    <div class="custom-select" id="periodSelectWrap">
-      <button type="button" class="custom-select-btn" id="periodSelectBtn" aria-haspopup="listbox" aria-expanded="false" aria-label="Pilih periode kurva ekuitas">
-        <span id="periodSelectLabel">Pilih periode</span>
-        <span class="custom-select-arrow" aria-hidden="true"></span>
-      </button>
-      <ul class="custom-select-list" id="periodSelectList" role="listbox" tabindex="-1" aria-label="Pilih periode"></ul>
-    </div>
+    <div class="lap-gran-tabs" id="periodChips" role="tablist" aria-label="Periode kurva ekuitas"></div>
     <div class="custom-range" id="customRange">
       <div class="cr-field"><label>Dari</label><div class="dt-picker" id="dtp_customFrom" aria-label="Dari tanggal"></div></div>
       <span class="sep">–</span>
@@ -232,6 +229,7 @@ var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('co
     <div class="undo-bar" id="undoDeleteBar" style="display:none;"><span id="undoDeleteText"></span><button type="button" class="ledger-reset-btn" id="undoDeleteBtn">Batalkan hapus</button><button type="button" class="ledger-reset-btn" id="undoDeleteX" aria-label="Tutup">✕</button></div>
     <div class="ledger-quick-range">
       <span class="qr-lbl">Cepat:</span>
+      <button type="button" class="quick-chip" id="quickAll" data-range="all">All</button>
       <button type="button" class="quick-chip" id="quickToday" data-range="today">Hari Ini</button>
       <button type="button" class="quick-chip" id="quickWeek" data-range="week">Minggu Ini</button>
       <button type="button" class="quick-chip" id="quick7d" data-range="7">7 Hari</button>
@@ -421,7 +419,7 @@ var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('co
   <section>
     <div class="section-head">
       <h2>Analisis PNL</h2>
-      <div class="section-note">Statistik rentang waktu bergulir dari hari ini (GMT+8) — terpisah dari periode di tab Ringkasan &amp; Laporan.</div>
+      <div class="section-note">Statistik rentang waktu bergulir dari hari ini (GMT+8), atau seluruh riwayat (All) — terpisah dari periode di tab Ringkasan &amp; Laporan.</div>
     </div>
     <div class="lap-gran-tabs" id="anGranTabs" role="tablist" aria-label="Rentang periode analisis"></div>
     <div class="custom-range" id="anCustomRange">
@@ -462,7 +460,7 @@ var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('co
   <section>
     <div class="section-head">
       <h2>Tampilan</h2>
-      <div class="section-note">Pilih mode dan skema warna. Skema berlaku di mode gelap; mode terang memakai Kertas Hangat. Tersimpan di browser ini, tidak ikut ekspor JSON.</div>
+      <div class="section-note">Pilih mode, skema warna, warna aksen, dan pasangan warna untung/rugi. Tersimpan di browser ini, tidak ikut ekspor JSON; cetak Laporan tetap memakai tema terang.</div>
     </div>
     <div class="settings-row">
       <div class="settings-desc"><strong>Mode</strong><span>Otomatis mengikuti pengaturan perangkat.</span></div>
@@ -473,6 +471,22 @@ var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('co
       </div>
     </div>
     <div class="scheme-grid" id="schemeGrid" role="group" aria-label="Skema warna"></div>
+    <div class="settings-row">
+      <div class="settings-desc"><strong>Warna aksen</strong><span id="accentHint">Menimpa warna utama skema (tombol utama, tab aktif, garis kurva) untuk mode yang sedang dipakai. Ditolak bila kontras terhadap latar &lt; 4,5:1.</span></div>
+      <div class="accent-ctl"><input type="color" id="accentInput" aria-label="Warna aksen" value="#c9a24b"><button type="button" class="quick-chip" id="accentReset">Bawaan skema</button></div>
+    </div>
+    <div class="section-note accent-msg" id="accentMsg" role="status" aria-live="polite"></div>
+    <div class="settings-row">
+      <div class="settings-desc"><strong>Warna untung/rugi</strong><span>Biru/oranye untuk yang sulit membedakan hijau–merah. Tidak terpengaruh warna aksen.</span></div>
+      <div class="theme-modes" id="cbModes" role="group" aria-label="Warna untung dan rugi">
+        <button type="button" class="quick-chip" data-cb="0">Bawaan skema</button>
+        <button type="button" class="quick-chip" data-cb="1">Biru / oranye</button>
+      </div>
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc"><strong>Kembali ke bawaan</strong><span>Mode Gelap, skema Emas Klasik, tanpa aksen custom dan tanpa mode buta warna.</span></div>
+      <button type="button" class="quick-chip" id="themeResetBtn">Atur ulang tampilan</button>
+    </div>
   </section>
 
   <section>
@@ -863,7 +877,7 @@ var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('co
 
 <script id="journal-data" type="application/json">{"summary": {"total": 0, "win": 0, "loss": 0, "winrate": 0, "pl_cent": 0, "pl_rp": 0, "saldo_akhir": 0, "pct_pl": null}, "periods": [], "kurs": 0, "dashboard": {"update": "Update terakhir: -", "saldo": 0, "stats": {"total": 0, "winrate": 0, "pf": 0, "maxdd": 0, "expectancy": 0}, "top_win": [], "top_loss": [], "mm": {"equity": 0, "risk": 0.01, "sl": 150, "pipval": 10, "lot": 0, "tp_pips": 0, "tp_cent": 0}}, "maxdd_note": "", "equity": [], "months": [], "weeks": [], "trades": [], "deposit": {"total_deposit": 0, "total_penarikan": 0, "total_mc": 0, "modal_bersih": 0, "log": []}, "period_ranges": [], "modal_kumulatif": []}</script>
 <script src="config.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="app.js"></script>
 <script src="sync.js"></script>
 <script src="pwa.js"></script>

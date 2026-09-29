@@ -102,6 +102,26 @@ function computeLivePeriods(ranges){
     };
   });
 }
+// ---------- Chip periode bersama (Ringkasan, Analisis PNL): 7H · 1B · 3B · 1T · All · Sesuaikan ----------
+// Satu sumber label/arti: 7/30/90/365 hari bergulir sampai akhir hari ini (GMT+8); All = seluruh riwayat.
+const PERIOD_PRESETS = [
+  {key:'7h', label:'7H', days:7, long:'7 hari terakhir'},
+  {key:'1b', label:'1B', days:30, long:'30 hari terakhir'},
+  {key:'3b', label:'3B', days:90, long:'90 hari terakhir'},
+  {key:'1t', label:'1T', days:365, long:'365 hari terakhir'},
+  {key:'all', label:'All', long:'All Time'},
+  {key:'custom', label:'Sesuaikan', long:'Kustom'}
+];
+function buildPeriodChips(el, opts){
+  const { items, active, onSelect } = opts;
+  el.innerHTML = items.map(r=>`<button type="button" class="lap-gran-btn${r.key===active?' active':''}" role="tab" aria-selected="${r.key===active}" data-key="${r.key}">${r.label}</button>`).join('');
+  el.querySelectorAll('.lap-gran-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      el.querySelectorAll('.lap-gran-btn').forEach(b=>{ const on = b===btn; b.classList.toggle('active', on); b.setAttribute('aria-selected', String(on)); });
+      onSelect(btn.dataset.key);
+    });
+  });
+}
 const LIVE_RANGES = buildLiveRanges();
 const LIVE_PERIODS = computeLivePeriods(LIVE_RANGES);
 
@@ -391,81 +411,9 @@ renderHeroMoney();
   });
 })();
 
-// ---------- Period dropdown (kustom, bukan <select> bawaan browser) ----------
-const periodSelectWrap = document.getElementById('periodSelectWrap');
-const periodSelectBtn = document.getElementById('periodSelectBtn');
-const periodSelectLabel = document.getElementById('periodSelectLabel');
-const periodSelectList = document.getElementById('periodSelectList');
+// ---------- Periode Ringkasan: chip bulat (v1.1.134), default All ----------
 let currentPeriodRange = null;
-
-function setPeriodSelectValue(value, label){
-  if(label !== undefined) periodSelectLabel.textContent = label;
-  periodSelectList.querySelectorAll('li').forEach(li=>{
-    const isActive = li.dataset.value === value;
-    li.classList.toggle('active', isActive);
-    li.setAttribute('aria-selected', String(isActive));
-  });
-}
-function openPeriodSelect(focusIdx){
-  document.querySelectorAll('.custom-select.open, .dt-picker.open').forEach(el=>{ if(el!==periodSelectWrap) el.classList.remove('open'); });
-  periodSelectWrap.classList.add('open');
-  periodSelectBtn.setAttribute('aria-expanded','true');
-  const li = [...periodSelectList.querySelectorAll('li')];
-  if(li.length){
-    const idx = focusIdx==null ? Math.max(0, li.findIndex(x=>x.classList.contains('active'))) : focusIdx;
-    (li[idx]||li[0]).focus();
-  }
-}
-function closePeriodSelect(returnFocus){
-  periodSelectWrap.classList.remove('open');
-  periodSelectBtn.setAttribute('aria-expanded','false');
-  if(returnFocus) periodSelectBtn.focus();
-}
-function buildPeriodOption(value, label){
-  const li = document.createElement('li');
-  li.setAttribute('role','option');
-  li.setAttribute('tabindex','-1');
-  li.dataset.value = value;
-  li.textContent = label;
-  li.addEventListener('click', ()=>{
-    closePeriodSelect(false);
-    if(value === 'custom') selectCustom();
-    else selectPeriod(Number(value));
-  });
-  return li;
-}
-LIVE_PERIODS.forEach((p,i)=>{
-  if(i===0) return; // "Hari Ini" sudah ditampilkan di ringkasan PNL di atas saldo
-  periodSelectList.appendChild(buildPeriodOption(String(i), p.label));
-});
-periodSelectList.appendChild(buildPeriodOption('custom', 'Kustom…'));
-periodSelectBtn.addEventListener('click', (e)=>{
-  e.stopPropagation();
-  if(periodSelectWrap.classList.contains('open')) closePeriodSelect(false);
-  else openPeriodSelect();
-});
-periodSelectBtn.addEventListener('keydown', (e)=>{
-  if((e.key==='ArrowDown' || e.key==='ArrowUp') && !periodSelectWrap.classList.contains('open')){
-    e.preventDefault(); openPeriodSelect(e.key==='ArrowDown' ? 0 : undefined);
-  }
-});
-periodSelectList.addEventListener('keydown', (e)=>{
-  const li = [...periodSelectList.querySelectorAll('li')];
-  const cur = li.indexOf(document.activeElement);
-  if(e.key==='ArrowDown'){ e.preventDefault(); (li[Math.min(cur+1, li.length-1)]||li[0]).focus(); }
-  else if(e.key==='ArrowUp'){ e.preventDefault(); (li[Math.max(cur-1, 0)]||li[0]).focus(); }
-  else if(e.key==='Home'){ e.preventDefault(); li[0] && li[0].focus(); }
-  else if(e.key==='End'){ e.preventDefault(); li[li.length-1] && li[li.length-1].focus(); }
-  else if(e.key==='Enter' || e.key===' '){ e.preventDefault(); li[cur] && li[cur].click(); }
-  else if(e.key==='Tab'){ closePeriodSelect(false); }
-});
-document.addEventListener('click', (e)=>{
-  if(!periodSelectWrap.contains(e.target)) closePeriodSelect(false);
-});
-document.addEventListener('keydown', (e)=>{
-  if(e.key === 'Escape' && periodSelectWrap.classList.contains('open')) closePeriodSelect(true);
-});
-
+buildPeriodChips(document.getElementById('periodChips'), { items: PERIOD_PRESETS, active: 'all', onSelect: k=> selectPeriodKey(k) });
 const customRangeEl = document.getElementById('customRange');
 const customNote = document.getElementById('customNote');
 
@@ -505,13 +453,13 @@ function computePeriodStats(matched){
 // PF, Max DD, Expectancy — sebelumnya Transaksi & Win rate juga tampil terpisah di kartu
 // period-detail di atas kurva ekuitas, jadi dobel dengan kartu ini.
 function renderStatStrip(st){
-  const pfTxt = st.total===0 ? '—' : (st.pf===Infinity ? '∞' : st.pf.toFixed(2)+'x');
+  const pfTxt = st.total===0 ? '—' : (st.pf===Infinity ? '∞' : st.pf.toFixed(2).replace('.',',')+'x');
   document.getElementById('statStrip').innerHTML = `
     <div class="stat"><div class="stat-lbl">Transaksi</div><div class="stat-val">${st.total}</div></div>
     <div class="stat"><div class="stat-lbl">Win rate</div><div class="stat-val">${st.total? fmtPct(st.winrate) : '—'}</div></div>
     <div class="stat"><div class="stat-lbl">Laba/Rugi</div><div class="stat-val ${st.pl>=0?'up':'down'}">${st.pl>=0?'+':''}${fmtMoney(st.pl)}</div>${approxRp(st.pl)}</div>
     <div class="stat"><div class="stat-lbl">PF</div><div class="stat-val">${pfTxt}</div></div>
-    <div class="stat"><div class="stat-lbl">Max DD</div><div class="stat-val ${st.maxdd>0?'down':''}">-${fmtMoney(st.maxdd)}</div></div>
+    <div class="stat"><div class="stat-lbl" title="Berbasis PNL (tanpa deposit/penarikan); beda dasar hitung dengan Drawdown ekuitas di kurva">Max DD (PNL)</div><div class="stat-val ${st.maxdd>0?'down':''}">-${fmtMoney(st.maxdd)}</div></div>
     <div class="stat"><div class="stat-lbl">Expectancy</div><div class="stat-val ${st.expectancy>=0?'up':'down'}">${st.expectancy>=0?'+':''}${fmtMoney(st.expectancy)}</div></div>
   `;
 }
@@ -569,7 +517,7 @@ function renderLaporan(matched, label, prev){
   const st = computePeriodStats(matched || []);
   const stripEl = document.getElementById('laporanStatStrip');
   if(stripEl){
-    const pfTxt = st.total===0 ? '—' : (st.pf===Infinity ? '∞' : st.pf.toFixed(2)+'x');
+    const pfTxt = st.total===0 ? '—' : (st.pf===Infinity ? '∞' : st.pf.toFixed(2).replace('.',',')+'x');
     const pv = prev || null;
     const ppFmt = v=> fmtPct(v).replace('%',' pp');
     const rrTxt = st.rr>0 ? st.rr.toFixed(2).replace('.',',') : '—';
@@ -578,7 +526,7 @@ function renderLaporan(matched, label, prev){
       kpiEl.innerHTML = `
         <div class="stat"><div class="stat-lbl">Laba bersih</div><div class="stat-val ${st.pl>=0?'up':'down'}">${st.total? (st.pl>=0?'+':'')+fmtMoney(st.pl) : '—'}</div>${st.total? approxRp(st.pl) : ''}${pv? deltaTag(st.pl, pv.pl, fmtMoney) : ''}</div>
         <div class="stat"><div class="stat-lbl">Win rate</div><div class="stat-val">${st.total? fmtPct(st.winrate) : '—'}</div>${pv? deltaTag(st.winrate, pv.winrate, ppFmt) : ''}</div>
-        <div class="stat"><div class="stat-lbl">PF</div><div class="stat-val">${pfTxt}</div>${pv? deltaTag(st.pf, pv.pf, v=>v.toFixed(2)+'x') : ''}</div>
+        <div class="stat"><div class="stat-lbl">PF</div><div class="stat-val">${pfTxt}</div>${pv? deltaTag(st.pf, pv.pf, v=>v.toFixed(2).replace('.',',')+'x') : ''}</div>
         <div class="stat"><div class="stat-lbl">Max DD</div><div class="stat-val ${st.maxdd>0?'down':''}">${st.maxdd>0?'-':''}${fmtMoney(st.maxdd)}</div>${approxRp(-st.maxdd)}<span class="approx-rp" id="lapKpiDDPct"></span>${pv? deltaTag(st.maxdd, pv.maxdd, fmtMoney, true) : ''}</div>`;
       let noteEl = document.getElementById('laporanDeltaNote');
       if(!noteEl){ noteEl = document.createElement('div'); noteEl.id = 'laporanDeltaNote'; noteEl.className = 'lap-delta-note'; kpiEl.insertAdjacentElement('afterend', noteEl); }
@@ -1444,8 +1392,10 @@ const ChartHover = (function(){
   function attach(cfg){
     const { svg, hoverArea, W, H, resolveIndex, posX, dots = [], hoverLine, tooltip,
             enableClick = false, outsideHideContainer = null, touchPreventDefault = false,
-            fitBox, onShow, onHide } = cfg;
+            fitBox, onShow, onHide, autoHideMs = 0 } = cfg;
+    let hideTimer = null;
     function showAt(clientX){
+      if(autoHideMs && window.matchMedia && matchMedia('(hover: none)').matches){ clearTimeout(hideTimer); hideTimer = setTimeout(hide, autoHideMs); }
       const rect = svg.getBoundingClientRect();
       const px = (clientX - rect.left) / rect.width * W;
       const i = resolveIndex(px);
@@ -1463,6 +1413,7 @@ const ChartHover = (function(){
       if(onShow) onShow(i);
     }
     function hide(){
+      clearTimeout(hideTimer);
       if(hoverLine) hoverLine.el.style.opacity = 0;
       dots.forEach(d=> d.el.style.opacity = 0);
       if(tooltip) tooltip.el.style.opacity = 0;
@@ -1918,7 +1869,6 @@ window.addEventListener('afterprint', ()=>{
 });
 
 function selectCustom(){
-  setPeriodSelectValue('custom', 'Kustom…');
   customRangeEl.classList.add('open');
   applyCustomRange();
 }
@@ -1941,18 +1891,25 @@ function applyCustomRange(){
 }
 
 
-function selectPeriod(i){
+function selectPeriodKey(key){
+  if(key === 'custom'){ selectCustom(); return; }
   customRangeEl.classList.remove('open');
-  setPeriodSelectValue(String(i), LIVE_PERIODS[i].label);
-  const p = LIVE_PERIODS[i];
-  currentPeriodRange = LIVE_RANGES[i];
+  const preset = PERIOD_PRESETS.find(p=>p.key===key) || PERIOD_PRESETS[4];
+  let range;
+  if(preset.days){
+    const {y,m,d} = GMT8_NOW, [, todayEnd] = gmt8DayBounds(y,m,d);
+    range = {start: todayEnd - preset.days*86400000, end: todayEnd};
+  } else {
+    range = {start: Date.UTC(2000,0,1), end: Date.UTC(2100,0,1)};
+  }
+  currentPeriodRange = range;
   const matched = DATA.trades.filter(t=>{
     const tt = parseGmt8(t.tanggal_gmt8);
-    return tt>=currentPeriodRange.start && tt<=currentPeriodRange.end;
+    return tt>=range.start && tt<=range.end;
   });
+  const pl = matched.reduce((s,t)=>s+t.laba, 0);
   renderStatStrip(computePeriodStats(matched));
-  if(window.updateChartHighlight) window.updateChartHighlight(currentPeriodRange, p.label, p.pl);
-  if(window.renderTrades) window.renderTrades();
+  if(window.updateChartHighlight) window.updateChartHighlight(range, preset.long, pl);
 }
 
 // ---------- Equity chart (hand-drawn SVG, no dependencies) ----------
@@ -2038,6 +1995,7 @@ function renderEqDdBadge(d){
     el.innerHTML = `<span class="eq-dd-badge up" title="Dihitung dari seluruh riwayat (sama dengan Laporan \u2192 Drawdown), tidak mengikuti pemilih periode."><span>Ekuitas</span><b>di puncak</b></span>`;
   }
 }
+let eqLegendHidden = { modal:false, peak:false };
 function renderEquityChart(){
   const eqFull = DATA.equity;
   const box = document.getElementById('chartBox');
@@ -2048,12 +2006,13 @@ function renderEquityChart(){
     return;
   }
   const modalFull = DATA.modal_kumulatif || null;
-  const W = 880, H = 260, padL = 54, padR = 8, padT = 12, padB = 26;
+  const W = 880, H = 260, padL = 54, padR = 22, padT = 12, padB = 26;
   const plotW = W - padL - padR, plotH = H - padT - padB;
   const goldColor = cssVar('--gold');
   const gainColor = cssVar('--gain');
   const lossColor = cssVar('--loss');
   const modalColor = cssVar('--paper-dim');
+  const peakColor = cssVar('--gold-dim');
 
   const fullTimes = eqFull.map(p=>new Date(p[0]).getTime());
   const dataStart = fullTimes[0], dataEnd = fullTimes[fullTimes.length-1];
@@ -2144,23 +2103,38 @@ function renderEquityChart(){
   const peakLineColor = cssVar('--paper-faint');
   const peakPtsStr = showPeak ? times.map((t,k)=>`${x(t).toFixed(1)},${y(peakVals[k]).toFixed(1)}`).join(' ') : '';
   const d = buildSmoothPath(eqPts);
-  const areaD = d + ` L ${x(times[times.length-1])} ${y(yLo)} L ${x(times[0])} ${y(yLo)} Z`;
-
-  let modalD = '';
+  let modalD = '', areaD = '';
   if(modalVals){
     const modalPts = times.map((t,i)=>({x:x(t), y:y(modalVals[i])}));
     modalD = buildSmoothPath(modalPts);
+    // isian hanya antara kurva ekuitas dan garis modal (bukan sampai dasar sumbu)
+    areaD = d + ' L ' + modalPts[modalPts.length-1].x + ' ' + modalPts[modalPts.length-1].y + ' ' + buildSmoothPath(modalPts.slice().reverse()).replace(/^M/, 'L') + ' Z';
+  } else {
+    const yBase = y(Math.min(Math.max(0, yLo), yHi));
+    areaD = d + ` L ${x(times[times.length-1])} ${yBase} L ${x(times[0])} ${yBase} Z`;
   }
 
-  // y gridlines (4 steps)
-  const ySteps = 4;
-  let gridLines = '', yLabels = '';
-  for(let i=0;i<=ySteps;i++){
-    const v = yLo + (yHi-yLo)*i/ySteps;
-    const yy = y(v);
-    gridLines += `<line x1="${padL}" y1="${yy}" x2="${W-padR}" y2="${yy}"/>`;
-    yLabels += `<text x="${padL-8}" y="${yy+3}" text-anchor="end">${fmtAxisMoney(v, yHi-yLo)}</text>`;
+  // Sumbu Y: tick "cantik" (kelipatan 1/2/2,5/5 x 10^k) dalam satuan tampilan (USD/USC/Rp), garis nol tegas
+  const dispF = HERO_CURRENCY==='USD' ? 0.01 : (HERO_CURRENCY==='IDR' ? (DATA.kurs||0)/100 : 1);
+  const axisF = dispF > 0 ? dispF : 1;
+  const rawStep = (yHi-yLo)*axisF/5;
+  const mag = Math.pow(10, Math.floor(Math.log10(rawStep || 1)));
+  const stepD = [1,2,2.5,5,10].map(m=>m*mag).find(v=>v >= rawStep) || 10*mag;
+  const fmtTick = vd => {
+    const a = Math.abs(vd), sg = vd<0 ? '-' : '';
+    if(HERO_CURRENCY==='USD') return sg + a.toLocaleString('id-ID',{minimumFractionDigits:0,maximumFractionDigits:stepD<1?2:0});
+    if(a>=1e6) return sg + (a/1e6).toLocaleString('id-ID',{maximumFractionDigits:2}) + 'jt';
+    if(a>=1e3) return sg + (a/1e3).toLocaleString('id-ID',{maximumFractionDigits:2}) + 'rb';
+    return sg + a.toLocaleString('id-ID',{maximumFractionDigits:2});
+  };
+  let gridLines = '', yLabels = '', zeroLine = '';
+  for(let k=Math.ceil(yLo*axisF/stepD - 1e-9); k*stepD <= yHi*axisF + 1e-9; k++){
+    const vd = Math.round(k*stepD*1e6)/1e6, yy = y(vd/axisF);
+    if(k===0) zeroLine = `<line x1="${padL}" y1="${yy}" x2="${W-padR}" y2="${yy}" stroke="${cssVar('--paper-faint')}" stroke-width="1" opacity="0.7"/>`;
+    else gridLines += `<line x1="${padL}" y1="${yy}" x2="${W-padR}" y2="${yy}"/>`;
+    yLabels += `<text x="${padL-8}" y="${yy+3}" text-anchor="end">${fmtTick(vd)}</text>`;
   }
+  yLabels += `<text x="2" y="7" text-anchor="start">${curUnitSymbol()}</text>`;
   // x labels: pick ~6 evenly spaced points. Format mengikuti rentang tampilan (spanMs) supaya
   // tidak lagi selalu "bulan+tahun" — untuk periode pendek (Hari Ini/Minggu Ini dst.) itu bikin
   // semua label sama persis (mis. "Sep 26" berulang 7x), tidak menunjukkan progres waktu sama sekali.
@@ -2181,30 +2155,36 @@ function renderEquityChart(){
     } else {
       lbl = dt.toLocaleDateString('id-ID',{year:'numeric'});
     }
-    xLabels += `<text x="${x(t)}" y="${H-6}" text-anchor="middle">${lbl}</text>`;
+    xLabels += `<text x="${x(t)}" y="${H-6}" text-anchor="${i===nXLabels ? 'end' : (i===0 ? 'start' : 'middle')}">${lbl}</text>`;
   }
 
+  // Kunci tampil/sembunyi legenda (bertahan antar render)
+  const hid = eqLegendHidden;
+  const noteLabel = periodLabel && periodLabel.indexOf(' — ') >= 0 ? periodLabel : ''; // label periode hanya bila ada catatan (periode sudah terlihat di pemilih)
+  const bandH = 5, bandY = padT + plotH - bandH;
   box.innerHTML = `
+    <div class="eq-plot">
     <svg id="equityChart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:260px;">
       <defs>
         <linearGradient id="eqFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="${lineColor}" stop-opacity="0.30"/>
-          <stop offset="100%" stop-color="${lineColor}" stop-opacity="0"/>
+          <stop offset="0%" stop-color="${lineColor}" stop-opacity="0.26"/>
+          <stop offset="100%" stop-color="${lineColor}" stop-opacity="0.04"/>
         </linearGradient>
       <clipPath id="eqPlotClip"><rect x="${padL}" y="${padT}" width="${plotW}" height="${plotH}"/></clipPath>
       </defs>
       <g class="eq-grid">${gridLines}</g>
-      <path d="${areaD}" fill="url(#eqFill)" stroke="none"/>
-      ${modalD ? `<path d="${modalD}" fill="none" stroke="${modalColor}" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="5 4" opacity="0.85"/>` : ''}
+      ${zeroLine}
+      <path d="${areaD}" fill="url(#eqFill)" stroke="none" clip-path="url(#eqPlotClip)"/>
+      ${modalD ? `<path id="eqModalLine" d="${modalD}" fill="none" stroke="${modalColor}" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round" opacity="0.7" style="${hid.modal ? 'display:none' : ''}"/>` : ''}
       <path d="${d}" fill="none" stroke="${lineColor}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"${eqAnimated ? '' : `
             stroke-dasharray="3000" stroke-dashoffset="3000"`}>${eqAnimated ? '' : `
         <animate attributeName="stroke-dashoffset" from="3000" to="0" dur="1.1s" fill="freeze" calcMode="spline" keySplines="0.2 0 0.1 1"/>`}
       </path>
-      ${showPeak ? `<polyline points="${peakPtsStr}" fill="none" stroke="${peakLineColor}" stroke-width="1.1" stroke-dasharray="4 3" opacity="0.85" clip-path="url(#eqPlotClip)" style="pointer-events:none;"/>` : ''}
+      ${showPeak ? `<polyline id="eqPeakLine" points="${peakPtsStr}" fill="none" stroke="${peakColor}" stroke-width="1.3" stroke-dasharray="5 3" opacity="0.95" clip-path="url(#eqPlotClip)" style="pointer-events:none;${hid.peak ? 'display:none;' : ''}"/>` : ''}
       <g class="eq-axis">${yLabels}${xLabels}</g>
-      <rect id="eqDrawdownRect" x="${x(times[peakIdx])}" y="${padT}" width="${Math.max(1.5, x(times[troughIdx])-x(times[peakIdx]))}" height="${plotH}" fill="${lossColor}" opacity="0.10" style="pointer-events:none;"/>
-      <line x1="${x(times[peakIdx])}" y1="${padT}" x2="${x(times[peakIdx])}" y2="${padT+plotH}" stroke="${lossColor}" stroke-width="1" stroke-dasharray="3 3" opacity="0.5"/>
-      <line x1="${x(times[troughIdx])}" y1="${padT}" x2="${x(times[troughIdx])}" y2="${padT+plotH}" stroke="${lossColor}" stroke-width="1" stroke-dasharray="3 3" opacity="0.5"/>
+      <rect id="eqDrawdownRect" x="${x(times[peakIdx])}" y="${bandY}" width="${Math.max(1.5, x(times[troughIdx])-x(times[peakIdx]))}" height="${bandH}" fill="${lossColor}" opacity="0.6" style="pointer-events:none;"/>
+      <line class="eq-dd-edge" x1="${x(times[peakIdx])}" y1="${padT}" x2="${x(times[peakIdx])}" y2="${padT+plotH}" stroke="${lossColor}" stroke-width="1" stroke-dasharray="3 3" opacity="0" style="pointer-events:none;"/>
+      <line class="eq-dd-edge" x1="${x(times[troughIdx])}" y1="${padT}" x2="${x(times[troughIdx])}" y2="${padT+plotH}" stroke="${lossColor}" stroke-width="1" stroke-dasharray="3 3" opacity="0" style="pointer-events:none;"/>
       <circle id="eqAthDot" cx="${athPx}" cy="${athPy}" r="3" fill="${gainColor}"/>
       ${showBottomLabel ? `<circle id="eqBottomDot" cx="${bottomPx}" cy="${bottomPy}" r="3" fill="${lossColor}"/>` : ''}
       <line class="eq-hover-line" id="eqHoverLine" x1="0" y1="${padT}" x2="0" y2="${padT+plotH}"/>
@@ -2214,14 +2194,36 @@ function renderEquityChart(){
     <div class="eq-tooltip" id="eqTooltip"></div>
     <div class="eq-extreme-label ath" id="eqAthLabel" style="left:${athPx/W*100}%;top:${athPy/H*100}%;">${fmtMoney(vals[athIdx])}</div>
     ${showBottomLabel ? `<div class="eq-extreme-label bottom" id="eqBottomLabel" style="left:${bottomPx/W*100}%;top:${bottomPy/H*100}%;">${fmtMoney(vals[bottomIdx])}</div>` : ''}
-    <div class="eq-period-label" id="eqPeriodLabel">${periodLabel ? 'Menampilkan: ' + periodLabel : ''}</div>
+    <div class="eq-period-label" id="eqPeriodLabel">${noteLabel ? 'Menampilkan: ' + noteLabel : ''}</div>
+    </div>
     <div class="eq-legend">
-      <span class="eq-legend-item"><span class="eq-legend-swatch" style="background:${lossColor};opacity:0.4"></span>Drawdown terbesar: ${fmtMoney(maxDD)} (${fmtDate(eqFull[idxs[peakIdx]][0])} &rarr; ${fmtDate(eqFull[idxs[troughIdx]][0])})</span>
-      ${showPeak ? `<span class="eq-legend-item"><span class="eq-legend-swatch eq-legend-dash" style="border-top-color:${peakLineColor}"></span>Puncak berjalan</span>` : ''}
-      ${modalD ? `<span class="eq-legend-item"><span class="eq-legend-swatch" style="background:${lineColor}"></span>Saldo Berjalan / Ekuitas</span>
-      <span class="eq-legend-item"><span class="eq-legend-swatch eq-legend-dash" style="border-top-color:${modalColor}"></span>Modal Kumulatif (Deposit − Penarikan)</span>` : ''}
+      <button type="button" class="eq-legend-item eq-legend-wide" data-eqleg="dd" aria-pressed="false" title="Ketuk untuk menyorot periode drawdown di kurva"><span class="eq-legend-swatch" style="background:${lossColor};opacity:0.6;height:5px"></span>Drawdown ekuitas terbesar: ${fmtMoney(maxDD)} (${fmtDate(eqFull[idxs[peakIdx]][0])} &rarr; ${fmtDate(eqFull[idxs[troughIdx]][0])})</button>
+      <span class="eq-legend-item"><span class="eq-legend-swatch" style="background:${lineColor}"></span>${modalD ? 'Saldo / Ekuitas' : 'Saldo'}</span>
+      ${modalD ? `<button type="button" class="eq-legend-item${hid.modal ? ' off' : ''}" data-eqleg="modal" aria-pressed="${!hid.modal}" title="Ketuk untuk tampil/sembunyi"><span class="eq-legend-swatch" style="background:${modalColor};opacity:0.7"></span>Modal kumulatif</button>` : ''}
+      ${showPeak ? `<button type="button" class="eq-legend-item${hid.peak ? ' off' : ''}" data-eqleg="peak" aria-pressed="${!hid.peak}" title="Ketuk untuk tampil/sembunyi"><span class="eq-legend-swatch eq-legend-dash" style="border-top-color:${peakColor}"></span>Puncak berjalan</button>` : ''}
+      <span class="eq-legend-item"><span class="eq-legend-dot" style="background:${gainColor}"></span>Titik tertinggi</span>
+      ${showBottomLabel ? `<span class="eq-legend-item"><span class="eq-legend-dot" style="background:${lossColor}"></span>Titik terendah</span>` : ''}
     </div>
   `;
+  // Legenda bisa diketuk: sembunyikan/tampilkan garis modal & puncak; sorot penuh periode drawdown
+  box.querySelectorAll('[data-eqleg]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const k = btn.getAttribute('data-eqleg');
+      if(k === 'dd'){
+        const on = btn.getAttribute('aria-pressed') !== 'true';
+        btn.setAttribute('aria-pressed', on);
+        const r = document.getElementById('eqDrawdownRect');
+        r.setAttribute('y', on ? padT : bandY); r.setAttribute('height', on ? plotH : bandH); r.setAttribute('opacity', on ? 0.14 : 0.6);
+        box.querySelectorAll('.eq-dd-edge').forEach(l=> l.setAttribute('opacity', on ? 0.5 : 0));
+        return;
+      }
+      eqLegendHidden[k] = !eqLegendHidden[k];
+      const el = document.getElementById(k === 'modal' ? 'eqModalLine' : 'eqPeakLine');
+      if(el) el.style.display = eqLegendHidden[k] ? 'none' : '';
+      btn.classList.toggle('off', eqLegendHidden[k]);
+      btn.setAttribute('aria-pressed', !eqLegendHidden[k]);
+    });
+  });
 
   const svg = document.getElementById('equityChart');
   const hoverArea = document.getElementById('eqHoverArea');
@@ -2230,6 +2232,7 @@ function renderEquityChart(){
   const tooltip = document.getElementById('eqTooltip');
   const athLabel = document.getElementById('eqAthLabel');
   const bottomLabel = document.getElementById('eqBottomLabel');
+  const periodLbl = document.getElementById('eqPeriodLabel');
 
   function nearestIndex(t){
     let lo=0, hi=times.length-1;
@@ -2250,16 +2253,17 @@ function renderEquityChart(){
     hoverLine: { el: hoverLine },
     tooltip: {
       el: tooltip,
-      top: i => y(vals[i]),
+      top: i => 0,
       html: i => {
         const modalPart = modalVals ? `<span style="color:${modalColor}">Modal: ${fmtMoney(modalVals[i])}</span>` : '';
         return `<span class="t-date">${fmtDate(eqFull[idxs[i]][0])}</span>` + ttJoin([fmtMoney(vals[i]), modalPart]);
       }
     },
     enableClick: true,
+    autoHideMs: 3000,
     outsideHideContainer: box,
-    onShow(){ if(athLabel) athLabel.style.opacity = 0; if(bottomLabel) bottomLabel.style.opacity = 0; },
-    onHide(){ if(athLabel) athLabel.style.opacity = 1; if(bottomLabel) bottomLabel.style.opacity = 1; }
+    onShow(){ if(athLabel) athLabel.style.opacity = 0; if(bottomLabel) bottomLabel.style.opacity = 0; if(periodLbl) periodLbl.style.opacity = 0; },
+    onHide(){ if(athLabel) athLabel.style.opacity = 1; if(bottomLabel) bottomLabel.style.opacity = 1; if(periodLbl) periodLbl.style.opacity = 1; }
   });
   eqAnimated = true;
 }
@@ -2352,14 +2356,8 @@ window.renderEquityChart = renderEquityChart;
   const rangeEl = document.getElementById('anCustomRange');
   const noteEl = document.getElementById('anCustomNote');
 
-  const AN_RANGES = [
-    {key:'7h', label:'7H', days:7},
-    {key:'1b', label:'1B', days:30},
-    {key:'3b', label:'3B', days:90},
-    {key:'1t', label:'1T', days:365},
-    {key:'custom', label:'Sesuaikan'}
-  ];
-  let anKey = '3b';
+  const AN_RANGES = PERIOD_PRESETS;
+  let anKey = 'all';
 
   function currentRange(){
     const {y,m,d} = GMT8_NOW;
@@ -2380,6 +2378,14 @@ window.renderEquityChart = renderEquityChart;
       return {start, end};
     }
     noteEl.textContent = '';
+    if(opt.key === 'all'){
+      // seluruh riwayat: mulai dari awal hari transaksi pertama (GMT+8) sampai akhir hari ini
+      let first = null;
+      DATA.trades.forEach(t=>{ if(t.tanggal_gmt8 && (first===null || t.tanggal_gmt8 < first)) first = t.tanggal_gmt8; });
+      if(!first) return {start: todayEnd - 86400000, end: todayEnd};
+      const [fy,fm,fd] = first.slice(0,10).split('-').map(Number);
+      return {start: gmt8DayBounds(fy,fm-1,fd)[0], end: todayEnd};
+    }
     return {start: todayEnd - opt.days*86400000, end: todayEnd};
   }
 
@@ -2418,14 +2424,7 @@ window.renderEquityChart = renderEquityChart;
     `;
   }
 
-  granEl.innerHTML = AN_RANGES.map(r=>`<button type="button" class="lap-gran-btn${r.key===anKey?' active':''}" data-key="${r.key}">${r.label}</button>`).join('');
-  granEl.querySelectorAll('.lap-gran-btn').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      anKey = btn.dataset.key;
-      granEl.querySelectorAll('.lap-gran-btn').forEach(b=>b.classList.toggle('active', b===btn));
-      render();
-    });
-  });
+  buildPeriodChips(granEl, { items: AN_RANGES, active: anKey, onSelect: k=>{ anKey = k; render(); } });
   render();
   window.renderAnalisisRange = render;
 })();
@@ -2916,7 +2915,7 @@ let ledgerLimit = 300; const LEDGER_STEP = 100, LEDGER_KEY = 'jurnalLedgerState'
 function saveLedgerState(f){
   if(ledgerRestoring) return;
   try{
-    const sc = document.querySelector('.ledger-scroll'), chip = document.querySelector('.quick-chip.active');
+    const sc = document.querySelector('.ledger-scroll'), chip = document.querySelector('.ledger-quick-range .quick-chip.active');
     sessionStorage.setItem(LEDGER_KEY, JSON.stringify(Object.assign({}, f, { sort:currentSort, limit:ledgerLimit, chip:chip ? chip.dataset.range : '', st:sc ? sc.scrollTop : 0 })));
   }catch(e){}
 }
@@ -3078,7 +3077,8 @@ document.getElementById('ledgerResetBtn').addEventListener('click', ()=>{
   document.getElementById('ledgerLotMax').value = '';
   document.getElementById('ledgerFilterNote').textContent = '';
   ledgerLimit = 300;
-  document.querySelectorAll('.quick-chip').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.ledger-quick-range .quick-chip').forEach(b=>b.classList.remove('active'));
+  syncLedgerAllChip();
   renderTrades();
 });
 
@@ -3088,10 +3088,19 @@ document.getElementById('ledgerResetBtn').addEventListener('click', ()=>{
     const {y,m,d} = GMT8_NOW;
     return gmt8DateKeyFromParts(y, m, d + days);
   }
-  const chips = [...document.querySelectorAll('.quick-chip')];
+  const chips = [...document.querySelectorAll('.ledger-quick-range .quick-chip')];
+  // "All" aktif bila tidak ada chip lain aktif dan kedua tanggal kosong (default; = tanpa batas tanggal)
+  window.syncLedgerAllChip = function(){
+    const allChip = document.getElementById('quickAll'); if(!allChip) return;
+    const other = chips.some(c=>c!==allChip && c.classList.contains('active'));
+    allChip.classList.toggle('active', !other && !DTP.get('ledgerFrom') && !DTP.get('ledgerTo'));
+  };
   function applyChip(range){
     const todayKey = GMT8_TODAY_KEY;
-    if(range === '7'){
+    if(range === 'all'){
+      DTP.set('ledgerFrom', '');
+      DTP.set('ledgerTo', '');
+    } else if(range === '7'){
       DTP.set('ledgerFrom', gmt8DateKeyOffset(-6));
       DTP.set('ledgerTo', todayKey);
     } else if(range === '30'){
@@ -3119,12 +3128,13 @@ document.getElementById('ledgerResetBtn').addEventListener('click', ()=>{
     chip.addEventListener('click', ()=>{
       const wasActive = chip.classList.contains('active');
       chips.forEach(b=>b.classList.remove('active'));
-      if(!wasActive){
+      if(!wasActive || chip.dataset.range === 'all'){
         chip.classList.add('active');
         applyChip(chip.dataset.range);
       } else {
         DTP.set('ledgerFrom', '');
         DTP.set('ledgerTo', '');
+        syncLedgerAllChip();
         renderTrades();
       }
     });
@@ -3293,7 +3303,7 @@ window.renderTrades = renderTrades;
   const isLight = () => mode==='light' || (mode==='auto' && mq && mq.matches);
   const grid = document.getElementById('schemeGrid'), chips = [...document.querySelectorAll('#themeModes [data-mode]')];
   if(grid) grid.innerHTML = SCHEMES.map(s => `<button type="button" class="scheme-card" data-scheme-id="${s.id}" aria-pressed="false"><span class="scheme-sw">${s.c.map(c=>`<i style="background:${c}"></i>`).join('')}</span><span>${s.n}</span></button>`).join('');
-  function apply(persist){
+  let apply = function(persist){
     const light = isLight();
     if(light) root.setAttribute('data-theme','light'); else root.removeAttribute('data-theme');
     if(scheme!=='emas') root.setAttribute('data-scheme',scheme); else root.removeAttribute('data-scheme');
@@ -3307,7 +3317,43 @@ window.renderTrades = renderTrades;
     if(window.renderEquityChart) window.renderEquityChart();
     if(window.renderAnCalendar) window.renderAnCalendar();
     if(window.renderSplitArah) window.renderSplitArah();
+  };
+  // ---- Aksen custom + mode buta warna (v1.1.131) ----
+  const accIn = document.getElementById('accentInput'), accMsg = document.getElementById('accentMsg'), cbBtns = [...document.querySelectorAll('#cbModes [data-cb]')];
+  let accents = {}, cb = false;
+  try{ const a = JSON.parse(localStorage.getItem('jurnalAccent')||'null'); if(a && typeof a==='object') accents = a; cb = localStorage.getItem('jurnalCB')==='1'; }catch(e){}
+  const lum = h => { const c = [1,3,5].map(i => parseInt(h.substr(i,2),16)/255).map(v => v<=0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055,2.4)); return 0.2126*c[0]+0.7152*c[1]+0.0722*c[2]; };
+  const ratio = (a,b) => { const x = lum(a), y = lum(b); return (Math.max(x,y)+0.05)/(Math.min(x,y)+0.05); };
+  const mix = (a,b,t) => '#' + [1,3,5].map(i => Math.round(parseInt(a.substr(i,2),16)*(1-t)+parseInt(b.substr(i,2),16)*t).toString(16).padStart(2,'0')).join('').toUpperCase();
+  const dist = (a,b) => Math.sqrt([1,3,5].reduce((s,i) => s + Math.pow(parseInt(a.substr(i,2),16)-parseInt(b.substr(i,2),16),2), 0));
+  const modeKey = () => isLight() ? 'l' : 'd';
+  const say = (t, warn) => { if(accMsg){ accMsg.textContent = t||''; accMsg.classList.toggle('warn', !!warn); } };
+  function paintAccent(){
+    const a = accents[modeKey()];
+    if(a){ root.style.setProperty('--gold', a[0]); root.style.setProperty('--gold-dim', a[1]); }
+    else { root.style.removeProperty('--gold'); root.style.removeProperty('--gold-dim'); }
+    if(cb) root.setAttribute('data-cb','1'); else root.removeAttribute('data-cb');
+    if(accIn){ const sc = SCHEMES.find(x=>x.id===scheme); accIn.value = (a ? a[0] : sc[isLight()?'l':'c'][1]).toLowerCase(); }
+    cbBtns.forEach(b => b.classList.toggle('active', (b.dataset.cb==='1') === cb));
   }
+  function saveAccent(){ try{ if(Object.keys(accents).length) localStorage.setItem('jurnalAccent', JSON.stringify(accents)); else localStorage.removeItem('jurnalAccent'); localStorage.setItem('jurnalCB', cb ? '1' : '0'); }catch(e){} }
+  function repaintCharts(){ if(window.renderEquityChart) window.renderEquityChart(); if(window.renderAnCalendar) window.renderAnCalendar(); if(window.renderSplitArah) window.renderSplitArah(); }
+  if(accIn) accIn.addEventListener('change', () => {
+    const hex = accIn.value.toUpperCase(), sc = SCHEMES.find(x=>x.id===scheme), ink = sc[isLight()?'l':'c'][0];
+    const r = ratio(hex, ink);
+    if(r < 4.5){ say('Aksen ditolak: kontras ' + r.toFixed(1).replace('.',',') + ':1 terhadap latar (minimal 4,5:1). Pilih warna yang lebih ' + (isLight() ? 'gelap' : 'terang') + '.', true); paintAccent(); return; }
+    const near = [sc[isLight()?'l':'c'][2], sc[isLight()?'l':'c'][3]].concat(cb ? [isLight() ? '#0A58C0' : '#4DA3FF', isLight() ? '#B04400' : '#FF9F43'] : []);
+    if(near.some(c => dist(hex, c.toUpperCase()) < 70)){ say('Aksen ditolak: terlalu mirip warna untung/rugi, jadi mudah tertukar dengan hasil trading.', true); paintAccent(); return; }
+    accents[modeKey()] = [hex, mix(hex, ink, 0.3)];
+    saveAccent(); say('Aksen ' + hex + ' dipakai (kontras ' + r.toFixed(1).replace('.',',') + ':1).'); paintAccent(); repaintCharts();
+  });
+  const accReset = document.getElementById('accentReset');
+  if(accReset) accReset.addEventListener('click', () => { delete accents[modeKey()]; saveAccent(); say('Aksen kembali ke bawaan skema.'); paintAccent(); repaintCharts(); });
+  cbBtns.forEach(b => b.addEventListener('click', () => { cb = b.dataset.cb==='1'; saveAccent(); paintAccent(); repaintCharts(); }));
+  const resetBtn = document.getElementById('themeResetBtn');
+  if(resetBtn) resetBtn.addEventListener('click', () => { mode = 'dark'; scheme = 'emas'; accents = {}; cb = false; saveAccent(); say('Tampilan dikembalikan ke bawaan.'); apply(true); });
+  const _apply = apply;
+  apply = function(persist){ _apply(persist); paintAccent(); };
   toggleBtn.addEventListener('click', () => { mode = isLight() ? 'dark' : 'light'; apply(true); });
   chips.forEach(c => c.addEventListener('click', () => { mode = c.dataset.mode; apply(true); }));
   if(grid) grid.addEventListener('click', e => { const b = e.target.closest('.scheme-card'); if(b){ scheme = b.dataset.schemeId; apply(true); } });
@@ -4000,11 +4046,13 @@ CS.build('csw_filterCatatan', [{value:'',label:'Semua catatan'}, {value:'belum',
 CS.build('csw_depositFilterTipe', [{value:'',label:'Semua tipe'}, {value:'Deposit',label:'Deposit'}, {value:'Penarikan',label:'Penarikan'}, {value:'Kompensasi MC',label:'Kompensasi MC'}], 'Semua tipe', renderDepositLog);
 renderDepositLog();
 function onLedgerDateChange(){
-  document.querySelectorAll('.quick-chip').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.ledger-quick-range .quick-chip').forEach(b=>b.classList.remove('active'));
+  syncLedgerAllChip();
   if(window.renderTrades) window.renderTrades();
 }
 DTP.build('ledgerFrom', 'Dari tanggal', { dateOnly:true, onChange:onLedgerDateChange });
 DTP.build('ledgerTo', 'Sampai tanggal', { dateOnly:true, onChange:onLedgerDateChange });
+syncLedgerAllChip(); // default: chip All aktif (tanpa batas tanggal); dipanggil setelah DTP siap
 
 // ---------- Analisis PNL: rentang "Sesuaikan" (dt-picker kustom, bukan <input type="date"> bawaan browser) ----------
 (function(){
@@ -4364,7 +4412,7 @@ function renderPsyPrompt(){
 
 // Pemicu render awal dipindah ke sini (paling akhir skrip) supaya modul CS/DTP
 // (dipakai filter tab Transaksi) sudah selesai dibangun sebelum renderTrades() pertama jalan.
-selectPeriod(Math.max(0, LIVE_PERIODS.findIndex(p=>p.label==='All Time'))); // default Ringkasan: All Time (v1.1.111)
+selectPeriodKey('all'); // default Ringkasan: All (v1.1.111, chip sejak v1.1.134)
 renderPsyPrompt();
 // ---------- Pilih & isi massal catatan psikologi (v1.1.126) ----------
 (function(){
@@ -4420,7 +4468,8 @@ renderPsyPrompt();
   }catch(e){}
   ledgerRestoring = false;
   renderTrades();
-  document.querySelectorAll('.quick-chip').forEach(b=>b.classList.toggle('active', !!s.chip && b.dataset.range===s.chip));
+  document.querySelectorAll('.ledger-quick-range .quick-chip').forEach(b=>b.classList.toggle('active', !!s.chip && b.dataset.range===s.chip));
+  syncLedgerAllChip();
   const sc = document.querySelector('.ledger-scroll'), applyScroll = ()=>{ if(sc && s.st) sc.scrollTop = s.st; };
   setTimeout(applyScroll, 60);
   const tb = document.querySelector('.main-tab-btn[data-tab="transaksi"]'); if(tb) tb.addEventListener('click', ()=>setTimeout(applyScroll, 60), { once:true });
@@ -4459,9 +4508,13 @@ renderPsyPrompt();
 // ---------- Tentang aplikasi: versi + riwayat perubahan bahasa awam (v1.1.113) ----------
 // SETIAP RILIS: naikkan APP_VERSION, tambah entri di USER_CHANGELOG (tanggal ISO, bahasa pengguna akhir),
 // naikkan CACHE di sw.js, dan tambah entri di CHANGELOG.md. Versi hanya tampil di Setelan (bukan di footer).
-const APP_VERSION = '1.1.130';
+const APP_VERSION = '1.1.134';
 const USER_CHANGELOG = [
   { date:'2026-09-29', items:[
+    'Pilihan periode kini berupa <strong>chip bulat</strong> (7H · 1B · 3B · 1T · All · Sesuaikan) di Ringkasan dan Analisis PNL, dan bawaannya <strong>All</strong>. Tab Transaksi mendapat chip <strong>All</strong> (tanpa batas tanggal). Tombol mata uang di kartu saldo tampil polos tanpa garis tepi.',
+    'Kurva ekuitas di Ringkasan <strong>lebih jelas</strong>: garis modal dan puncak berjalan kini beda gaya dan warna, sumbu angka memakai kelipatan bulat dengan satuan dan garis nol, isian hanya di antara kurva dan modal, blok drawdown menjadi pita tipis di dasar, dan tooltip tampil di atas grafik lalu hilang sendiri di layar sentuh. Legenda bisa diketuk untuk menyembunyikan garis atau menyorot drawdown. Angka PF kini memakai koma.',
+    'Aplikasi terbuka <strong>lebih cepat</strong>, terutama saat sinyal lemah: tampilan langsung muncul dari penyimpanan perangkat dan diperbarui diam-diam di latar. Setelah ada versi baru, versi itu dipakai saat aplikasi dibuka lagi. Huruf tidak lagi menahan tampilan awal.',
+    'Setelan → <strong>Tampilan</strong>: pilih <strong>warna aksen</strong> sendiri (tombol utama, tab aktif, garis kurva) untuk mode gelap dan terang secara terpisah; warna yang kontrasnya terlalu rendah atau terlalu mirip warna untung/rugi ditolak dengan penjelasan. Ditambah opsi <strong>untung biru / rugi oranye</strong> bagi yang sulit membedakan hijau–merah, dan tombol <strong>Atur ulang tampilan</strong>.',
     'Setelan → <strong>Tampilan</strong>: skema warna kini juga berlaku di <strong>mode terang</strong> (sebelumnya semua skema tampil sebagai terang Kertas Hangat). Tiap skema punya versi terangnya sendiri, dan contoh warna di kartu skema ikut berganti mengikuti mode.',
     'Tab <strong>Transaksi</strong>: <strong>catatan bebas</strong> per transaksi (alasan entry, pelajaran) di form Tambah dan Edit, tampil di detail; ikon ✎ di samping ID menandai transaksi yang punya catatan, kotak pencarian kini juga mencari isi catatan, dan ekspor/impor CSV memuat kolom Catatan. Catatan ikut sinkron ke cloud setelah kolom <code>catatan</code> ditambahkan di Supabase (jalankan <code>migrasi-catatan.sql</code> sekali).',
     'Tab <strong>Transaksi</strong> di HP (layar sempit): daftar kini tampil sebagai <strong>kartu ringkas</strong> (tanggal + ID, arah, laba besar di kanan, lot/buka/tutup/pips di bawahnya) sehingga tidak perlu menggulir ke samping; ketuk kartu tetap membuka detail. Header kolom diganti menu <strong>Urutkan</strong> di atas daftar.',
