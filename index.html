@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jurnal XAUUSD — Buku Trading</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="masthead-top">
+      <div class="brand">Jurnal <em>XAUUSD</em></div>
+      <div class="masthead-right">
+        <div class="custom-select tz-select-wrap" id="tzSelectWrap" title="Zona waktu tampilan jam transaksi">
+          <button type="button" class="custom-select-btn" id="tzSelectBtn" aria-haspopup="listbox" aria-expanded="false" aria-label="Pilih zona waktu">
+            <span class="cs-label" id="tzSelectLabel">—</span>
+            <span class="custom-select-arrow" aria-hidden="true"></span>
+          </button>
+          <ul class="custom-select-list" id="tzSelectList" role="listbox" tabindex="-1" aria-label="Pilih zona waktu"></ul>
+        </div>
+        <button id="themeToggle" class="theme-toggle" aria-label="Ganti tema" title="Ganti tema gelap/terang">☾</button>
+        <button id="settingsGearBtn" class="theme-toggle" role="tab" aria-selected="false" data-tab="setelan" aria-controls="tabpanel-setelan" aria-label="Setelan" title="Setelan">⚙</button>
+      </div>
+    </div>
+    <div class="updated" id="updatedLine">—</div>
+  </header>
+
+  <nav class="main-tabs" id="mainTabs" role="tablist" aria-label="Bagian dashboard">
+    <button class="main-tab-btn active" role="tab" aria-selected="true" id="tabbtn-grafik" aria-controls="tabpanel-grafik" data-tab="grafik">Ringkasan</button>
+    <button class="main-tab-btn" role="tab" aria-selected="false" id="tabbtn-analisis" aria-controls="tabpanel-analisis" data-tab="analisis">Analisis PNL</button>
+    <button class="main-tab-btn" role="tab" aria-selected="false" id="tabbtn-statistik" aria-controls="tabpanel-statistik" data-tab="statistik">Performa</button>
+    <button class="main-tab-btn" role="tab" aria-selected="false" id="tabbtn-laporan" aria-controls="tabpanel-laporan" data-tab="laporan">Laporan</button>
+    <button class="main-tab-btn" role="tab" aria-selected="false" id="tabbtn-transaksi" aria-controls="tabpanel-transaksi" data-tab="transaksi">Transaksi</button>
+    <button class="main-tab-btn" role="tab" aria-selected="false" id="tabbtn-modal" aria-controls="tabpanel-modal" data-tab="modal">Deposit</button>
+    <button class="main-tab-btn" role="tab" aria-selected="false" id="tabbtn-kalkulator" aria-controls="tabpanel-kalkulator" data-tab="kalkulator">Kalkulator</button>
+  </nav>
+
+  <div class="tab-panel active" data-panel="grafik" id="tabpanel-grafik" role="tabpanel" aria-labelledby="tabbtn-grafik">
+
+  <section class="hero">
+    <p class="hero-label">Saldo akhir akun</p>
+    <div class="hero-figure">
+      <div class="hero-number" id="heroSaldo">—</div>
+      <div class="hero-sub">
+        <div class="custom-select hero-cur" id="csw_heroCurrency" title="Mata uang tampilan saldo & PNL">
+          <button type="button" class="custom-select-btn" id="heroCurrencyBtn" aria-haspopup="listbox" aria-expanded="false" aria-label="Pilih mata uang tampilan">
+            <span class="cs-label">USD</span>
+            <span class="custom-select-arrow" aria-hidden="true"></span>
+          </button>
+          <ul class="custom-select-list" role="listbox" tabindex="-1" aria-label="Pilih mata uang"></ul>
+        </div>
+      </div>
+    </div>
+    <div class="hero-approx" id="heroSaldoRp" hidden></div>
+    <div class="hero-alltime" id="heroAllTime">—</div>
+
+    <div class="pnl-snapshot" id="pnlSnapshot">
+      <div class="pnl-main-top">
+        <span class="pnl-main-label">PNL hari ini</span>
+        <button class="eye-toggle" id="eyeToggle" type="button" aria-pressed="false" aria-label="Sembunyikan angka PNL" title="Sembunyikan/tampilkan angka">◉</button>
+      </div>
+      <div class="pnl-main-figure">
+        <span class="pnl-main-pct" id="pnlTodayPct">—</span>
+        <span class="pnl-main-approx" id="pnlTodayApprox">—</span>
+      </div>
+      <div class="hero-rp-sub" id="pnlTodayRp" hidden></div>
+      <div class="pnl-grid" id="pnlGrid"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Kurva ekuitas</h2>
+      <div class="section-note">Saldo berjalan dari transaksi pertama hingga saat ini, sudah termasuk deposit &amp; penarikan.</div>
+    </div>
+    <div class="custom-select" id="periodSelectWrap">
+      <button type="button" class="custom-select-btn" id="periodSelectBtn" aria-haspopup="listbox" aria-expanded="false" aria-label="Pilih periode kurva ekuitas">
+        <span id="periodSelectLabel">Pilih periode</span>
+        <span class="custom-select-arrow" aria-hidden="true"></span>
+      </button>
+      <ul class="custom-select-list" id="periodSelectList" role="listbox" tabindex="-1" aria-label="Pilih periode"></ul>
+    </div>
+    <div class="custom-range" id="customRange">
+      <div class="cr-field"><label>Dari</label><div class="dt-picker" id="dtp_customFrom" aria-label="Dari tanggal"></div></div>
+      <span class="sep">–</span>
+      <div class="cr-field"><label>Sampai</label><div class="dt-picker" id="dtp_customTo" aria-label="Sampai tanggal"></div></div>
+      <span class="cr-note" id="customNote"></span>
+    </div>
+    <div class="chart-box" id="chartBox"></div>
+  </section>
+
+  <section class="stats" id="statStrip" aria-live="polite"></section>
+
+  <section>
+    <div class="quote-box" id="quoteBox"></div>
+  </section>
+
+  </div>
+
+  <div class="tab-panel" data-panel="kalkulator" id="tabpanel-kalkulator" role="tabpanel" aria-labelledby="tabbtn-kalkulator">
+
+  <section>
+    <div class="section-head">
+      <h2>Kalkulator money management</h2>
+      <div class="section-note">Ubah angka di bawah untuk menghitung ukuran lot &amp; target sesuai rencana trading Anda.</div>
+    </div>
+    <div class="calc-box">
+      <div class="calc-grid">
+        <div class="calc-field">
+          <label for="calcSaldo">Saldo (¢)</label>
+          <div class="cf-input-wrap"><input type="number" id="calcSaldo" readonly tabindex="-1"></div>
+          <span class="cf-note">Mengikuti saldo jurnal terkini</span>
+        </div>
+        <div class="calc-field has-unit">
+          <label for="calcRisk">Risiko / trade</label>
+          <div class="cf-input-wrap"><input type="number" id="calcRisk" step="0.1" min="0.1" max="100"><span class="cf-unit">%</span></div>
+        </div>
+        <div class="calc-field has-unit">
+          <label for="calcSl">Stop loss</label>
+          <div class="cf-input-wrap"><input type="number" id="calcSl" step="1" min="1"><span class="cf-unit">pips</span></div>
+        </div>
+        <div class="calc-field has-unit">
+          <label for="calcRr">Rasio risk:reward</label>
+          <div class="cf-input-wrap"><input type="number" id="calcRr" step="0.1" min="0.1"><span class="cf-unit">×</span></div>
+        </div>
+      </div>
+      <button class="calc-reset" type="button" id="calcResetBtn">Reset ke pengaturan default</button>
+      <div class="mm-grid" id="mmGridQuick" style="margin-top:18px;"></div>
+      <div class="calc-warn" id="calcWarn"></div>
+    </div>
+  </section>
+
+  </div>
+
+  <div class="tab-panel" data-panel="statistik" id="tabpanel-statistik" role="tabpanel" aria-labelledby="tabbtn-statistik">
+
+  <section>
+    <div class="section-head">
+      <h2>Performa bulanan</h2>
+      <div class="section-note">Laba/rugi, win rate, dan % thd saldo sebelum bulan berjalan.</div>
+    </div>
+    <div class="month-grid" id="monthGrid"></div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Performa mingguan</h2>
+      <div class="section-note">Laba/rugi per minggu ISO (Senin–Minggu) sejak minggu pertama tercatat, lengkap dengan win rate dan % thd saldo sebelum minggu itu.</div>
+    </div>
+    <div class="week-strip-scroll">
+      <div class="week-strip" id="weekStrip"></div>
+      <div class="week-labels" id="weekLabels"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Rekor transaksi</h2>
+      <div class="section-note" id="maxddNote"></div>
+    </div>
+    <div class="records">
+      <div>
+        <p class="rec-title win">Kemenangan terbesar</p>
+        <div id="topWin"></div>
+      </div>
+      <div>
+        <p class="rec-title loss">Kerugian terbesar</p>
+        <div id="topLoss"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Split arah: Beli vs Jual</h2>
+      <div class="section-note">Perbandingan performa posisi Beli (long) vs Jual (short). Arahkan kursor atau ketuk salah satu untuk detail.</div>
+    </div>
+    <div class="split-pie-wrap" id="splitArahGrid">
+      <div class="split-pie-box">
+        <svg viewBox="0 0 160 160" width="160" height="160">
+          <circle cx="80" cy="80" r="64" fill="none" stroke="var(--line-soft)" stroke-width="20"/>
+          <circle id="splitPieBeli" cx="80" cy="80" r="64" fill="none" stroke-width="20" transform="rotate(-90 80 80)"/>
+          <circle id="splitPieJual" cx="80" cy="80" r="64" fill="none" stroke-width="20" transform="rotate(-90 80 80)"/>
+        </svg>
+        <div class="split-pie-center" id="splitPieCenter"></div>
+      </div>
+      <div class="split-pie-legend" id="splitPieLegend"></div>
+    </div>
+  </section>
+
+  </div>
+
+  <div class="tab-panel" data-panel="modal" id="tabpanel-modal" role="tabpanel" aria-labelledby="tabbtn-modal">
+
+  <section>
+    <div class="section-head">
+      <h2>Log deposit &amp; penarikan</h2>
+      <div class="section-note">Histori transaksi broker (deposit, penarikan, kompensasi margin call).</div>
+    </div>
+    <div class="mm-grid" id="depositSummary" style="margin-bottom:22px;"></div>
+    <div class="ledger-controls">
+      <input type="text" id="depositSearchBox" placeholder="Cari jenis…">
+      <div class="custom-select" id="csw_depositFilterTipe"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter tipe"><span class="cs-label">Semua tipe</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Filter tipe"></ul></div>
+    </div>
+    <div class="ledger-scroll" style="max-height:360px;">
+      <table class="ledger">
+        <thead>
+          <tr>
+            <th class="sortable" data-key="tanggal">Tanggal<span class="sort-ind"></span></th>
+            <th class="sortable" data-key="jenis" style="text-align:left;">Jenis<span class="sort-ind"></span></th>
+            <th class="sortable" data-key="tipe">Tipe<span class="sort-ind"></span></th>
+            <th class="sortable" data-key="cent">Jumlah<span class="sort-ind"></span></th>
+          </tr>
+        </thead>
+        <tbody id="depositBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  </div>
+
+  <div class="tab-panel" data-panel="transaksi" id="tabpanel-transaksi" role="tabpanel" aria-labelledby="tabbtn-transaksi">
+
+  <section>
+    <div class="section-head">
+      <h2>Buku transaksi</h2>
+      <div class="section-note" id="tradeCount"></div>
+    </div>
+    <div class="ledger-quick-range">
+      <span class="qr-lbl">Cepat:</span>
+      <button type="button" class="quick-chip" id="quick7d" data-range="7">7 Hari</button>
+      <button type="button" class="quick-chip" id="quick30d" data-range="30">30 Hari</button>
+      <button type="button" class="quick-chip" id="quickMonth" data-range="month">Bulan Ini</button>
+    </div>
+    <div class="ledger-controls">
+      <input type="text" id="searchBox" placeholder="Cari ID posisi…">
+      <div class="custom-select" id="csw_filterArah"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter arah"><span class="cs-label">Semua arah</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Filter arah"></ul></div>
+      <div class="custom-select" id="csw_filterHasil"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter hasil"><span class="cs-label">Semua hasil</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Filter hasil"></ul></div>
+      <div class="custom-select" id="csw_filterCatatan"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter catatan psikologi"><span class="cs-label">Semua catatan</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Filter catatan psikologi"></ul></div>
+      <div class="dt-picker" id="dtp_ledgerFrom" aria-label="Dari tanggal"></div>
+      <span class="ledger-range-sep">–</span>
+      <div class="dt-picker" id="dtp_ledgerTo" aria-label="Sampai tanggal"></div>
+      <input type="number" id="ledgerLotMin" placeholder="Lot min" step="0.01" min="0" style="width:78px;">
+      <span class="ledger-range-sep">–</span>
+      <input type="number" id="ledgerLotMax" placeholder="Lot max" step="0.01" min="0" style="width:78px;">
+      <button type="button" id="ledgerResetBtn" class="ledger-reset-btn">Reset filter<span class="filter-badge" id="ledgerFilterBadge"></span></button>
+      <button type="button" id="ledgerExportBtn" class="ledger-reset-btn">Export CSV</button>
+    </div>
+    <div class="section-note" id="ledgerFilterNote" style="text-align:left;margin:-6px 0 12px;"></div>
+    <div class="ledger-scroll">
+      <table class="ledger">
+        <thead>
+          <tr>
+            <th class="sortable" data-key="tanggal">Tanggal tutup<span class="sort-ind"></span></th>
+            <th class="sortable" data-key="id">ID posisi<span class="sort-ind"></span></th>
+            <th class="sortable" data-key="arah">Arah<span class="sort-ind"></span></th>
+            <th class="sortable" data-key="lot">Lot<span class="sort-ind"></span></th>
+            <th class="sortable" data-key="buka">Buka<span class="sort-ind"></span></th>
+            <th class="sortable" data-key="tutup">Tutup<span class="sort-ind"></span></th>
+            <th class="sortable" data-key="pips">Pips<span class="sort-ind"></span></th>
+            <th class="sortable" data-key="laba">Laba (<span class="cur-unit">¢</span>)<span class="sort-ind"></span></th>
+          </tr>
+        </thead>
+        <tbody id="ledgerBody"></tbody>
+      </table>
+    </div>
+    <div class="ledger-foot"><span id="ledgerShown" aria-live="polite"></span><span id="ledgerSum"></span></div>
+  </section>
+
+  </div>
+
+  <div class="tab-panel" data-panel="laporan" id="tabpanel-laporan" role="tabpanel" aria-labelledby="tabbtn-laporan">
+
+  <div class="print-head"><h1>Laporan Trading XAUUSD</h1><div id="printMeta"></div></div>
+  <div class="laporan-period-bar">
+    <div class="laporan-period-label">Periode: <b id="laporanPeriodLabel">—</b></div>
+    <div class="laporan-btn-group"><button type="button" class="laporan-print-btn" id="laporanCsvBtn" title="Unduh ringkasan Laporan periode &amp; filter terpilih (CSV)">Ekspor CSV</button><button type="button" class="laporan-print-btn" id="laporanPrintBtn">Cetak / PDF</button></div>
+  </div>
+
+  <section>
+    <div class="section-head">
+      <h2>Tren profit / rugi</h2>
+      <div class="section-note">Periode &amp; filter di sini berlaku untuk seluruh halaman Laporan.</div>
+    </div>
+    <div class="lap-gran-tabs" id="lapGranTabs" role="tablist" aria-label="Granularitas periode laporan"></div>
+    <div class="lap-range-nav">
+      <button type="button" class="lap-range-nav-btn" id="lapNavPrev" aria-label="Periode sebelumnya">‹</button>
+      <div class="lap-range-label" id="lapRangeLabel">—</div>
+      <button type="button" class="lap-range-nav-btn" id="lapNavNext" aria-label="Periode berikutnya">›</button>
+    </div>
+    <div class="lap-filter-row" id="lapArahFilter" aria-label="Filter arah transaksi"></div>
+    <div class="lap-filter-row" id="lapSesiFilter" aria-label="Filter sesi pasar" style="margin-top:-8px;"></div>
+    <div class="lap-filter-row" id="lapPsyFilter" aria-label="Filter catatan psikologi" style="margin-top:-8px;"><div class="custom-select" id="csw_lapEmosi"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter emosi"><span class="cs-label">Semua emosi</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Filter emosi"></ul></div><div class="custom-select" id="csw_lapTrigger"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter trigger entry"><span class="cs-label">Semua trigger</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Filter trigger entry"></ul></div><div class="custom-select" id="csw_lapJenis"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter jenis entry"><span class="cs-label">Semua jenis</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Filter jenis entry"></ul></div></div>
+    <div class="stats lap-kpi" id="lapKpi" aria-live="polite"></div>
+    <div class="chart-box" id="lapTrendBox"></div>
+    <div class="lap-trend-legend"><span><i style="background:var(--gain);"></i>Profit</span><span><i style="background:var(--loss);"></i>Rugi</span></div>
+    <details class="lap-tbl-wrap"><summary>Tabel angka grafik</summary><div class="lap-tbl-scroll" id="lapTrendTable"></div></details>
+    <div class="lap-summary-grid" id="lapSummaryGrid"></div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Ringkasan performa periode</h2>
+      <div class="section-note">Statistik transaksi pada periode yang dipilih.</div>
+    </div>
+    <div class="stats" id="laporanStatStrip" aria-live="polite"></div>
+  </section>
+
+  <section class="lap-sec-psy">
+    <div class="section-head">
+      <h2>Analisis psikologi trading</h2>
+      <div class="section-note">Berdasarkan trigger &amp; emosi yang dicatat manual; transaksi tanpa catatan tidak dihitung. Isi cepat: tab Transaksi → filter &quot;Belum ada catatan&quot; → Edit → &quot;Simpan &amp; lanjut&quot;.</div>
+    </div>
+    <div class="psy-group">
+      <h3>Trigger entry</h3>
+      <div id="laporanTriggerEntry"></div>
+    </div>
+    <div class="psy-group">
+      <h3>Trigger exit</h3>
+      <div id="laporanTriggerExit"></div>
+    </div>
+    <div class="psy-group">
+      <h3>Kondisi emosi</h3>
+      <div id="laporanEmosi"></div>
+    </div>
+    <div class="psy-group">
+      <h3>Jenis entry</h3>
+      <div id="laporanJenisEntry"></div>
+    </div>
+  </section>
+
+  <section class="lap-sec-cmp">
+    <div class="section-head">
+      <h2>Bandingkan dua periode</h2>
+      <div class="section-note">Pilih dua periode bebas (mis. bulan ini vs bulan lalu, atau paruh pertama vs kedua riwayat) untuk melihat KPI berdampingan dengan selisih. Bagian ini tidak ikut periode utama Laporan di atas, tetapi filter Arah, Sesi, Emosi, Trigger, dan Jenis entry tetap berlaku.</div>
+    </div>
+    <div class="lap-cmp-ctl">
+      <div class="lap-cmp-side"><span class="lap-cmp-tag">A</span>
+        <div class="custom-select" id="csw_cmpA"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Periode A"><span class="cs-label">Bulan lalu</span><span class="custom-select-arrow" aria-hidden="true"></span></button><ul class="custom-select-list" role="listbox" tabindex="-1" aria-label="Periode A"></ul></div>
+        <span class="lap-cmp-custom" id="cmpACustom" hidden><input type="date" id="cmpAFrom" aria-label="Periode A mulai"><input type="date" id="cmpATo" aria-label="Periode A sampai"></span></div>
+      <div class="lap-cmp-side"><span class="lap-cmp-tag">B</span>
+        <div class="custom-select" id="csw_cmpB"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Periode B"><span class="cs-label">Bulan ini</span><span class="custom-select-arrow" aria-hidden="true"></span></button><ul class="custom-select-list" role="listbox" tabindex="-1" aria-label="Periode B"></ul></div>
+        <span class="lap-cmp-custom" id="cmpBCustom" hidden><input type="date" id="cmpBFrom" aria-label="Periode B mulai"><input type="date" id="cmpBTo" aria-label="Periode B sampai"></span></div>
+    </div>
+    <div id="lapCmp"></div>
+    <div class="psy-cover" id="lapCmpNote" style="margin-top:8px;"></div>
+  </section>
+
+  <section class="lap-sec-adv">
+    <div class="section-head">
+      <h2>Analisis lanjutan</h2>
+      <div class="section-note">Streak, jam &amp; hari buka, sesi pasar, durasi posisi, lot &amp; ukuran posisi, transaksi per hari, drawdown, dan return terhadap modal, dari transaksi periode terpilih.</div>
+    </div>
+    <div class="psy-group"><h3>Temuan otomatis</h3><ul class="lap-findings" id="lapFindings"></ul><div class="psy-cover" style="margin-top:6px;">Ringkasan fakta dari data periode terpilih (hanya dari kelompok bersampel cukup); bukan saran trading. Ketuk sel heatmap atau baris kelompok untuk melihat transaksinya.</div></div>
+    <div class="psy-group"><h3>Streak</h3><div class="stats" id="lapStreak"></div><div id="lapStreakAfter"></div></div>
+    <div class="psy-group"><h3>Emosi setelah transaksi rugi</h3><div id="lapAfterLoss"></div></div>
+    <div class="psy-group"><h3>Silang psikologi</h3><div class="lap-heat-mode" id="lapMxMode"></div><div class="lap-mx" id="lapMx"></div><div class="psy-cover" id="lapMxNote" style="margin-top:8px;"></div></div>
+    <div class="psy-group"><h3>Jam &amp; hari buka (GMT+8)</h3><div id="lapHeat"></div><div class="psy-cover" id="lapHeatInfo" style="margin-top:8px;"></div></div>
+    <div class="psy-group"><h3>Sesi pasar (waktu buka, GMT+8)</h3><div id="lapSession"></div><div class="psy-cover" id="lapSessionNote" style="margin-top:8px;"></div></div>
+    <div class="psy-group"><h3>Durasi posisi vs hasil</h3><div id="lapDur"></div></div>
+    <div class="psy-group"><h3>Beli vs Jual</h3><div id="lapArahSplit"></div><div class="stats" id="lapArahStats" style="margin-top:10px;"></div><div class="psy-cover" id="lapArahNote" style="margin-top:8px;"></div></div>
+    <div class="psy-group"><h3>Distribusi hasil per transaksi</h3><div class="stats" id="lapDist"></div>
+      <div class="chart-box" id="lapDistBox" style="margin-top:10px;"></div><div class="psy-cover" id="lapDistNote" style="margin-top:8px;"></div></div>
+    <div class="psy-group"><h3>Lot &amp; ukuran posisi</h3><div class="stats" id="lapLot"></div>
+      <div class="psy-cover" style="margin-top:10px;">Setelah rugi: apakah lot dinaikkan? (dibanding transaksi sebelumnya)</div><div id="lapLotAfterLoss"></div>
+      <div class="psy-cover" style="margin-top:10px;">Hasil menurut ukuran lot (dibanding lot rata-rata periode)</div><div id="lapLotSize"></div>
+      <div class="psy-cover" id="lapLotNote" style="margin-top:8px;"></div></div>
+    <div class="psy-group"><h3>Transaksi per hari &amp; batas harian</h3><div class="stats" id="lapDaily"></div>
+      <div class="psy-cover" style="margin-top:10px;">Hasil menurut jumlah transaksi per hari</div><div id="lapDayBins"></div>
+      <div class="psy-cover" style="margin-top:10px;">Batas harian pribadi (atur di Setelan ⚙)</div><div id="lapDayLimits"></div>
+      <div class="psy-cover" id="lapDailyNote" style="margin-top:8px;"></div></div>
+    <div class="psy-group"><h3>Tren performa (rolling)</h3><div class="lap-heat-mode" id="lapRollMode"></div><div class="stats" id="lapRollStats"></div>
+      <div class="chart-box" id="lapRollBox"></div><div class="psy-cover" id="lapRollNote" style="margin-top:8px;"></div></div>
+    <div class="psy-group"><h3>Drawdown (underwater)</h3><div class="stats" id="lapDD"></div>
+      <div class="chart-box lap-dd-box" id="lapDDBox"></div>
+      <div class="psy-cover" style="margin-top:10px;">Drawdown terdalam periode ini</div><div id="lapDDList"></div>
+      <div class="psy-cover" id="lapDDNote" style="margin-top:8px;"></div></div>
+    <div class="psy-group"><h3>Return terhadap modal</h3><div class="stats" id="lapReturn"></div><div class="psy-cover" id="lapReturnNote" style="margin-top:8px;"></div></div>
+  </section>
+
+  </div>
+
+  <div class="tab-panel" data-panel="analisis" id="tabpanel-analisis" role="tabpanel" aria-labelledby="tabbtn-analisis">
+
+  <section>
+    <div class="section-head">
+      <h2>Analisis PNL</h2>
+      <div class="section-note">Statistik rentang waktu bergulir dari hari ini (GMT+8) — terpisah dari periode di tab Ringkasan &amp; Laporan.</div>
+    </div>
+    <div class="lap-gran-tabs" id="anGranTabs" role="tablist" aria-label="Rentang periode analisis"></div>
+    <div class="custom-range" id="anCustomRange">
+      <div class="cr-field"><label>Dari</label><div class="dt-picker" id="dtp_anCustomFrom" aria-label="Dari tanggal"></div></div>
+      <span class="sep">–</span>
+      <div class="cr-field"><label>Sampai</label><div class="dt-picker" id="dtp_anCustomTo" aria-label="Sampai tanggal"></div></div>
+      <span class="cr-note" id="anCustomNote"></span>
+    </div>
+    <div class="stats" id="anStatStrip" aria-live="polite"></div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>PNL Harian</h2>
+      <div class="section-note">Laba/rugi per hari kalender (berdasar tanggal tutup GMT+8) — navigasi bulan sendiri, terpisah dari rentang periode di atas.</div>
+    </div>
+    <div class="cal-nav">
+      <button id="anCalPrev" aria-label="Bulan sebelumnya">‹</button>
+      <div class="cal-month-label" id="anCalMonthLabel"></div>
+      <button id="anCalNext" aria-label="Bulan berikutnya">›</button>
+    </div>
+    <div class="cal-summary" id="anCalSummary"></div>
+    <div class="cal-weekdays">
+      <span>Sen</span><span>Sel</span><span>Rab</span><span>Kam</span><span>Jum</span><span>Sab</span><span>Min</span>
+    </div>
+    <div class="cal-grid" id="anCalGrid"></div>
+    <div class="cal-legend">
+      <span class="cal-legend-item"><i class="cal-swatch loss" style="opacity:1"></i>Rugi</span>
+      <span class="cal-legend-item"><i class="cal-swatch" style="background:var(--line-soft)"></i>Tidak ada transaksi</span>
+      <span class="cal-legend-item"><i class="cal-swatch gain" style="opacity:1"></i>Untung</span>
+    </div>
+  </section>
+
+  </div>
+
+  <div class="tab-panel" data-panel="setelan" id="tabpanel-setelan" role="tabpanel" aria-labelledby="settingsGearBtn">
+
+  <section>
+    <div class="section-head">
+      <h2>Batas harian</h2>
+      <div class="section-note">Batas pribadi untuk analisis overtrading di tab Laporan. Kosongkan untuk menonaktifkan. Tersimpan di browser ini (localStorage), tidak ikut ekspor JSON.</div>
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc">
+        <strong>Maks rugi harian (¢)</strong>
+        <span id="limMaxLossHint">Hari dianggap melewati batas bila rugi kumulatif hari itu (urut waktu tutup) mencapai nilai ini.</span>
+      </div>
+      <input type="number" id="limMaxLoss" class="settings-input" min="0" step="1" placeholder="mis. 500" aria-label="Maks rugi harian dalam sen">
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc">
+        <strong>Maks transaksi per hari</strong>
+        <span>Transaksi ke-(N+1) dan seterusnya pada hari yang sama dihitung melewati batas.</span>
+      </div>
+      <input type="number" id="limMaxTrades" class="settings-input" min="1" step="1" placeholder="mis. 5" aria-label="Maks jumlah transaksi per hari">
+    </div>
+  </section>
+
+  <section id="syncSection">
+    <div class="section-head">
+      <h2>Sinkron Supabase</h2>
+      <div class="section-note">Cadangan &amp; pindah data lintas perangkat. Yang dikirim: transaksi, deposit/penarikan, dan kurs. Angka lain dihitung ulang otomatis.</div>
+    </div>
+    <div class="sync-box" id="syncAuthBox">
+      <div class="settings-row">
+        <div class="settings-desc">
+          <strong>Masuk</strong>
+          <span>Email &amp; password akun Supabase Auth Anda. Belum punya? Isi lalu tekan Daftar.</span>
+        </div>
+        <div class="sync-fields">
+          <input type="email" id="syncEmail" class="settings-input" placeholder="email" autocomplete="username" aria-label="Email">
+          <input type="password" id="syncPass" class="settings-input" placeholder="password (min. 6)" autocomplete="current-password" aria-label="Password">
+        </div>
+      </div>
+      <div class="settings-row">
+        <div class="settings-desc"><strong id="syncStatus">Belum masuk</strong></div>
+        <div class="sync-actions">
+          <button type="button" id="syncLoginBtn" class="ledger-reset-btn">Masuk</button>
+          <button type="button" id="syncSignupBtn" class="ledger-reset-btn">Daftar</button>
+        </div>
+      </div>
+    </div>
+    <div class="sync-box" id="syncActionBox" hidden>
+      <div class="settings-row">
+        <div class="settings-desc">
+          <strong>Kirim data ke awan</strong>
+          <span>Awan dibuat sama dengan browser ini. Data di awan yang sudah tidak ada di sini ikut dihapus.</span>
+        </div>
+        <button type="button" id="syncPushBtn" class="ledger-reset-btn">Kirim ke awan</button>
+      </div>
+      <div class="settings-row">
+        <div class="settings-desc">
+          <strong>Ambil data dari awan</strong>
+          <span>Menimpa data browser ini dengan data awan. Cadangan JSON otomatis didownload dulu.</span>
+        </div>
+        <button type="button" id="syncPullBtn" class="ledger-reset-btn">Tarik dari awan</button>
+      </div>
+      <div class="settings-row">
+        <div class="settings-desc"><strong id="syncUser"></strong></div>
+        <button type="button" id="syncLogoutBtn" class="ledger-reset-btn">Keluar</button>
+      </div>
+    </div>
+    <div class="section-note" id="syncNote" style="text-align:left;"></div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Ekspor data</h2>
+      <div class="section-note">Simpan salinan jurnal ini sebagai cadangan (backup) dari data yang sedang aktif di browser ini.</div>
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc">
+        <strong>Salinan dashboard (.html)</strong>
+        <span>Halaman + data saat ini. Karena kode kini terpisah, simpan di folder yang sama dengan style.css, app.js, sync.js, dan config.js. Untuk cadangan, JSON lebih praktis.</span>
+      </div>
+      <button type="button" id="exportHtmlBtn" class="ledger-reset-btn">Download HTML</button>
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc">
+        <strong>Data mentah (.json)</strong>
+        <span>Hanya data transaksi &amp; ringkasannya, untuk dianalisis di tempat lain atau diedit lalu diimpor kembali.</span>
+      </div>
+      <button type="button" id="exportJsonBtn" class="ledger-reset-btn">Download JSON</button>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Impor data</h2>
+      <div class="section-note">Muat file data (.json) baru — hasil ekspor dari dashboard ini atau format yang sama. Data tersimpan otomatis di penyimpanan lokal browser ini (localStorage), jadi tetap ada walau tab ditutup atau halaman dimuat ulang — tanpa perlu download file HTML baru tiap kali.</div>
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc">
+        <strong>Pilih file JSON</strong>
+        <span>Dashboard akan memuat ulang dengan data dari file yang dipilih, tersimpan di browser ini.</span>
+      </div>
+      <input type="file" id="importJsonInput" accept="application/json,.json">
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc">
+        <strong>Hapus data tersimpan</strong>
+        <span>Kembali ke data bawaan file HTML ini (data yang terakhir diimpor di browser ini akan dihapus). Cadangan JSON otomatis didownload dulu sebelum dihapus.</span>
+      </div>
+      <button type="button" id="clearLocalDataBtn" class="ledger-reset-btn">Reset ke Bawaan</button>
+    </div>
+    <div class="section-note" id="importNote" style="text-align:left;"></div>
+  </section>
+
+  </div>
+
+  <footer>Jurnal Trading XAUUSD — akun cent (1 USD = 100¢) · dibuat dari data ekspor broker · v1.1.105</footer>
+</div>
+
+<nav class="bottom-nav" id="bottomNav" role="tablist" aria-label="Bagian dashboard (mobile)">
+  <button class="bnav-btn active" role="tab" aria-selected="true" data-tab="grafik" aria-controls="tabpanel-grafik">
+    <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg>
+    <span>Ringkasan</span>
+  </button>
+  <button class="bnav-btn" role="tab" aria-selected="false" data-tab="analisis" aria-controls="tabpanel-analisis">
+    <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/><path d="M7 15l3-3 3 2 4-5"/></svg>
+    <span>Analisis PNL</span>
+  </button>
+  <button class="bnav-btn" role="tab" aria-selected="false" data-tab="statistik" aria-controls="tabpanel-statistik">
+    <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="12" width="4" height="8" rx="1"/><rect x="10" y="7" width="4" height="13" rx="1"/><rect x="16" y="3" width="4" height="17" rx="1"/></svg>
+    <span>Performa</span>
+  </button>
+  <button class="bnav-btn" role="tab" aria-selected="false" data-tab="laporan" aria-controls="tabpanel-laporan">
+    <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5"/><line x1="8.5" y1="12.5" x2="15.5" y2="12.5"/><line x1="8.5" y1="16" x2="15.5" y2="16"/></svg>
+    <span>Laporan</span>
+  </button>
+  <button class="bnav-btn" role="tab" aria-selected="false" data-tab="transaksi" aria-controls="tabpanel-transaksi">
+    <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/></svg>
+    <span>Transaksi</span>
+  </button>
+  <button class="bnav-btn" role="tab" aria-selected="false" data-tab="modal" aria-controls="tabpanel-modal">
+    <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h13a1 1 0 0 1 1 1v3"/><path d="M3 7v11a2 2 0 0 0 2 2h14a1 1 0 0 0 1-1v-7a1 1 0 0 0-1-1h-4a2 2 0 0 0 0 4h5"/></svg>
+    <span>Deposit</span>
+  </button>
+  <button class="bnav-btn" role="tab" aria-selected="false" data-tab="kalkulator" aria-controls="tabpanel-kalkulator">
+    <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><line x1="8" y1="7" x2="16" y2="7"/><circle cx="8.5" cy="12.5" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12.5" r="1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="12.5" r="1" fill="currentColor" stroke="none"/><circle cx="8.5" cy="16.5" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="16.5" r="1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="16.5" r="1" fill="currentColor" stroke="none"/></svg>
+    <span>Kalkulator</span>
+  </button>
+</nav>
+
+<div class="fab-wrap" id="fabWrap">
+  <div class="fab-menu" id="fabMenu">
+    <button type="button" class="fab-mini" data-mode="deposit">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Deposit
+    </button>
+    <button type="button" class="fab-mini" data-mode="penarikan">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Penarikan
+    </button>
+    <button type="button" class="fab-mini" data-mode="trade">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg>
+      Transaksi
+    </button>
+  </div>
+  <button type="button" class="fab-main" id="fabMainBtn" aria-label="Tambah data manual" aria-expanded="false" aria-haspopup="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </button>
+</div>
+
+<div class="modal-overlay" id="entryModalOverlay" role="dialog" aria-modal="true" aria-labelledby="entryModalTitle">
+  <div class="modal-box entry-modal-box">
+    <p class="modal-title" id="entryModalTitle">Tambah Transaksi</p>
+    <div id="entryFormTrade" class="entry-form">
+      <div class="calc-field"><label>ID Posisi <span style="color:var(--paper-faint);font-weight:400;">(opsional)</span></label><input type="text" id="entryIdPosisi" placeholder="mis. 123456789 — kosongkan untuk ID otomatis"></div>
+      <div class="calc-field">
+        <label>Arah</label>
+        <div class="custom-select" id="csw_entryArah"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Arah"><span class="cs-label">Beli</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Arah"></ul></div>
+      </div>
+      <div class="calc-field"><label>Lot</label><input type="number" id="entryLot" step="0.01" min="0.01" placeholder="mis. 0.05"></div>
+      <div class="calc-field"><label>Waktu Buka</label><div class="dt-picker" id="dtp_entryWaktuBuka"></div></div>
+      <div class="calc-field"><label>Harga Buka</label><input type="number" id="entryBuka" step="0.01" placeholder="mis. 4359.05"></div>
+      <div class="calc-field"><label>Harga Tutup</label><input type="number" id="entryTutup" step="0.01" placeholder="mis. 4363.11"></div>
+      <div class="calc-field"><label>Waktu Tutup</label><div class="dt-picker" id="dtp_entryWaktuTrade"></div></div>
+      <div class="calc-field">
+        <label>Trigger Entry</label>
+        <div class="custom-select" id="csw_entryTrigger"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Trigger entry"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Trigger entry"></ul></div>
+      </div>
+      <div class="calc-field">
+        <label>Trigger Exit</label>
+        <div class="custom-select" id="csw_entryTriggerExit"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Trigger exit"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Trigger exit"></ul></div>
+      </div>
+      <div class="calc-field">
+        <label>Kondisi Emosi</label>
+        <div class="custom-select" id="csw_entryEmosi"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Kondisi emosi"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Kondisi emosi"></ul></div>
+      </div>
+      <div class="calc-field">
+        <label>Jenis Entry</label>
+        <div class="custom-select" id="csw_entryJenisEntry"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Jenis entry"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Jenis entry"></ul></div>
+      </div>
+      <div class="entry-preview" id="entryPreviewTrade"></div>
+    </div>
+    <div id="entryFormDeposit" class="entry-form" style="display:none;">
+      <div class="calc-field"><label id="entryJumlahLabel">Jumlah (USD)</label><input type="number" id="entryUsd" step="0.01" min="0.01" placeholder="mis. 50"></div>
+      <div class="calc-field"><label>Keterangan</label><input type="text" id="entryJenis" placeholder="mis. Deposit Bank Transfer"></div>
+      <div class="calc-field"><label>Waktu</label><div class="dt-picker" id="dtp_entryWaktuDeposit"></div></div>
+    </div>
+    <p class="modal-message" id="entryModalError" style="display:none;color:var(--loss);margin:0 0 14px;"></p>
+    <div class="modal-actions">
+      <button type="button" class="ledger-reset-btn" id="entryModalCancel">Batal</button>
+      <button type="button" class="ledger-reset-btn modal-btn-primary" id="entryModalSave">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="detailModalOverlay" role="dialog" aria-modal="true" aria-labelledby="detailModalTitle">
+  <div class="modal-box entry-modal-box">
+    <p class="modal-title" id="detailModalTitle">Detail Transaksi</p>
+    <div id="detailView">
+      <div class="detail-row"><span class="detail-lbl">ID</span><span class="detail-val" id="dvId"></span></div>
+      <div class="detail-row"><span class="detail-lbl">Arah</span><span class="detail-val" id="dvArah"></span></div>
+      <div class="detail-row"><span class="detail-lbl">Lot</span><span class="detail-val" id="dvLot"></span></div>
+      <div class="detail-row"><span class="detail-lbl">Harga Buka</span><span class="detail-val" id="dvBuka"></span></div>
+      <div class="detail-row"><span class="detail-lbl">Harga Tutup</span><span class="detail-val" id="dvTutup"></span></div>
+      <div class="detail-row"><span class="detail-lbl">Pips</span><span class="detail-val" id="dvPips"></span></div>
+      <div class="detail-row"><span class="detail-lbl">Laba</span><span class="detail-val" id="dvLaba"></span></div>
+      <div class="detail-row"><span class="detail-lbl">Waktu buka</span><span class="detail-val" id="dvWaktuBuka"></span></div>
+      <div class="detail-row"><span class="detail-lbl">Waktu tutup</span><span class="detail-val" id="dvWaktu"></span></div>
+      <div class="detail-row"><span class="detail-lbl">Trigger entry</span><span class="detail-val" id="dvTrigger"></span></div>
+      <div class="detail-row"><span class="detail-lbl">Trigger exit</span><span class="detail-val" id="dvTriggerExit"></span></div>
+      <div class="detail-row"><span class="detail-lbl">Kondisi emosi</span><span class="detail-val" id="dvEmosi"></span></div>
+      <div class="detail-row"><span class="detail-lbl">Jenis entry</span><span class="detail-val" id="dvJenisEntry"></span></div>
+    </div>
+    <div id="detailEdit" class="entry-form" style="display:none;">
+      <div class="calc-field">
+        <label>Arah</label>
+        <div class="custom-select" id="csw_editArah"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Arah"><span class="cs-label">Beli</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Arah"></ul></div>
+      </div>
+      <div class="calc-field"><label>Lot</label><input type="number" id="editLot" step="0.01" min="0.01"></div>
+      <div class="calc-field"><label>Waktu Buka</label><div class="dt-picker" id="dtp_editWaktuBuka"></div></div>
+      <div class="calc-field"><label>Harga Buka</label><input type="number" id="editBuka" step="0.01"></div>
+      <div class="calc-field"><label>Harga Tutup</label><input type="number" id="editTutup" step="0.01"></div>
+      <div class="calc-field"><label>Waktu Tutup</label><div class="dt-picker" id="dtp_editWaktu"></div></div>
+      <div class="calc-field">
+        <label>Trigger Entry</label>
+        <div class="custom-select" id="csw_editTrigger"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Trigger entry"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Trigger entry"></ul></div>
+      </div>
+      <div class="calc-field">
+        <label>Trigger Exit</label>
+        <div class="custom-select" id="csw_editTriggerExit"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Trigger exit"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Trigger exit"></ul></div>
+      </div>
+      <div class="calc-field">
+        <label>Kondisi Emosi</label>
+        <div class="custom-select" id="csw_editEmosi"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Kondisi emosi"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Kondisi emosi"></ul></div>
+      </div>
+      <div class="calc-field">
+        <label>Jenis Entry</label>
+        <div class="custom-select" id="csw_editJenisEntry"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Jenis entry"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Jenis entry"></ul></div>
+      </div>
+    </div>
+    <p class="modal-message" id="detailModalError" style="display:none;color:var(--loss);margin:10px 0 0;"></p>
+    <div class="modal-actions" id="detailViewActions" style="margin-top:18px;justify-content:space-between;">
+      <button type="button" class="ledger-reset-btn" id="detailDeleteBtn" style="color:var(--loss);border-color:var(--loss);">Hapus</button>
+      <div style="display:flex;gap:10px;">
+        <button type="button" class="ledger-reset-btn" id="detailCloseBtn">Tutup</button>
+        <button type="button" class="ledger-reset-btn modal-btn-primary" id="detailEditBtn">Edit</button>
+      </div>
+    </div>
+    <div class="modal-actions" id="detailEditActions" style="display:none;margin-top:4px;">
+      <button type="button" class="ledger-reset-btn" id="detailCancelEditBtn">Batal</button>
+      <button type="button" class="ledger-reset-btn" id="detailSaveNextBtn" style="display:none;">Simpan &amp; lanjut</button>
+      <button type="button" class="ledger-reset-btn modal-btn-primary" id="detailSaveBtn">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="dayModalOverlay" role="dialog" aria-modal="true" aria-labelledby="dayModalTitle">
+  <div class="modal-box entry-modal-box">
+    <p class="modal-title" id="dayModalTitle">Detail Hari</p>
+    <div class="day-modal-summary" id="dayModalSummary"></div>
+    <div class="day-trade-list" id="dayTradeList"></div>
+    <p class="modal-message" id="dayModalEmpty" style="display:none;">Tidak ada transaksi pada tanggal ini.</p>
+    <div class="modal-actions" style="margin-top:16px;justify-content:flex-end;">
+      <button type="button" class="ledger-reset-btn" id="dayModalCloseBtn">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="confirmModalOverlay" role="alertdialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+  <div class="modal-box">
+    <p class="modal-title" id="confirmModalTitle">Konfirmasi</p>
+    <p class="modal-message" id="confirmModalMessage"></p>
+    <div class="modal-actions">
+      <button type="button" class="ledger-reset-btn" id="confirmModalNo">Batal</button>
+      <button type="button" class="ledger-reset-btn modal-btn-primary" id="confirmModalYes">Lanjutkan</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="notifyModalOverlay" role="status" aria-live="polite">
+  <div class="modal-box" id="notifyModalBox">
+    <p class="modal-title" id="notifyModalTitle">Notifikasi</p>
+    <p class="modal-message" id="notifyModalMessage"></p>
+    <div class="modal-notify-actions">
+      <button type="button" class="ledger-reset-btn" id="notifyModalClose">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<script id="journal-data" type="application/json">{"summary": {"total": 0, "win": 0, "loss": 0, "winrate": 0, "pl_cent": 0, "pl_rp": 0, "saldo_akhir": 0, "pct_pl": null}, "periods": [], "kurs": 0, "dashboard": {"update": "Update terakhir: -", "saldo": 0, "stats": {"total": 0, "winrate": 0, "pf": 0, "maxdd": 0, "expectancy": 0}, "top_win": [], "top_loss": [], "mm": {"equity": 0, "risk": 0.01, "sl": 150, "pipval": 10, "lot": 0, "tp_pips": 0, "tp_cent": 0}}, "maxdd_note": "", "equity": [], "months": [], "weeks": [], "trades": [], "deposit": {"total_deposit": 0, "total_penarikan": 0, "total_mc": 0, "modal_bersih": 0, "log": []}, "period_ranges": [], "modal_kumulatif": []}</script>
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="app.js"></script>
+<script src="sync.js"></script>
+</body>
+</html>
