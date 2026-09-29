@@ -54,7 +54,6 @@ var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('co
     <button class="main-tab-btn" role="tab" aria-selected="false" id="tabbtn-laporan" aria-controls="tabpanel-laporan" data-tab="laporan" title="Laporan"><svg class="mt-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5"/><line x1="8.5" y1="12.5" x2="15.5" y2="12.5"/><line x1="8.5" y1="16" x2="15.5" y2="16"/></svg><span class="mt-label">Laporan</span></button>
     <button class="main-tab-btn" role="tab" aria-selected="false" id="tabbtn-transaksi" aria-controls="tabpanel-transaksi" data-tab="transaksi" title="Transaksi"><svg class="mt-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/></svg><span class="mt-label">Transaksi</span></button>
     <button class="main-tab-btn" role="tab" aria-selected="false" id="tabbtn-modal" aria-controls="tabpanel-modal" data-tab="modal" title="Deposit"><svg class="mt-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h13a1 1 0 0 1 1 1v3"/><path d="M3 7v11a2 2 0 0 0 2 2h14a1 1 0 0 0 1-1v-7a1 1 0 0 0-1-1h-4a2 2 0 0 0 0 4h5"/></svg><span class="mt-label">Deposit</span></button>
-    <button class="main-tab-btn" role="tab" aria-selected="false" id="tabbtn-kalkulator" aria-controls="tabpanel-kalkulator" data-tab="kalkulator" title="Kalkulator"><svg class="mt-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><line x1="8" y1="7" x2="16" y2="7"/><circle cx="8.5" cy="12.5" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12.5" r="1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="12.5" r="1" fill="currentColor" stroke="none"/><circle cx="8.5" cy="16.5" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="16.5" r="1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="16.5" r="1" fill="currentColor" stroke="none"/></svg><span class="mt-label">Kalkulator</span></button>
   </nav>
   <button type="button" class="sb-toggle" id="sidebarToggle" aria-expanded="true" aria-controls="mainTabs" aria-label="Ciutkan sidebar" title="Ciutkan sidebar">
     <svg class="mt-icon sb-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
@@ -119,41 +118,6 @@ var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('co
 
   <section>
     <div class="quote-box" id="quoteBox"></div>
-  </section>
-
-  </div>
-
-  <div class="tab-panel" data-panel="kalkulator" id="tabpanel-kalkulator" role="tabpanel" aria-labelledby="tabbtn-kalkulator">
-
-  <section>
-    <div class="section-head">
-      <h2>Kalkulator money management</h2>
-      <div class="section-note">Ubah angka di bawah untuk menghitung ukuran lot &amp; target sesuai rencana trading Anda.</div>
-    </div>
-    <div class="calc-box">
-      <div class="calc-grid">
-        <div class="calc-field">
-          <label for="calcSaldo">Saldo (¢)</label>
-          <div class="cf-input-wrap"><input type="number" id="calcSaldo" readonly tabindex="-1"></div>
-          <span class="cf-note">Mengikuti saldo jurnal terkini</span>
-        </div>
-        <div class="calc-field has-unit">
-          <label for="calcRisk">Risiko / trade</label>
-          <div class="cf-input-wrap"><input type="number" id="calcRisk" step="0.1" min="0.1" max="100"><span class="cf-unit">%</span></div>
-        </div>
-        <div class="calc-field has-unit">
-          <label for="calcSl">Stop loss</label>
-          <div class="cf-input-wrap"><input type="number" id="calcSl" step="1" min="1"><span class="cf-unit">pips</span></div>
-        </div>
-        <div class="calc-field has-unit">
-          <label for="calcRr">Rasio risk:reward</label>
-          <div class="cf-input-wrap"><input type="number" id="calcRr" step="0.1" min="0.1"><span class="cf-unit">×</span></div>
-        </div>
-      </div>
-      <button class="calc-reset" type="button" id="calcResetBtn">Reset ke pengaturan default</button>
-      <div class="mm-grid" id="mmGridQuick" style="margin-top:18px;"></div>
-      <div class="calc-warn" id="calcWarn"></div>
-    </div>
   </section>
 
   </div>
@@ -251,6 +215,12 @@ var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('co
     <div class="section-head">
       <h2>Buku transaksi</h2>
       <div class="section-note" id="tradeCount"></div>
+    </div>
+    <div class="ledger-toolbar">
+      <button type="button" class="ledger-reset-btn ledger-calc-btn" id="openCalcBtn" aria-haspopup="dialog">
+        <svg class="lc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><line x1="8" y1="7" x2="16" y2="7"/><circle cx="8.5" cy="12.5" r=".6"/><circle cx="12" cy="12.5" r=".6"/><circle cx="15.5" cy="12.5" r=".6"/><circle cx="8.5" cy="16.5" r=".6"/><circle cx="12" cy="16.5" r=".6"/><circle cx="15.5" cy="16.5" r=".6"/></svg>
+        Kalkulator lot
+      </button>
     </div>
     <div class="ledger-quick-range">
       <span class="qr-lbl">Cepat:</span>
@@ -560,9 +530,30 @@ var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('co
     <div class="section-note" id="importNote" style="text-align:left;"></div>
   </section>
 
+  <section id="aboutSection">
+    <div class="section-head">
+      <h2>Tentang aplikasi</h2>
+      <div class="section-note">Info versi dan daftar pembaruan yang sudah masuk ke aplikasi.</div>
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc">
+        <strong>Versi aplikasi</strong>
+        <span>Versi yang sedang Anda pakai sekarang.</span>
+      </div>
+      <span class="app-version-badge" id="appVersionVal">v-</span>
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc">
+        <strong>Riwayat perubahan</strong>
+        <span>Lihat apa saja yang baru dan diperbaiki, diurutkan dari tanggal terbaru.</span>
+      </div>
+      <button type="button" id="changelogBtn" class="ledger-reset-btn">Lihat riwayat</button>
+    </div>
+  </section>
+
   </div>
 
-  <footer>Jurnal Trading XAUUSD — akun cent (1 USD = 100¢) · dibuat dari data ekspor broker · v1.1.112</footer>
+  <footer>Jurnal Trading XAUUSD — akun cent (1 USD = 100¢) · dibuat dari data ekspor broker</footer>
 </div>
 
 <nav class="bottom-nav" id="bottomNav" role="tablist" aria-label="Bagian dashboard (mobile)">
@@ -589,10 +580,6 @@ var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('co
   <button class="bnav-btn" role="tab" aria-selected="false" data-tab="modal" aria-controls="tabpanel-modal">
     <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h13a1 1 0 0 1 1 1v3"/><path d="M3 7v11a2 2 0 0 0 2 2h14a1 1 0 0 0 1-1v-7a1 1 0 0 0-1-1h-4a2 2 0 0 0 0 4h5"/></svg>
     <span>Deposit</span>
-  </button>
-  <button class="bnav-btn" role="tab" aria-selected="false" data-tab="kalkulator" aria-controls="tabpanel-kalkulator">
-    <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><line x1="8" y1="7" x2="16" y2="7"/><circle cx="8.5" cy="12.5" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12.5" r="1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="12.5" r="1" fill="currentColor" stroke="none"/><circle cx="8.5" cy="16.5" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="16.5" r="1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="16.5" r="1" fill="currentColor" stroke="none"/></svg>
-    <span>Kalkulator</span>
   </button>
 </nav>
 
@@ -730,6 +717,50 @@ var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('co
     <p class="modal-message" id="dayModalEmpty" style="display:none;">Tidak ada transaksi pada tanggal ini.</p>
     <div class="modal-actions" style="margin-top:16px;justify-content:flex-end;">
       <button type="button" class="ledger-reset-btn" id="dayModalCloseBtn">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="calcModalOverlay" role="dialog" aria-modal="true" aria-labelledby="calcModalTitle">
+  <div class="modal-box entry-modal-box calc-modal">
+    <p class="modal-title" id="calcModalTitle">Kalkulator money management</p>
+    <p class="modal-message" style="margin-bottom:14px;">Ubah angka di bawah untuk menghitung ukuran lot &amp; target sesuai rencana trading Anda.</p>
+    <div class="calc-box calc-modal-box">
+      <div class="calc-grid">
+        <div class="calc-field">
+          <label for="calcSaldo">Saldo (¢)</label>
+          <div class="cf-input-wrap"><input type="number" id="calcSaldo" readonly tabindex="-1"></div>
+          <span class="cf-note">Mengikuti saldo jurnal terkini</span>
+        </div>
+        <div class="calc-field has-unit">
+          <label for="calcRisk">Risiko / trade</label>
+          <div class="cf-input-wrap"><input type="number" id="calcRisk" step="0.1" min="0.1" max="100"><span class="cf-unit">%</span></div>
+        </div>
+        <div class="calc-field has-unit">
+          <label for="calcSl">Stop loss</label>
+          <div class="cf-input-wrap"><input type="number" id="calcSl" step="1" min="1"><span class="cf-unit">pips</span></div>
+        </div>
+        <div class="calc-field has-unit">
+          <label for="calcRr">Rasio risk:reward</label>
+          <div class="cf-input-wrap"><input type="number" id="calcRr" step="0.1" min="0.1"><span class="cf-unit">×</span></div>
+        </div>
+      </div>
+      <button class="calc-reset" type="button" id="calcResetBtn">Reset ke pengaturan default</button>
+      <div class="mm-grid" id="mmGridQuick" style="margin-top:18px;"></div>
+      <div class="calc-warn" id="calcWarn"></div>
+    </div>
+    <div class="modal-actions" style="margin-top:16px;justify-content:flex-end;">
+      <button type="button" class="ledger-reset-btn" id="calcModalCloseBtn">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="changelogModalOverlay" role="dialog" aria-modal="true" aria-labelledby="changelogModalTitle">
+  <div class="modal-box entry-modal-box changelog-modal-box">
+    <p class="modal-title" id="changelogModalTitle">Riwayat perubahan</p>
+    <div class="changelog-list" id="changelogList"></div>
+    <div class="modal-actions" style="margin-top:16px;justify-content:flex-end;">
+      <button type="button" class="ledger-reset-btn" id="changelogCloseBtn">Tutup</button>
     </div>
   </div>
 </div>

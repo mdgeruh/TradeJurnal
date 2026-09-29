@@ -3,13 +3,13 @@
 Riwayat per rilis/tema: `CHANGELOG.md`. Fitur & cara pakai: `README.md`. File ini hanya memuat status, arsitektur, jebakan bug, dan todo.
 
 ## Apa ini
-Dashboard trading journal single-file HTML untuk akun cent XAUUSD. Tab: Ringkasan, Analisis PNL, Performa, Laporan, Transaksi, Deposit, Kalkulator + Setelan (⚙); navigasi desktop ≥ 1100px berupa sidebar kiri yang bisa diciutkan lewat tombol melayang (v1.1.110). File utama: `index.html` + `style.css` + `app.js` + `sync.js` + `config.js` (v1.1.105).
+Dashboard trading journal single-file HTML untuk akun cent XAUUSD. Tab: Ringkasan, Analisis PNL, Performa, Laporan, Transaksi, Deposit + Setelan (⚙); Kalkulator berupa modal dari tombol "Kalkulator lot" di tab Transaksi (bukan tab, sejak v1.1.114); navigasi desktop ≥ 1100px berupa sidebar kiri yang bisa diciutkan lewat tombol melayang (v1.1.110). File utama: `index.html` + `style.css` + `app.js` + `sync.js` + `config.js` (v1.1.105).
 
-## Status (v1.1.112)
+## Status (v1.1.114)
 - Data aktif ada di localStorage (`jurnalXauusdData_v1`), bukan di file. File baru kosong (`kurs` = 0, mode Rp tampil Rp 0) sampai JSON diimpor lewat Setelan.
 - JSON ekspor terbaru (441 transaksi, sudah berisi `waktu_buka`) siap diimpor manual. Angka ringkasan dihitung otomatis, tidak dicatat di sini.
 - Tab Laporan: Paket A/B/Optimalisasi, style cetak PDF, dan L1–L17 selesai (v1.1.78–1.1.101); L18 juga sudah selesai (tombol Ekspor CSV). Tooltip kurva drawdown yang melebar keluar kartu sudah diperbaiki (v1.1.102); tooltip rolling & distribusi ditambahkan sekalian. Tidak ada bug fungsional terbuka; dua cek tampilan tooltip tercatat di Rawan bug.
-- Sejak v1.1.105: kode dipecah jadi folder datar dan ada sinkron Supabase manual (`sync.js`); v1.1.106: bisa dipasang sebagai PWA. v1.1.108: layout desktop ≥ 1100px (lebar 1240px, 2 kolom di Ringkasan/Performa/Setelan). v1.1.109–1.1.110: navigasi desktop berupa sidebar kiri yang bisa diciutkan lewat tombol bulat melayang (pilihan di `jurnalSidebar`). v1.1.111: kurva Ringkasan default All Time. v1.1.112: status batas harian di kartu PNL Hari Ini.
+- Sejak v1.1.105: kode dipecah jadi folder datar dan ada sinkron Supabase manual (`sync.js`); v1.1.106: bisa dipasang sebagai PWA. v1.1.108: layout desktop ≥ 1100px (lebar 1240px, 2 kolom di Ringkasan/Performa/Setelan). v1.1.109–1.1.110: navigasi desktop berupa sidebar kiri yang bisa diciutkan lewat tombol bulat melayang (pilihan di `jurnalSidebar`). v1.1.111: kurva Ringkasan default All Time. v1.1.112: status batas harian di kartu PNL Hari Ini. v1.1.113: Setelan → Tentang aplikasi (versi + modal Riwayat perubahan bahasa pengguna; versi tak lagi di footer). v1.1.114: tab Kalkulator dihapus dari nav; kalkulator jadi modal dari tab Transaksi (id `calc*`/`mmGridQuick` tetap, logika hitung tidak berubah).
 - Belum diuji ke proyek Supabase asli dan belum dicek di perangkat asli (sentuhan, PWA, sidebar); daftar cek manual ada di Todo.
 
 ## Arsitektur singkat
@@ -38,6 +38,7 @@ Dashboard trading journal single-file HTML untuk akun cent XAUUSD. Tab: Ringkasa
 - **Ambang lot:** klasifikasi "lot naik" memakai ≥ 1,25× lot sebelumnya; temuan otomatis rasio lot rata-rata (setelah rugi ÷ setelah menang) muncul di ≥ 1,2×. Keduanya sengaja beda.
 - **Format nominal:** tanda minus selalu di depan simbol (`-$x`, `-Rp x`); pakai `fmtMoney`/`fmtRp`, jangan tulis `'Rp ' + n` sendiri.
 - **Field turunan:** semua field hasil hitung dari `DATA.trades` harus ikut `recomputeAll()`.
+- **Alur rilis:** versi hanya ada di `APP_VERSION` (`app.js`, tampil di Setelan → Tentang aplikasi) dan `CACHE` di `sw.js`; keduanya harus dinaikkan bersama. Tiap rilis juga tambah entri berbahasa pengguna akhir di `USER_CHANGELOG` (`app.js`, tanggal ISO; tanggal sama = gabung ke entri itu) selain `CHANGELOG.md` teknis.
 - **Verifikasi:** render & error konsol dicek tiap rilis lewat Playwright + Chromium (390/768/1280px); interaksi kompleks hanya dicek bila ada dugaan bug.
 
 ## Todo
@@ -56,7 +57,7 @@ Kondisi sekarang: kartu hero (saldo, PNL kumulatif, Hari Ini, 7H, 30H), kurva ek
   - [ ] Indikator sinkron Supabase di Ringkasan (terakhir dikirim/diambil; ada perubahan lokal yang belum dikirim). Sinkron masih manual, jadi mudah lupa.
   - [ ] Ganti kutipan acak dengan checklist/aturan trading pribadi yang bisa diedit (atau hapus kartunya).
   - [ ] Daftar 5 transaksi terakhir dengan hasil dan emosi, bergaya ringkas.
-Catatan pengerjaan: tiap butir mengubah `app.js`/`style.css`, jadi ikuti alur rilis biasa (naikkan versi footer dan `CACHE` di `sw.js`, entri `CHANGELOG.md`, cek Playwright 390/1280px, data kosong dan data sintetis).
+Catatan pengerjaan: tiap butir mengubah `app.js`/`style.css`, jadi ikuti alur rilis biasa (naikkan `APP_VERSION` di `app.js` dan `CACHE` di `sw.js`, tambah entri `USER_CHANGELOG` di `app.js` serta `CHANGELOG.md`, cek Playwright 390/1280px, data kosong dan data sintetis).
 
 **Laporan (putaran 2)** — L1–L17 selesai (rincian di `CHANGELOG.md`, v1.1.85–1.1.100). Sisa:
 - [x] L18 (sudah ada di kode: tombol "Ekspor CSV" di tab Laporan). Ekspor ringkasan Laporan periode terpilih ke CSV (KPI, kelompok psikologi, sesi, heatmap) untuk analisis di luar aplikasi; nominal tetap ¢ seperti ekspor lain.

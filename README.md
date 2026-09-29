@@ -11,7 +11,7 @@ Dashboard jurnal trading akun **cent XAUUSD**: satu folder datar (`index.html`, 
 
 ## Konsep dasar
 - **Akun cent:** 1 USD = 100¢. Nominal internal dalam sen; kurs rupiah di `DATA.kurs`.
-- **Mata uang tampilan:** pemilih USD / USC (¢) / Rp di kartu hero berlaku di semua tab (kecuali Kalkulator dan ekspor, tetap ¢). Mode USD/USC menampilkan sub-baris `≈ Rp …`. Ganti pilihan = muat ulang ke tab yang sama. Default USD.
+- **Mata uang tampilan:** pemilih USD / USC (¢) / Rp di kartu hero berlaku di semua tab (kecuali Kalkulator lot dan ekspor, tetap ¢). Mode USD/USC menampilkan sub-baris `≈ Rp …`. Ganti pilihan = muat ulang ke tab yang sama. Default USD.
 - **Zona waktu:** periode (Hari Ini, kalender, Laporan) selalu GMT+8; dropdown zona waktu hanya mengubah tampilan jam.
 - **Arah & Pips:** Arah = arah entry sebenarnya; Pips bertanda +/- mengikuti laba/rugi.
 
@@ -22,11 +22,10 @@ Navigasi: layar ≥ 1100px memakai **sidebar kiri** yang bisa diciutkan (tombol 
 2. **Analisis PNL:** statistik rentang bergulir (7H–1T/Sesuaikan) dan kalender PNL Harian (klik tanggal untuk detail).
 3. **Performa:** bulanan & mingguan, rekor menang/rugi terbesar, donut Split arah Beli vs Jual.
 4. **Laporan:** lihat bagian berikut.
-5. **Transaksi:** buku transaksi (cari ID posisi; filter Arah/Hasil/Catatan psikologi/tanggal/lot; ekspor CSV). Klik baris untuk detail (lihat, edit, hapus); "Simpan & lanjut" mengisi catatan psikologi berurutan.
+5. **Transaksi:** buku transaksi (cari ID posisi; filter Arah/Hasil/Catatan psikologi/tanggal/lot; ekspor CSV). Klik baris untuk detail (lihat, edit, hapus); "Simpan & lanjut" mengisi catatan psikologi berurutan. Tombol **Kalkulator lot** (kanan atas tabel) membuka modal kalkulator money management: risiko per trade (%), stop loss (pips), R:R → lot & target sesuai saldo terkini (tutup lewat Tutup, ketuk latar, atau Esc).
 6. **Deposit:** log deposit, penarikan, kompensasi margin call; ringkasan modal bersih.
-7. **Kalkulator:** risiko per trade (%), stop loss (pips), R:R → lot & target sesuai saldo.
 
-**Setelan** (⚙): batas harian pribadi (maks rugi & maks transaksi per hari), ekspor HTML/JSON, impor JSON (konfirmasi sebelum menimpa), Reset ke Bawaan (auto-backup JSON dulu).
+**Setelan** (⚙): batas harian pribadi (maks rugi & maks transaksi per hari), sinkron Supabase, ekspor HTML/JSON, impor JSON (konfirmasi sebelum menimpa), Reset ke Bawaan (auto-backup JSON dulu), dan **Tentang aplikasi**: versi aplikasi serta tombol **Lihat riwayat** untuk membuka daftar perubahan berbahasa awam, diurutkan dari tanggal terbaru.
 
 **Input manual:** tombol FAB (+) untuk Tambah Transaksi (arah, lot, harga, waktu, ID Posisi opsional, field psikologi), Deposit, atau Penarikan. Semua agregat dihitung ulang dari data mentah.
 
@@ -55,7 +54,7 @@ Navigasi: layar ≥ 1100px memakai **sidebar kiri** yang bisa diciutkan (tombol 
 - Kurva SVG digambar manual (monotone cubic Hermite); dropdown, date-time picker, dan filter memakai komponen kustom yang bisa dioperasikan keyboard.
 
 ## File terkait
-`CHANGELOG.md` (riwayat perubahan), `SUMMARY.md` (status, jebakan bug, todo).
+`CHANGELOG.md` (riwayat teknis per rilis), `SUMMARY.md` (status, jebakan bug, todo). Riwayat versi untuk pengguna ada di aplikasi (`USER_CHANGELOG` di `app.js`).
 
 ## Sinkron Supabase (v1.1.105)
 1. Jalankan `schema.sql` sekali di Supabase → SQL Editor. Aktifkan Auth email (Authentication → Providers).
@@ -65,3 +64,6 @@ Navigasi: layar ≥ 1100px memakai **sidebar kiri** yang bisa diciutkan (tombol 
 
 ## Pasang sebagai aplikasi (PWA, v1.1.106)
 Butuh alamat https (Vercel sudah otomatis). Android: Chrome → menu ⋮ → **Instal aplikasi**. iOS: Safari → Bagikan → **Tambah ke Layar Utama**. Data aplikasi terpasang terpisah dari browser; masuk lalu **Ambil dari awan**. Naikkan `CACHE` di `sw.js` bila ingin memaksa cache lama dibuang.
+
+## Alur rilis
+Naikkan `APP_VERSION` (`app.js`) dan `CACHE` (`sw.js`), tambah entri `USER_CHANGELOG` (`app.js`, bahasa pengguna) dan `CHANGELOG.md` (teknis), lalu perbarui `README.md`/`SUMMARY.md` bila fitur atau status berubah.
