@@ -34,6 +34,9 @@
   html[data-theme="light"][data-scheme="teal"]{--ink:#EDF6F5;--ink-raised:#DCECEA;--paper:#10292A;--paper-dim:#476664;--paper-faint:#5C7B79;--gold:#09726A;--gold-dim:#4FA79F;--gain:#4A7419;--loss:#B0442C;--line:#C2DAD7;--line-soft:#D2E5E2;}
   html[data-theme="light"][data-scheme="grafit"]{--ink:#F4F4F4;--ink-raised:#E8E8E8;--paper:#1C1C1C;--paper-dim:#595959;--paper-faint:#6B6B6B;--gold:#856410;--gold-dim:#B0954A;--gain:#2C7742;--loss:#A63E29;--line:#D4D4D4;--line-soft:#E2E2E2;}
   html[data-theme="light"][data-scheme="kontras"]{--ink:#FFFFFF;--ink-raised:#F0F0F0;--paper:#000000;--paper-dim:#404040;--paper-faint:#575757;--gold:#855300;--gold-dim:#B08A3E;--gain:#0A58C0;--loss:#B04400;--line:#B0B0B0;--line-soft:#D6D6D6;}
+  /* Ramah buta warna (v1.1.131): menimpa untung/rugi skema apa pun; harus setelah blok skema terang di atas */
+  html[data-cb="1"]{--gain:#4DA3FF;--loss:#FF9F43;}
+  html[data-cb="1"][data-theme="light"]{--gain:#0A58C0;--loss:#B04400;}
   html{transition:background .2s;}
   body{transition:background .2s, color .2s;}
   *{box-sizing:border-box;}
@@ -104,9 +107,11 @@
   .hero-approx[hidden]{display:none;}
   .custom-select.hero-cur{min-width:0;margin-bottom:0;flex-shrink:0;}
   .hero-cur .custom-select-btn{
-    width:auto;padding:4px 8px;font-size:13px;background:none;border:1px solid var(--line);
-    color:var(--paper-dim);gap:8px;white-space:nowrap;
+    width:auto;min-width:44px;min-height:38px;padding:4px 6px;font-size:13px;background:none !important;border:0 !important;
+    color:var(--paper-dim);gap:6px;white-space:nowrap;justify-content:flex-start;
   }
+  .hero-cur .custom-select-btn:hover{color:var(--gold);}
+  .hero-cur .custom-select-btn:focus-visible{outline:2px solid var(--gold);outline-offset:1px;}
   .hero-cur .custom-select-list{left:0;right:auto;width:max-content;min-width:100%;}
   .hero-cur .custom-select-list li{font-size:13px;padding:7px 12px;white-space:nowrap;}
   .hero-alltime{font-size:12.5px;color:var(--paper-dim);margin-top:6px;}
@@ -330,6 +335,9 @@
   .lap-dd-box{margin-top:12px;}
   .lap-dd-box svg{display:block;width:100%;height:auto;overflow:visible;}
   #equityChart{width:100%;height:auto;display:block;overflow:visible;}
+  #chartBox{padding-top:28px;}
+  .eq-plot{position:relative;}
+  #chartBox .eq-tooltip{transform:translate(-50%,-100%);margin-top:-3px;}
   .eq-tooltip{
     position:absolute;pointer-events:none;background:var(--ink-raised);border:1px solid var(--line);
     padding:6px 10px;font-size:11.5px;white-space:nowrap;transform:translate(-50%,-115%);opacity:0;transition:opacity .1s;
@@ -344,12 +352,17 @@
   .eq-extreme-label.bottom{transform:translate(-50%,-112%);color:var(--loss);}
   .eq-hover-line{stroke:var(--paper-faint);stroke-width:1;stroke-dasharray:2,3;opacity:0;}
   .eq-hover-dot{fill:var(--gold);opacity:0;}
-  .eq-period-label{position:absolute;top:0;right:0;font-size:10.5px;color:var(--gold);}
+  .eq-period-label{position:absolute;top:-26px;left:0;font-size:10.5px;color:var(--gold);transition:opacity .1s;}
   .eq-axis text{fill:var(--paper-faint);font-family:'IBM Plex Mono',monospace;font-size:9.5px;}
   .eq-grid line{stroke:var(--line-soft);}
-  .eq-legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:6px;font-size:10.5px;color:var(--paper-dim);}
-  .eq-legend-item{display:flex;align-items:center;gap:6px;}
-  .eq-legend-swatch{width:14px;height:2px;display:inline-block;border-radius:1px;}
+  .eq-legend{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 12px;margin-top:8px;font-size:10.5px;color:var(--paper-dim);}
+  .eq-legend-item{display:flex;align-items:center;gap:6px;min-width:0;}
+  .eq-legend-wide{grid-column:1/-1;}
+  button.eq-legend-item{background:none;border:0;padding:4px 0;margin:0;font:inherit;color:inherit;text-align:left;cursor:pointer;min-height:28px;}
+  button.eq-legend-item.off{opacity:.4;text-decoration:line-through;}
+  button.eq-legend-item:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
+  .eq-legend-dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none;}
+  .eq-legend-swatch{width:14px;height:2px;display:inline-block;border-radius:1px;flex:none;}
   .eq-legend-dash{width:14px;height:0;border-top:2px dashed;background:none;}
 
   /* PnL calendar */
@@ -810,6 +823,7 @@
 
   /* ---------- Laporan: tren profit/rugi (navigator periode & filter mandiri, terpisah dari tab Ringkasan) ---------- */
   .lap-gran-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;}
+  #periodChips .lap-gran-btn, #anGranTabs .lap-gran-btn{padding:7px 11px;min-height:34px;}
   .lap-gran-btn{background:none;border:1px solid var(--line);color:var(--paper-dim);font-family:'IBM Plex Mono',monospace;font-size:11px;padding:7px 13px;cursor:pointer;border-radius:999px;}
   .lap-gran-btn:hover{border-color:var(--gold);color:var(--gold);}
   .lap-gran-btn.active{background:var(--paper);color:var(--ink);border-color:var(--paper);}
@@ -1066,3 +1080,8 @@
   .detail-row-note{flex-direction:column;gap:6px;}
   .detail-note{text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--paper-dim);}
   .cat-ico{color:var(--gold);margin-left:6px;font-size:11px;cursor:help;}
+
+.accent-ctl{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.accent-ctl input[type="color"]{width:44px;height:34px;padding:2px;background:var(--ink-raised);border:1px solid var(--line);border-radius:6px;cursor:pointer;}
+.accent-msg{min-height:1.2em;margin:4px 0 0;}
+.accent-msg.warn{color:var(--loss);}
