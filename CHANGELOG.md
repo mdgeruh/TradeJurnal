@@ -1,8 +1,18 @@
 # Changelog
 
-Perubahan Jurnal XAUUSD, terbaru di atas. Semua rilis 22–28 Sep 2026. v1.1.66–v1.1.102 dicatat per versi; v1.0.0–v1.1.65 diringkas per tema. Status & todo: `SUMMARY.md`.
+Perubahan Jurnal XAUUSD, terbaru di atas. Semua rilis 22–29 Sep 2026. v1.1.66–v1.1.102 dicatat per versi; v1.0.0–v1.1.65 diringkas per tema. Status & todo: `SUMMARY.md`.
 
 ## Rilis terbaru
+### 1.1.109 — 29 Sep
+- Navbar atas jadi **sidebar kiri dinamis** di desktop (≥ 1100px): tiap tab punya ikon + label, tab aktif ditandai garis emas di kiri. Tombol **Ciutkan/Perluas** di dasar sidebar (224px ↔ 68px, hanya ikon dengan tooltip saat ciut); konten dan tombol + bergeser mengikuti dengan transisi halus. Pilihan disimpan di `localStorage` key `jurnalSidebar`; tanpa pilihan tersimpan, layar < 1280px mulai dalam keadaan ciut agar kolom 2 dari v1.1.108 tetap lega. Status diterapkan lewat skrip kecil di `<head>` (class `sb-collapsed` pada `<html>`) sebelum render pertama, jadi tidak melompat saat reload.
+- Layar < 1100px tidak berubah: 721–1099px tetap tab horizontal di atas, ≤ 720px tetap bottom nav. Cetak Laporan tidak terpengaruh. Logika tab di `app.js` tidak diubah (tombol `.main-tab-btn` yang sama); ditambah modul kecil untuk tombol ciut.
+- Diverifikasi Playwright (1920/1280/1100/900/390px): sidebar 224px/68px, konten bergeser benar, ganti tab berfungsi, pilihan bertahan setelah reload, tanpa overflow horizontal dan tanpa error JS. Belum dicek di perangkat asli; cetak PDF belum dicek ulang.
+- `sw.js`: `CACHE` dinaikkan ke `jurnal-v1.1.109`.
+### 1.1.108 — 29 Sep
+- Tampilan desktop (≥ 1100px): lebar maksimum 920 → 1240px. Ringkasan: kartu saldo di kiri, kurva ekuitas di kanan. Performa dan Setelan: 2 kolom. Laporan, Transaksi, Deposit, Analisis PNL, Kalkulator tetap satu kolom tapi lebih lebar. Tombol + ikut bergeser ke tepi konten. Layar < 1100px dan cetak tidak berubah.
+- Diverifikasi Playwright (390/768/1099/1100/1280/1920px): tanpa error JS, tanpa overflow horizontal kecuali Laporan pada 768px (774px, sudah ada sebelumnya).
+### 1.1.107 — 29 Sep
+- **Fix:** layar berkedip gelap tiap ganti mata uang (dan reload lain) saat memakai tema terang. Tema tersimpan kini diterapkan lewat skrip kecil di `<head>` sebelum halaman pertama digambar; sebelumnya baru diterapkan di akhir `app.js`. `theme-color` PWA ikut menyesuaikan.
 ### 1.1.106 — 29 Sep
 - PWA: bisa dipasang di Android (Chrome) dan iOS (Safari → Tambah ke Layar Utama). Baru: `manifest.webmanifest`, `sw.js` (network-first, cadangan offline), `pwa.js`, ikon 192/512/180 px. Service worker hanya aktif di https/localhost. Panggilan Supabase tidak di-cache.
 - Catatan iOS: data localStorage aplikasi terpasang terpisah dari Safari, jadi isi lewat Ambil dari awan.
