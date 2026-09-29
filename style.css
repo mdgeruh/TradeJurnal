@@ -11,7 +11,7 @@
     --line:#3A3226;
     --line-soft:#2A251C;
   }
-  /* Skema warna gelap (v1.1.121): menimpa 11 variabel :root; html[data-theme="light"] di bawahnya tetap menang */
+  /* Skema warna gelap (v1.1.121): menimpa 11 variabel :root; varian terang tiap skema ada di bawah blok html[data-theme="light"] (v1.1.130) */
   html[data-scheme="ocean"]{--ink:#071B33;--ink-raised:#0E2A4A;--paper:#E3EEF8;--paper-dim:#8FA9C4;--paper-faint:#6B839C;--gold:#4DB8FF;--gold-dim:#2F7FB8;--gain:#5FD0A0;--loss:#EE7B66;--line:#1E3A5C;--line-soft:#14304F;}
   html[data-scheme="teal"]{--ink:#0B1B1C;--ink-raised:#112628;--paper:#E2F0EF;--paper-dim:#8DAEAC;--paper-faint:#66807E;--gold:#2EC4B6;--gold-dim:#1F8A80;--gain:#A6D96A;--loss:#F0806A;--line:#1F3A3B;--line-soft:#163031;}
   html[data-scheme="grafit"]{--ink:#121212;--ink-raised:#1B1B1B;--paper:#ECECEC;--paper-dim:#A0A0A0;--paper-faint:#767676;--gold:#E0B84D;--gold-dim:#9C823A;--gain:#79B98A;--loss:#D9736A;--line:#333333;--line-soft:#262626;}
@@ -29,6 +29,11 @@
     --line:#D9CFB4;
     --line-soft:#E3DAC3;
   }
+  /* Varian terang per skema (v1.1.130): harus SETELAH html[data-theme="light"]; Emas Klasik memakai blok terang di atas. Kontras teks/aksen/gain/loss >= 4.5:1 terhadap --ink. */
+  html[data-theme="light"][data-scheme="ocean"]{--ink:#EEF5FB;--ink-raised:#DDEAF6;--paper:#0F2740;--paper-dim:#4A6580;--paper-faint:#5F7892;--gold:#0B6AAE;--gold-dim:#4E93C6;--gain:#1B7550;--loss:#B23F2B;--line:#C3D6E8;--line-soft:#D3E2F0;}
+  html[data-theme="light"][data-scheme="teal"]{--ink:#EDF6F5;--ink-raised:#DCECEA;--paper:#10292A;--paper-dim:#476664;--paper-faint:#5C7B79;--gold:#09726A;--gold-dim:#4FA79F;--gain:#4A7419;--loss:#B0442C;--line:#C2DAD7;--line-soft:#D2E5E2;}
+  html[data-theme="light"][data-scheme="grafit"]{--ink:#F4F4F4;--ink-raised:#E8E8E8;--paper:#1C1C1C;--paper-dim:#595959;--paper-faint:#6B6B6B;--gold:#856410;--gold-dim:#B0954A;--gain:#2C7742;--loss:#A63E29;--line:#D4D4D4;--line-soft:#E2E2E2;}
+  html[data-theme="light"][data-scheme="kontras"]{--ink:#FFFFFF;--ink-raised:#F0F0F0;--paper:#000000;--paper-dim:#404040;--paper-faint:#575757;--gold:#855300;--gold-dim:#B08A3E;--gain:#0A58C0;--loss:#B04400;--line:#B0B0B0;--line-soft:#D6D6D6;}
   html{transition:background .2s;}
   body{transition:background .2s, color .2s;}
   *{box-sizing:border-box;}
@@ -1026,3 +1031,38 @@
 .scheme-card[aria-pressed="true"]{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold);}
 .scheme-sw{display:flex;height:22px;border:1px solid rgba(128,128,128,.4);}
 .scheme-sw i{flex:1;}
+
+  /* v1.1.128: kartu transaksi di layar sempit */
+  .ledger-sort-m{display:none;}
+  @media (max-width:720px){
+    .ledger-sort-m{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:11px;color:var(--paper-faint);text-transform:uppercase;letter-spacing:.05em;}
+    .ledger-sort-m select{flex:1;min-width:0;background:var(--ink-raised);color:var(--paper);border:1px solid var(--line);padding:7px 10px;font-size:12px;font-family:inherit;}
+    .ledger-sort-m select:focus{outline:1px solid var(--gold);}
+    table.ledger.ledger-tx{min-width:0;display:block;}
+    table.ledger.ledger-tx thead{display:none;}
+    table.ledger.ledger-tx tbody{display:block;}
+    table.ledger.ledger-tx tbody tr{display:grid;grid-template-columns:auto 1fr auto;grid-template-areas:"date dir laba" "id id laba" "meta meta meta";column-gap:10px;row-gap:3px;align-items:center;padding:10px 10px;border-bottom:1px solid var(--line-soft);}
+    table.ledger.ledger-tx tbody tr.big-loss{padding-left:13px;}
+    table.ledger.ledger-tx tbody tr[data-id]{cursor:pointer;}
+    table.ledger.ledger-tx tbody td{display:block;padding:0;border:0;white-space:normal;text-align:left;}
+    table.ledger.ledger-tx tbody tr.big-loss td:first-child{padding-left:0;}
+    table.ledger.ledger-tx td.c-date{grid-area:date;font-size:12px;color:var(--paper-dim);}
+    table.ledger.ledger-tx td.c-id{grid-area:id;font-size:11px;color:var(--paper-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    table.ledger.ledger-tx td.c-laba{grid-area:laba;align-self:center;text-align:right;font-size:17px;font-weight:500;}
+    table.ledger.ledger-tx td.c-dir{grid-area:dir;justify-self:start;}
+    table.ledger.ledger-tx tbody td.col-x{display:none;}
+    table.ledger.ledger-tx tbody tr .c-lot,table.ledger.ledger-tx tbody tr .c-open,table.ledger.ledger-tx tbody tr .c-close,table.ledger.ledger-tx tbody tr .c-pips{display:none;}
+    table.ledger.ledger-tx tbody tr::after{content:attr(data-meta);grid-area:meta;margin-top:3px;font-size:11.5px;color:var(--paper-dim);}
+    table.ledger.ledger-tx tbody tr:has(td[colspan]){display:table-row;}
+    table.ledger.ledger-tx tbody tr td[colspan]{display:table-cell;text-align:center;}
+  }
+
+  /* v1.1.129: catatan bebas per transaksi */
+  .calc-field textarea,.entry-form .calc-field textarea{
+    width:100%;background:var(--ink-raised);border:1px solid var(--line);color:var(--paper);
+    font-family:'IBM Plex Mono',monospace;font-size:13px;line-height:1.45;padding:9px 10px;box-sizing:border-box;resize:vertical;min-height:70px;
+  }
+  .calc-field textarea:focus{outline:1px solid var(--gold);border-color:var(--gold);}
+  .detail-row-note{flex-direction:column;gap:6px;}
+  .detail-note{text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--paper-dim);}
+  .cat-ico{color:var(--gold);margin-left:6px;font-size:11px;cursor:help;}

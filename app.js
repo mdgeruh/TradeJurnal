@@ -2944,7 +2944,7 @@ function renderTrades(){
   noteEl.textContent = dateInvalid ? 'Tanggal "sampai" harus setelah "dari"'
     : lotInvalid ? '"Lot max" harus lebih besar dari "Lot min"' : '';
   const filtered = (dateInvalid || lotInvalid) ? [] : allTrades.filter(t=>{
-    if(q && !t.id.toLowerCase().includes(q)) return false;
+    if(q && !t.id.toLowerCase().includes(q) && !String(t.catatan||'').toLowerCase().includes(q)) return false;
     if(arah && t.arah!==arah) return false;
     if(hasil==='win' && t.laba<=0) return false;
     if(hasil==='loss' && t.laba>=0) return false;
@@ -2968,17 +2968,17 @@ function renderTrades(){
     return cmp * currentSort.dir;
   });
   tbody.innerHTML = filtered.length ? filtered.slice(0,ledgerLimit).map(t=>`
-    <tr class="${bigLossThreshold!==null && t.laba<=bigLossThreshold ? 'big-loss' : ''}${ledgerSel.has(t.id) ? ' sel-on' : ''}" data-id="${escapeHtml(t.id)}">
-      <td><input type="checkbox" class="sel-cb" tabindex="-1" aria-label="Pilih transaksi"${ledgerSel.has(t.id) ? ' checked' : ''}>${fmtDateTime(t.tanggal)}</td>
-      <td><span class="note-dot ${hasNote(t)?'on':''}" title="${escapeHtml(hasNote(t) ? 'Catatan: '+[t.emosi,t.trigger,t.jenis_entry].filter(Boolean).join(' · ') : 'Belum ada catatan psikologi')}"></span>${escapeHtml(t.id)}</td>
-      <td><span class="tag ${t.arah==='Beli'?'beli':'jual'}">${escapeHtml(t.arah)}</span></td>
-      <td>${t.lot}</td>
-      <td>${t.buka.toFixed(2)}</td>
-      <td>${t.tutup.toFixed(2)}</td>
+    <tr class="${bigLossThreshold!==null && t.laba<=bigLossThreshold ? 'big-loss' : ''}${ledgerSel.has(t.id) ? ' sel-on' : ''}" data-id="${escapeHtml(t.id)}" data-meta="${escapeHtml('Lot '+t.lot+' · '+t.buka.toFixed(2)+' → '+t.tutup.toFixed(2)+' · '+(t.pips>=0?'+':'')+t.pips.toFixed(1)+'p')}">
+      <td class="c-date"><input type="checkbox" class="sel-cb" tabindex="-1" aria-label="Pilih transaksi"${ledgerSel.has(t.id) ? ' checked' : ''}>${fmtDateTime(t.tanggal)}</td>
+      <td class="c-id"><span class="note-dot ${hasNote(t)?'on':''}" title="${escapeHtml(hasNote(t) ? 'Catatan: '+[t.emosi,t.trigger,t.jenis_entry].filter(Boolean).join(' · ') : 'Belum ada catatan psikologi')}"></span>${escapeHtml(t.id)}${t.catatan ? `<span class="cat-ico" title="${escapeHtml(String(t.catatan).slice(0,160))}">✎</span>` : ''}</td>
+      <td class="c-dir"><span class="tag ${t.arah==='Beli'?'beli':'jual'}">${escapeHtml(t.arah)}</span></td>
+      <td class="c-lot" data-l="Lot">${t.lot}</td>
+      <td class="c-open" data-l="Buka">${t.buka.toFixed(2)}</td>
+      <td class="c-close" data-l="Tutup">${t.tutup.toFixed(2)}</td>
       <td class="col-x">${t.waktu_buka ? fmtDateTimeGmt8(t.waktu_buka) : '-'}</td>
       <td class="col-x">${fmtTradeDur(tradeDurMin(t))}</td>
-      <td class="${t.pips>=0?'laba pos':'laba neg'}">${t.pips>=0?'+':''}${t.pips.toFixed(1)}</td>
-      <td class="${t.laba>=0?'laba pos':'laba neg'}">${t.laba>=0?'+':''}${fmtMoneyNum(t.laba)}</td>
+      <td class="c-pips ${t.pips>=0?'laba pos':'laba neg'}" data-l="Pips">${t.pips>=0?'+':''}${t.pips.toFixed(1)}</td>
+      <td class="c-laba ${t.laba>=0?'laba pos':'laba neg'}">${t.laba>=0?'+':''}${fmtMoneyNum(t.laba)}</td>
     </tr>`).join('') : `<tr><td colspan="10" style="text-align:center;color:var(--paper-faint);padding:18px 8px;">Tidak ada transaksi yang cocok dengan filter.</td></tr>`;
   const sum = filtered.reduce((s,t)=>s+t.laba,0);
   document.getElementById('ledgerShown').textContent = `Menampilkan ${Math.min(filtered.length,ledgerLimit)} dari ${filtered.length}`;
@@ -2987,6 +2987,7 @@ function renderTrades(){
   const gw = wn.reduce((a,t)=>a+t.laba,0), gl = ls.reduce((a,t)=>a+t.laba,0), stEl = document.getElementById('ledgerStats');
   if(stEl) stEl.textContent = filtered.length ? `Seluruh hasil filter: ${wn.length} menang · ${ls.length} rugi · WR ${(wn.length/filtered.length*100).toFixed(1).replace('.',',')}%` + (wn.length ? ` · rata-rata menang ${fmtMoney(gw/wn.length)}` : '') + (ls.length ? ` · rata-rata rugi ${fmtMoney(gl/ls.length)}` + (wn.length ? ` · PF ${(gw/Math.abs(gl)).toFixed(2).replace('.',',')}` : '') : '') : '';
   lastFilteredTrades = filtered;
+  { const ss = document.getElementById('ledgerSortSel'); if(ss){ const v = currentSort.key + ':' + currentSort.dir; ss.value = [...ss.options].some(o=>o.value===v) ? v : ''; } }
   const moreBtn = document.getElementById('ledgerMoreBtn');
   if(moreBtn){ const rest = filtered.length - ledgerLimit; moreBtn.style.display = rest>0 ? '' : 'none'; if(rest>0) moreBtn.textContent = `Tampilkan ${Math.min(LEDGER_STEP,rest)} lagi (${rest} tersisa)`; }
   saveLedgerState({ q, arah, hasil, catatan, fEmosi, fTrig, fJenis, fSesi, from:fromV||'', to:toV||'', lotMin:lotMinV, lotMax:lotMaxV });
@@ -3048,6 +3049,19 @@ function renderTrades(){
   });
   updateHeaderIndicators();
   window.updateLedgerSortInd = updateHeaderIndicators;
+})();
+(function(){
+  const sel = document.getElementById('ledgerSortSel'); if(!sel) return;
+  const sync = ()=>{ const v = currentSort.key + ':' + currentSort.dir; sel.value = [...sel.options].some(o=>o.value===v) ? v : ''; };
+  sel.addEventListener('change', ()=>{
+    if(!sel.value) return;
+    const [k,d] = sel.value.split(':'); currentSort.key = k; currentSort.dir = +d;
+    if(window.updateLedgerSortInd) window.updateLedgerSortInd();
+    renderTrades();
+  });
+  const orig = window.updateLedgerSortInd;
+  window.updateLedgerSortInd = function(){ if(orig) orig(); sync(); };
+  sync();
 })();
 document.getElementById('searchBox').addEventListener('input', renderTrades);
 document.getElementById('ledgerLotMin').addEventListener('input', renderTrades);
@@ -3120,14 +3134,14 @@ document.getElementById('ledgerResetBtn').addEventListener('click', ()=>{
 })();
 document.getElementById('ledgerExportBtn').addEventListener('click', ()=>{
   if(!lastFilteredTrades.length){ return; }
-  const header = ['Tanggal tutup','ID posisi','Arah','Lot','Buka','Tutup','Pips','Laba (cent)','Tanggal tutup (GMT+8)','Waktu buka (GMT+8)','Trigger entry','Trigger exit','Emosi','Jenis entry'];
+  const header = ['Tanggal tutup','ID posisi','Arah','Lot','Buka','Tutup','Pips','Laba (cent)','Tanggal tutup (GMT+8)','Waktu buka (GMT+8)','Trigger entry','Trigger exit','Emosi','Jenis entry','Catatan'];
   const csvEscape = v => {
     const s = String(v);
     return /[",\n;]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
   };
   const rows = lastFilteredTrades.map(t => [
     fmtDateTime(t.tanggal), t.id, t.arah, t.lot, t.buka.toFixed(2), t.tutup.toFixed(2), t.pips.toFixed(1), t.laba.toFixed(2),
-    String(t.tanggal_gmt8||'').replace('T',' '), String(t.waktu_buka||'').replace('T',' '), t.trigger||'', t.trigger_exit||'', t.emosi||'', t.jenis_entry||''
+    String(t.tanggal_gmt8||'').replace('T',' '), String(t.waktu_buka||'').replace('T',' '), t.trigger||'', t.trigger_exit||'', t.emosi||'', t.jenis_entry||'', t.catatan||''
   ].map(csvEscape).join(','));
   const csv = '\uFEFF' + [header.join(','), ...rows].join('\n');
   const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
@@ -3165,7 +3179,7 @@ const CSV_ALIAS = {
   id:['idposisi','id','ticket','position','posisi'], arah:['arah','type','tipe','direction'],
   lot:['lot','volume','size'], buka:['buka','hargabuka','openprice'], tutup:['tutup','hargatutup','closeprice'],
   pips:['pips'], laba:['labacent','laba','profit'], wb:['waktubukagmt8','waktubuka','opentime'],
-  trigger:['triggerentry','trigger'], trigger_exit:['triggerexit'], emosi:['emosi'], jenis_entry:['jenisentry']
+  trigger:['triggerentry','trigger'], trigger_exit:['triggerexit'], emosi:['emosi'], jenis_entry:['jenisentry'], catatan:['catatan','catatanbebas','note','notes']
 };
 function csvToTrades(text){
   const rows = parseCsvText(text);
@@ -3177,26 +3191,50 @@ function csvToTrades(text){
   if(need.length || (col.gmt8===undefined && col.tutupTime===undefined)) return { fresh:[], dup:0, bad:[], assumed:false, missing:true };
   const pn = v => { let s = String(v==null?'':v).trim().replace(/\s/g,''); s = (s.includes(',') && !s.includes('.')) ? s.replace(',', '.') : s.replace(/,/g,''); return s==='' ? NaN : parseFloat(s); };
   const pdt = v => { const m = String(v||'').trim().match(/^(\d{4})[-./](\d{2})[-./](\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/); return m ? `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]||'00'}` : ''; };
+  // Format ekspor lama: "27 Sep 22:29" / "27 Sep 2026 22:29" (bulan Indonesia/Inggris; tanpa tahun -> tahun terdekat yang tidak melewati hari ini).
+  // Zona waktunya = zona tampilan saat CSV diekspor; dipakai CURRENT_TZ_OFFSET lalu dikonversi ke GMT+8.
+  const MON = {jan:0,feb:1,mar:2,apr:3,mei:4,may:4,jun:5,jul:6,agu:7,aug:7,agt:7,sep:8,okt:9,oct:9,nov:10,des:11,dec:11};
+  const nowMs = Date.now();
+  const pdtNamed = v => {
+    const m = String(v||'').trim().match(/^(\d{1,2})\s+([A-Za-z]{3})[A-Za-z]*\.?\s+(?:(\d{4})\s+)?(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+    if(!m) return '';
+    const mo = MON[m[2].toLowerCase()]; if(mo===undefined) return '';
+    const d = +m[1], h = +m[4], mi = +m[5], sec = +(m[6]||0);
+    let y = m[3] ? +m[3] : new Date(nowMs + CURRENT_TZ_OFFSET*60000).getUTCFullYear();
+    const toUtc = yy => Date.UTC(yy, mo, d, h, mi, sec) - CURRENT_TZ_OFFSET*60000;
+    if(!m[3]) while(toUtc(y) > nowMs + 2*86400000) y--;
+    const g = new Date(toUtc(y) + 8*3600000);
+    if(isNaN(g)) return '';
+    return g.toISOString().slice(0,19);
+  };
+  let namedFmt = false;
   const get = (r,k) => col[k]===undefined ? '' : String(r[col[k]]==null ? '' : r[col[k]]).trim();
-  const seen = new Set(DATA.trades.map(t=>String(t.id)));
+  const inData = new Set(DATA.trades.map(t=>String(t.id))), inFile = new Set();
   const fresh = [], bad = []; let dup = 0;
   rows.slice(1).forEach((r, n)=>{
     const line = n + 2;
     const a = get(r,'arah'), arah = /beli|buy/i.test(a) ? 'Beli' : (/jual|sell/i.test(a) ? 'Jual' : '');
     const lot = pn(get(r,'lot')), buka = pn(get(r,'buka')), tutup = pn(get(r,'tutup'));
-    const g8 = pdt(get(r,'gmt8') || get(r,'tutupTime'));
+    let g8 = pdt(get(r,'gmt8'));
+    if(!g8){
+      const tt = get(r,'tutupTime');
+      g8 = pdt(tt);
+      if(!g8){ g8 = pdtNamed(tt); if(g8) namedFmt = true; }
+    }
     if(!arah || !(lot>0) || !(buka>0) || !(tutup>0) || !g8){ bad.push(line); return; }
     const id = get(r,'id') || ('imp-' + Date.now() + '-' + line);
-    if(seen.has(id)){ dup++; return; }
-    seen.add(id);
+    // Lewati bila ID sudah ada di data. Dalam satu file, ID sama dengan waktu/harga tutup berbeda = penutupan parsial, tetap diimpor.
+    const fk = id + '|' + g8 + '|' + tutup;
+    if(inData.has(id) || inFile.has(fk)){ dup++; return; }
+    inFile.add(fk);
     let pips = pn(get(r,'pips')), laba = pn(get(r,'laba'));
     if(!isFinite(pips)) pips = round2((arah==='Beli' ? (tutup-buka) : (buka-tutup)) * 10);
     if(!isFinite(laba)) laba = round2(pips * lot * 10);
     fresh.push({ id, arah, lot, buka, tutup, pips, laba,
       tanggal: new Date(new Date(g8 + 'Z').getTime() - 5*3600*1000).toISOString().slice(0,19), tanggal_gmt8: g8,
-      waktu_buka: pdt(get(r,'wb')), trigger: get(r,'trigger'), trigger_exit: get(r,'trigger_exit'), emosi: get(r,'emosi'), jenis_entry: get(r,'jenis_entry') });
+      waktu_buka: pdt(get(r,'wb')), trigger: get(r,'trigger'), trigger_exit: get(r,'trigger_exit'), emosi: get(r,'emosi'), jenis_entry: get(r,'jenis_entry'), ...(get(r,'catatan') ? { catatan: get(r,'catatan').slice(0,1000) } : {}) });
   });
-  return { fresh, dup, bad, assumed: col.gmt8===undefined };
+  return { fresh, dup, bad, assumed: col.gmt8===undefined && !namedFmt, namedFmt };
 }
 (function(){
   const btn = document.getElementById('ledgerImportBtn'), inp = document.getElementById('ledgerImportInput');
@@ -3208,7 +3246,7 @@ function csvToTrades(text){
     let res;
     try{ res = csvToTrades(await file.text()); }catch(e){ queueNotifyAfterReload('Gagal membaca file CSV.', 'error'); location.reload(); return; }
     if(res.missing || res.empty){ await showConfirmModal(res.empty ? 'File CSV kosong atau hanya berisi judul kolom.' : 'Kolom wajib tidak ditemukan. CSV harus punya kolom Arah, Lot, Buka, Tutup, dan Tanggal tutup (pakai file hasil Ekspor CSV sebagai contoh).'); return; }
-    const extra = (res.dup ? ` ${res.dup} dilewati (ID sudah ada).` : '') + (res.bad.length ? ` ${res.bad.length} baris tidak valid diabaikan (baris ${res.bad.slice(0,5).join(', ')}${res.bad.length>5?', …':''}).` : '') + (res.assumed && res.fresh.length ? ' Kolom "Tanggal tutup (GMT+8)" tidak ada, jadi waktu dianggap GMT+8.' : '');
+    const extra = (res.dup ? ` ${res.dup} dilewati (ID sudah ada).` : '') + (res.bad.length ? ` ${res.bad.length} baris tidak valid diabaikan (baris ${res.bad.slice(0,5).join(', ')}${res.bad.length>5?', …':''}).` : '') + (res.assumed && res.fresh.length ? ' Kolom "Tanggal tutup (GMT+8)" tidak ada, jadi waktu dianggap GMT+8.' : '') + (res.namedFmt && res.fresh.length ? ' Tanggal tanpa tahun dibaca sebagai tahun terdekat, dan jamnya dianggap mengikuti zona waktu tampilan saat ini.' : '');
     if(!res.fresh.length){ await showConfirmModal('Tidak ada transaksi baru untuk diimpor.' + extra); return; }
     if(!await showConfirmModal(`Tambahkan ${res.fresh.length} transaksi baru dari "${file.name}"? Data yang sudah ada tidak diubah.` + extra)) return;
     DATA.trades.push(...res.fresh);
@@ -3237,12 +3275,13 @@ window.renderTrades = renderTrades;
 // ---------- Tema: mode (gelap/terang/otomatis) + skema warna (v1.1.121) ----------
 (function(){
   const root = document.documentElement, toggleBtn = document.getElementById('themeToggle');
+  // c = swatch gelap, l = swatch terang (ink, aksen, gain, loss); harus sama dengan blok CSS html[data-scheme] / html[data-theme="light"][data-scheme]
   const SCHEMES = [
-    {id:'emas', n:'Emas Klasik', c:['#1B1712','#C9A24B','#84AB7C','#C06B54']},
-    {id:'ocean', n:'Blue Ocean', c:['#071B33','#4DB8FF','#5FD0A0','#EE7B66']},
-    {id:'teal', n:'Teal Green', c:['#0B1B1C','#2EC4B6','#A6D96A','#F0806A']},
-    {id:'grafit', n:'Grafit Netral', c:['#121212','#E0B84D','#79B98A','#D9736A']},
-    {id:'kontras', n:'Kontras Tinggi', c:['#0A0A0A','#FFD166','#4DA3FF','#FF9F43']}
+    {id:'emas', n:'Emas Klasik', c:['#1B1712','#C9A24B','#84AB7C','#C06B54'], l:['#F3EDE0','#9C7526','#4F7548','#9C4530']},
+    {id:'ocean', n:'Blue Ocean', c:['#071B33','#4DB8FF','#5FD0A0','#EE7B66'], l:['#EEF5FB','#0B6AAE','#1B7550','#B23F2B']},
+    {id:'teal', n:'Teal Green', c:['#0B1B1C','#2EC4B6','#A6D96A','#F0806A'], l:['#EDF6F5','#09726A','#4A7419','#B0442C']},
+    {id:'grafit', n:'Grafit Netral', c:['#121212','#E0B84D','#79B98A','#D9736A'], l:['#F4F4F4','#856410','#2C7742','#A63E29']},
+    {id:'kontras', n:'Kontras Tinggi', c:['#0A0A0A','#FFD166','#4DA3FF','#FF9F43'], l:['#FFFFFF','#855300','#0A58C0','#B04400']}
   ];
   const mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: light)') : null;
   let mode = 'dark', scheme = 'emas';
@@ -3260,7 +3299,8 @@ window.renderTrades = renderTrades;
     if(scheme!=='emas') root.setAttribute('data-scheme',scheme); else root.removeAttribute('data-scheme');
     toggleBtn.textContent = light ? '☀' : '☾';
     const meta = document.querySelector('meta[name="theme-color"]');
-    if(meta) meta.setAttribute('content', light ? '#F3EDE0' : SCHEMES.find(x=>x.id===scheme).c[0]);
+    if(meta) meta.setAttribute('content', SCHEMES.find(x=>x.id===scheme)[light ? 'l' : 'c'][0]);
+    document.querySelectorAll('.scheme-card').forEach(card => { const sc = SCHEMES.find(x=>x.id===card.dataset.schemeId); card.querySelectorAll('.scheme-sw i').forEach((el, i) => { el.style.background = sc[light ? 'l' : 'c'][i]; }); });
     chips.forEach(c => c.classList.toggle('active', c.dataset.mode===mode));
     document.querySelectorAll('.scheme-card').forEach(c => c.setAttribute('aria-pressed', c.dataset.schemeId===scheme ? 'true' : 'false'));
     if(persist){ try{ localStorage.setItem('jurnalTheme', mode); localStorage.setItem('jurnalScheme', scheme); }catch(e){} }
@@ -4040,6 +4080,7 @@ DTP.build('ledgerTo', 'Sampai tanggal', { dateOnly:true, onChange:onLedgerDateCh
       CS.set('csw_entryTriggerExit', '');
       CS.set('csw_entryEmosi', '');
       CS.set('csw_entryJenisEntry', '');
+      document.getElementById('entryCatatan').value = '';
     } else {
       document.getElementById('entryUsd').value = '';
       document.getElementById('entryJenis').value = m==='deposit' ? 'Deposit Bank Transfer' : 'Internal Transfer (Remove Funds)';
@@ -4095,7 +4136,8 @@ DTP.build('ledgerTo', 'Sampai tanggal', { dateOnly:true, onChange:onLedgerDateCh
       const emosi = CS.get('csw_entryEmosi');
       const jenis_entry = CS.get('csw_entryJenisEntry');
       const idPosisi = idPosisiRaw || ('manual-'+Date.now());
-      DATA.trades.push({ id: idPosisi, arah, lot, buka, tutup, pips, laba, tanggal, tanggal_gmt8, waktu_buka: waktu_buka_gmt8, trigger, trigger_exit, emosi, jenis_entry });
+      const catatanBaru = document.getElementById('entryCatatan').value.trim().slice(0,1000);
+      DATA.trades.push({ id: idPosisi, arah, lot, buka, tutup, pips, laba, tanggal, tanggal_gmt8, waktu_buka: waktu_buka_gmt8, trigger, trigger_exit, emosi, jenis_entry, ...(catatanBaru ? { catatan: catatanBaru } : {}) });
     } else {
       const usdRaw = parseFloat(document.getElementById('entryUsd').value);
       const jenis = document.getElementById('entryJenis').value.trim() || (mode==='deposit' ? 'Deposit Manual' : 'Penarikan Manual');
@@ -4160,6 +4202,7 @@ function gmt8ToServerIso(val){
     document.getElementById('dvTriggerExit').textContent = t.trigger_exit || '-';
     document.getElementById('dvEmosi').textContent = t.emosi || '-';
     document.getElementById('dvJenisEntry').textContent = t.jenis_entry || '-';
+    document.getElementById('dvCatatan').textContent = t.catatan || '-';
     viewBox.style.display='block'; editBox.style.display='none';
     viewActions.style.display='flex'; editActions.style.display='none';
     const ids = lastFilteredTrades.map(x=>x.id), ix = ids.indexOf(id);
@@ -4197,6 +4240,7 @@ function gmt8ToServerIso(val){
     CS.set('csw_editTriggerExit', t.trigger_exit || '');
     CS.set('csw_editEmosi', t.emosi || '');
     CS.set('csw_editJenisEntry', t.jenis_entry || '');
+    document.getElementById('editCatatan').value = t.catatan || '';
     viewBox.style.display='none'; editBox.style.display='flex';
     viewActions.style.display='none'; editActions.style.display='flex';
     const nb = document.getElementById('detailSaveNextBtn'), cand = nextCandidates();
@@ -4247,6 +4291,7 @@ function gmt8ToServerIso(val){
     t.trigger_exit = CS.get('csw_editTriggerExit');
     t.emosi = CS.get('csw_editEmosi');
     t.jenis_entry = CS.get('csw_editJenisEntry');
+    { const cat = document.getElementById('editCatatan').value.trim().slice(0,1000); if(cat) t.catatan = cat; else delete t.catatan; }
     rebuildEquitySeries();
     recomputeAll();
     if(!saveActiveData(DATA)){
@@ -4414,9 +4459,13 @@ renderPsyPrompt();
 // ---------- Tentang aplikasi: versi + riwayat perubahan bahasa awam (v1.1.113) ----------
 // SETIAP RILIS: naikkan APP_VERSION, tambah entri di USER_CHANGELOG (tanggal ISO, bahasa pengguna akhir),
 // naikkan CACHE di sw.js, dan tambah entri di CHANGELOG.md. Versi hanya tampil di Setelan (bukan di footer).
-const APP_VERSION = '1.1.126';
+const APP_VERSION = '1.1.130';
 const USER_CHANGELOG = [
   { date:'2026-09-29', items:[
+    'Setelan → <strong>Tampilan</strong>: skema warna kini juga berlaku di <strong>mode terang</strong> (sebelumnya semua skema tampil sebagai terang Kertas Hangat). Tiap skema punya versi terangnya sendiri, dan contoh warna di kartu skema ikut berganti mengikuti mode.',
+    'Tab <strong>Transaksi</strong>: <strong>catatan bebas</strong> per transaksi (alasan entry, pelajaran) di form Tambah dan Edit, tampil di detail; ikon ✎ di samping ID menandai transaksi yang punya catatan, kotak pencarian kini juga mencari isi catatan, dan ekspor/impor CSV memuat kolom Catatan. Catatan ikut sinkron ke cloud setelah kolom <code>catatan</code> ditambahkan di Supabase (jalankan <code>migrasi-catatan.sql</code> sekali).',
+    'Tab <strong>Transaksi</strong> di HP (layar sempit): daftar kini tampil sebagai <strong>kartu ringkas</strong> (tanggal + ID, arah, laba besar di kanan, lot/buka/tutup/pips di bawahnya) sehingga tidak perlu menggulir ke samping; ketuk kartu tetap membuka detail. Header kolom diganti menu <strong>Urutkan</strong> di atas daftar.',
+    'Tab <strong>Transaksi</strong>: <strong>impor CSV</strong> kini bisa membaca CSV lama yang tanggalnya tanpa tahun (mis. "27 Sep 22:29") dan bulan berbahasa Indonesia; sebelumnya semua baris dianggap tidak valid. Transaksi dengan ID sama tetapi waktu tutup berbeda (penutupan parsial) dalam satu file kini ikut diimpor.',
     'Tab <strong>Transaksi</strong>: tombol <strong>Pilih</strong> untuk memilih beberapa transaksi (ketuk baris, atau "Pilih semua hasil filter") lalu mengisi emosi, trigger, dan jenis entry sekaligus, cocok dipadukan dengan filter "Belum ada catatan"; serta pengaturan baru di Setelan → <strong>Buku transaksi</strong> untuk memilih persentase rugi terbesar yang diberi garis merah (bawaan 10%).',
     'Tab <strong>Transaksi</strong>: filter baru <strong>Emosi</strong>, <strong>Trigger</strong>, <strong>Jenis entry</strong>, dan <strong>Sesi pasar</strong>; tombol <strong>‹ ›</strong> di jendela detail untuk pindah ke transaksi sebelumnya/berikutnya tanpa menutupnya; kolom <strong>Laba aktual</strong> di Tambah/Edit transaksi (isi bila ingin memakai laba asli broker, termasuk swap dan komisi); dan <strong>Kalkulator lot</strong> juga tersedia di menu tombol (+).',
     'Tab <strong>Transaksi</strong>: kolom <strong>Waktu buka</strong> dan <strong>Durasi</strong> (bisa diurutkan; disembunyikan di layar HP), ringkasan hasil filter di bawah tabel (menang, rugi, win rate, rata-rata menang/rugi, profit factor), chip cepat <strong>Hari Ini</strong>, <strong>Minggu Ini</strong> (mulai Senin), dan <strong>Bulan Lalu</strong>, serta tombol <strong>Batalkan hapus</strong> selama 30 menit setelah menghapus transaksi. Perbaikan: chip <strong>7 Hari</strong> dan <strong>30 Hari</strong> tidak lagi salah menghitung tanggal awal di awal bulan atau saat tanggal hari ini kecil.',
