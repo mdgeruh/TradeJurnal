@@ -49,7 +49,9 @@ function gmt8DayBounds(y,m,d){
   return [start,end];
 }
 function gmt8DateKeyFromParts(y,m,d){
-  return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  // v1.1.124: dinormalkan lewat Date.UTC supaya d ≤ 0 atau m di luar 0–11 tetap tanggal valid (chip 7/30 Hari sebelumnya menghasilkan "2026-09-00").
+  const x = new Date(Date.UTC(y,m,d));
+  return `${x.getUTCFullYear()}-${String(x.getUTCMonth()+1).padStart(2,'0')}-${String(x.getUTCDate()).padStart(2,'0')}`;
 }
 const GMT8_NOW = gmt8NowParts();
 const GMT8_TODAY_KEY = gmt8DateKeyFromParts(GMT8_NOW.y, GMT8_NOW.m, GMT8_NOW.d);
@@ -2873,9 +2875,15 @@ const tbody = document.getElementById('ledgerBody');
 
 // Ambang "rugi besar": 10% kerugian terburuk secara historis (persentil, bukan angka tetap)
 const sortedLosses = allTrades.map(t=>t.laba).filter(v=>v<0).sort((a,b)=>a-b);
-const bigLossThreshold = sortedLosses.length ? sortedLosses[Math.max(0, Math.ceil(sortedLosses.length*0.1)-1)] : null;
+let bigLossPct = 10;
+try{ const v = localStorage.getItem('jurnalBigLossPct'); if(v==='off') bigLossPct = 0; else if(v!==null){ const n = parseFloat(v); if(n>=1 && n<=50) bigLossPct = n; } }catch(e){}
+let bigLossThreshold = null;
+function recomputeBigLoss(){
+  bigLossThreshold = (bigLossPct>0 && sortedLosses.length) ? sortedLosses[Math.max(0, Math.ceil(sortedLosses.length*bigLossPct/100)-1)] : null;
+  document.getElementById('tradeCount').textContent = allTrades.length + ' transaksi tercatat' + (bigLossThreshold!==null ? ` · garis merah = rugi ${String(bigLossPct).replace('.',',')}% terbesar` : '');
+}
 
-document.getElementById('tradeCount').textContent = allTrades.length + ' transaksi tercatat' + (sortedLosses.length ? ' · garis merah = rugi 10% terbesar' : '');
+recomputeBigLoss();
 
 const SORT_GETTERS = {
   tanggal: t => parseGmt8(t.tanggal_gmt8),
@@ -2885,17 +2893,43 @@ const SORT_GETTERS = {
   buka: t => t.buka,
   tutup: t => t.tutup,
   pips: t => t.pips,
-  laba: t => t.laba
+  laba: t => t.laba,
+  wbuka: t => t.waktu_buka ? parseGmt8(t.waktu_buka) : 0,
+  durasi: t => tradeDurMin(t) ?? -1
 };
+function tradeDurMin(t){
+  if(!t.waktu_buka) return null;
+  const m = Math.round((parseGmt8(t.tanggal_gmt8) - parseGmt8(t.waktu_buka)) / 60000);
+  return isFinite(m) && m >= 0 ? m : null;
+}
+function fmtTradeDur(m){
+  if(m===null) return '-';
+  if(m < 60) return m + ' mnt';
+  if(m < 1440) return Math.floor(m/60) + 'j ' + String(m%60).padStart(2,'0') + 'm';
+  return Math.floor(m/1440) + 'h ' + Math.floor(m%1440/60) + 'j';
+}
 let currentSort = { key:'tanggal', dir:-1 }; // default: tanggal terbaru dulu
 let lastFilteredTrades = [];
 
+const ledgerSel = new Set();
+let ledgerLimit = 300; const LEDGER_STEP = 100, LEDGER_KEY = 'jurnalLedgerState'; let ledgerRestoring = false;
+function saveLedgerState(f){
+  if(ledgerRestoring) return;
+  try{
+    const sc = document.querySelector('.ledger-scroll'), chip = document.querySelector('.quick-chip.active');
+    sessionStorage.setItem(LEDGER_KEY, JSON.stringify(Object.assign({}, f, { sort:currentSort, limit:ledgerLimit, chip:chip ? chip.dataset.range : '', st:sc ? sc.scrollTop : 0 })));
+  }catch(e){}
+}
+window.addEventListener('pagehide', ()=>{
+  try{ const v = JSON.parse(sessionStorage.getItem(LEDGER_KEY)||'null'), sc = document.querySelector('.ledger-scroll'); if(v && sc){ v.st = sc.scrollTop; sessionStorage.setItem(LEDGER_KEY, JSON.stringify(v)); } }catch(e){}
+});
 function hasNote(t){ return !!(t.trigger || t.trigger_exit || t.emosi || t.jenis_entry); }
 function renderTrades(){
   const q = document.getElementById('searchBox').value.trim().toLowerCase();
   const arah = CS.get('csw_filterArah');
   const hasil = CS.get('csw_filterHasil');
   const catatan = CS.get('csw_filterCatatan');
+  const fEmosi = CS.get('csw_filterEmosi'), fTrig = CS.get('csw_filterTrigger'), fJenis = CS.get('csw_filterJenis'), fSesi = CS.get('csw_filterSesi');
   const fromV = DTP.get('ledgerFrom');
   const toV = DTP.get('ledgerTo');
   const rs = fromV ? parseGmt8(fromV+'T00:00:00') : null;
@@ -2916,6 +2950,10 @@ function renderTrades(){
     if(hasil==='loss' && t.laba>=0) return false;
     if(catatan==='belum' && hasNote(t)) return false;
     if(catatan==='sudah' && !hasNote(t)) return false;
+    if(fEmosi && t.emosi!==fEmosi) return false;
+    if(fTrig && t.trigger!==fTrig) return false;
+    if(fJenis && t.jenis_entry!==fJenis) return false;
+    if(fSesi!=='' && (!t.waktu_buka || lapSessionIdx(new Date(parseGmt8(t.waktu_buka) + 8*3600000).getUTCHours()) !== +fSesi)) return false;
     if(lotMin!==null && t.lot < lotMin) return false;
     if(lotMax!==null && t.lot > lotMax) return false;
     const tt = parseGmt8(t.tanggal_gmt8);
@@ -2929,21 +2967,29 @@ function renderTrades(){
     const cmp = (typeof ka === 'string') ? ka.localeCompare(kb) : (ka - kb);
     return cmp * currentSort.dir;
   });
-  tbody.innerHTML = filtered.length ? filtered.slice(0,300).map(t=>`
-    <tr class="${bigLossThreshold!==null && t.laba<=bigLossThreshold ? 'big-loss' : ''}" data-id="${t.id}">
-      <td>${fmtDateTime(t.tanggal)}</td>
-      <td>${t.id}</td>
-      <td><span class="tag ${t.arah==='Beli'?'beli':'jual'}">${t.arah}</span></td>
+  tbody.innerHTML = filtered.length ? filtered.slice(0,ledgerLimit).map(t=>`
+    <tr class="${bigLossThreshold!==null && t.laba<=bigLossThreshold ? 'big-loss' : ''}${ledgerSel.has(t.id) ? ' sel-on' : ''}" data-id="${escapeHtml(t.id)}">
+      <td><input type="checkbox" class="sel-cb" tabindex="-1" aria-label="Pilih transaksi"${ledgerSel.has(t.id) ? ' checked' : ''}>${fmtDateTime(t.tanggal)}</td>
+      <td><span class="note-dot ${hasNote(t)?'on':''}" title="${escapeHtml(hasNote(t) ? 'Catatan: '+[t.emosi,t.trigger,t.jenis_entry].filter(Boolean).join(' · ') : 'Belum ada catatan psikologi')}"></span>${escapeHtml(t.id)}</td>
+      <td><span class="tag ${t.arah==='Beli'?'beli':'jual'}">${escapeHtml(t.arah)}</span></td>
       <td>${t.lot}</td>
       <td>${t.buka.toFixed(2)}</td>
       <td>${t.tutup.toFixed(2)}</td>
+      <td class="col-x">${t.waktu_buka ? fmtDateTimeGmt8(t.waktu_buka) : '-'}</td>
+      <td class="col-x">${fmtTradeDur(tradeDurMin(t))}</td>
       <td class="${t.pips>=0?'laba pos':'laba neg'}">${t.pips>=0?'+':''}${t.pips.toFixed(1)}</td>
       <td class="${t.laba>=0?'laba pos':'laba neg'}">${t.laba>=0?'+':''}${fmtMoneyNum(t.laba)}</td>
-    </tr>`).join('') : `<tr><td colspan="8" style="text-align:center;color:var(--paper-faint);padding:18px 8px;">Tidak ada transaksi yang cocok dengan filter.</td></tr>`;
+    </tr>`).join('') : `<tr><td colspan="10" style="text-align:center;color:var(--paper-faint);padding:18px 8px;">Tidak ada transaksi yang cocok dengan filter.</td></tr>`;
   const sum = filtered.reduce((s,t)=>s+t.laba,0);
-  document.getElementById('ledgerShown').textContent = `Menampilkan ${Math.min(filtered.length,300)} dari ${filtered.length}`;
+  document.getElementById('ledgerShown').textContent = `Menampilkan ${Math.min(filtered.length,ledgerLimit)} dari ${filtered.length}`;
   document.getElementById('ledgerSum').textContent = `Jumlah: ${fmtMoney(sum)}`;
+  const wn = filtered.filter(t=>t.laba>0), ls = filtered.filter(t=>t.laba<0);
+  const gw = wn.reduce((a,t)=>a+t.laba,0), gl = ls.reduce((a,t)=>a+t.laba,0), stEl = document.getElementById('ledgerStats');
+  if(stEl) stEl.textContent = filtered.length ? `Seluruh hasil filter: ${wn.length} menang · ${ls.length} rugi · WR ${(wn.length/filtered.length*100).toFixed(1).replace('.',',')}%` + (wn.length ? ` · rata-rata menang ${fmtMoney(gw/wn.length)}` : '') + (ls.length ? ` · rata-rata rugi ${fmtMoney(gl/ls.length)}` + (wn.length ? ` · PF ${(gw/Math.abs(gl)).toFixed(2).replace('.',',')}` : '') : '') : '';
   lastFilteredTrades = filtered;
+  const moreBtn = document.getElementById('ledgerMoreBtn');
+  if(moreBtn){ const rest = filtered.length - ledgerLimit; moreBtn.style.display = rest>0 ? '' : 'none'; if(rest>0) moreBtn.textContent = `Tampilkan ${Math.min(LEDGER_STEP,rest)} lagi (${rest} tersisa)`; }
+  saveLedgerState({ q, arah, hasil, catatan, fEmosi, fTrig, fJenis, fSesi, from:fromV||'', to:toV||'', lotMin:lotMinV, lotMax:lotMaxV });
   if(noteEl.textContent === ''){ const miss = filtered.filter(t=>!hasNote(t)).length; if(filtered.length && miss) noteEl.textContent = `${miss} dari ${filtered.length} transaksi di tampilan ini belum punya catatan psikologi. Buka satu transaksi → Edit → "Simpan & lanjut" untuk mengisi berurutan.`; }
 
   let activeFilters = 0;
@@ -2951,6 +2997,10 @@ function renderTrades(){
   if(arah) activeFilters++;
   if(hasil) activeFilters++;
   if(catatan) activeFilters++;
+  if(fEmosi) activeFilters++;
+  if(fTrig) activeFilters++;
+  if(fJenis) activeFilters++;
+  if(fSesi!=='') activeFilters++;
   if(fromV || toV) activeFilters++;
   if(lotMinV !== '' || lotMaxV !== '') activeFilters++;
   const badgeEl = document.getElementById('ledgerFilterBadge');
@@ -2997,6 +3047,7 @@ function renderTrades(){
     });
   });
   updateHeaderIndicators();
+  window.updateLedgerSortInd = updateHeaderIndicators;
 })();
 document.getElementById('searchBox').addEventListener('input', renderTrades);
 document.getElementById('ledgerLotMin').addEventListener('input', renderTrades);
@@ -3006,11 +3057,13 @@ document.getElementById('ledgerResetBtn').addEventListener('click', ()=>{
   CS.set('csw_filterArah', '');
   CS.set('csw_filterHasil', '');
   CS.set('csw_filterCatatan', '');
+  ['csw_filterEmosi','csw_filterTrigger','csw_filterJenis','csw_filterSesi'].forEach(id=>CS.set(id, ''));
   DTP.set('ledgerFrom', '');
   DTP.set('ledgerTo', '');
   document.getElementById('ledgerLotMin').value = '';
   document.getElementById('ledgerLotMax').value = '';
   document.getElementById('ledgerFilterNote').textContent = '';
+  ledgerLimit = 300;
   document.querySelectorAll('.quick-chip').forEach(b=>b.classList.remove('active'));
   renderTrades();
 });
@@ -3030,6 +3083,17 @@ document.getElementById('ledgerResetBtn').addEventListener('click', ()=>{
     } else if(range === '30'){
       DTP.set('ledgerFrom', gmt8DateKeyOffset(-29));
       DTP.set('ledgerTo', todayKey);
+    } else if(range === 'today'){
+      DTP.set('ledgerFrom', todayKey);
+      DTP.set('ledgerTo', todayKey);
+    } else if(range === 'week'){
+      const {y,m,d} = GMT8_NOW, dow = new Date(Date.UTC(y,m,d)).getUTCDay(); // Senin = awal minggu
+      DTP.set('ledgerFrom', gmt8DateKeyOffset(-((dow+6)%7)));
+      DTP.set('ledgerTo', todayKey);
+    } else if(range === 'lastmonth'){
+      const {y,m} = GMT8_NOW;
+      DTP.set('ledgerFrom', gmt8DateKeyFromParts(y, m-1, 1));
+      DTP.set('ledgerTo', gmt8DateKeyFromParts(y, m, 0));
     } else if(range === 'month'){
       const {y,m} = GMT8_NOW;
       DTP.set('ledgerFrom', gmt8DateKeyFromParts(y, m, 1));
@@ -3056,13 +3120,14 @@ document.getElementById('ledgerResetBtn').addEventListener('click', ()=>{
 })();
 document.getElementById('ledgerExportBtn').addEventListener('click', ()=>{
   if(!lastFilteredTrades.length){ return; }
-  const header = ['Tanggal tutup','ID posisi','Arah','Lot','Buka','Tutup','Pips','Laba (cent)'];
+  const header = ['Tanggal tutup','ID posisi','Arah','Lot','Buka','Tutup','Pips','Laba (cent)','Tanggal tutup (GMT+8)','Waktu buka (GMT+8)','Trigger entry','Trigger exit','Emosi','Jenis entry'];
   const csvEscape = v => {
     const s = String(v);
     return /[",\n;]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
   };
   const rows = lastFilteredTrades.map(t => [
-    fmtDateTime(t.tanggal), t.id, t.arah, t.lot, t.buka.toFixed(2), t.tutup.toFixed(2), t.pips.toFixed(1), t.laba.toFixed(2)
+    fmtDateTime(t.tanggal), t.id, t.arah, t.lot, t.buka.toFixed(2), t.tutup.toFixed(2), t.pips.toFixed(1), t.laba.toFixed(2),
+    String(t.tanggal_gmt8||'').replace('T',' '), String(t.waktu_buka||'').replace('T',' '), t.trigger||'', t.trigger_exit||'', t.emosi||'', t.jenis_entry||''
   ].map(csvEscape).join(','));
   const csv = '\uFEFF' + [header.join(','), ...rows].join('\n');
   const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
@@ -3077,6 +3142,96 @@ document.getElementById('ledgerExportBtn').addEventListener('click', ()=>{
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 });
+// ---------- Impor CSV transaksi (v1.1.123): menambah transaksi baru, tidak menimpa; ID yang sudah ada dilewati ----------
+function parseCsvText(text){
+  text = text.replace(/^\uFEFF/, '');
+  const first = text.split(/\r?\n/, 1)[0] || '';
+  const delim = first.split(';').length > first.split(',').length ? ';' : ',';
+  const rows = []; let row = [], f = '', q = false;
+  const endRow = ()=>{ row.push(f); f = ''; if(row.some(x=>x!=='')) rows.push(row); row = []; };
+  for(let i=0;i<text.length;i++){
+    const c = text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){ f+='"'; i++; } else q=false; } else f+=c; }
+    else if(c==='"') q = true;
+    else if(c===delim){ row.push(f); f=''; }
+    else if(c==='\n' || c==='\r'){ if(c==='\r' && text[i+1]==='\n') i++; endRow(); }
+    else f += c;
+  }
+  endRow();
+  return rows;
+}
+const CSV_ALIAS = {
+  gmt8:['tanggaltutupgmt8'], tutupTime:['tanggaltutup','tanggal','waktututup','closetime','time'],
+  id:['idposisi','id','ticket','position','posisi'], arah:['arah','type','tipe','direction'],
+  lot:['lot','volume','size'], buka:['buka','hargabuka','openprice'], tutup:['tutup','hargatutup','closeprice'],
+  pips:['pips'], laba:['labacent','laba','profit'], wb:['waktubukagmt8','waktubuka','opentime'],
+  trigger:['triggerentry','trigger'], trigger_exit:['triggerexit'], emosi:['emosi'], jenis_entry:['jenisentry']
+};
+function csvToTrades(text){
+  const rows = parseCsvText(text);
+  if(rows.length < 2) return { fresh:[], dup:0, bad:[], assumed:false, empty:true };
+  const norm = s => String(s).toLowerCase().replace(/[^a-z0-9]/g, '');
+  const head = rows[0].map(norm), col = {};
+  for(const k in CSV_ALIAS){ for(const a of CSV_ALIAS[k]){ const i = head.indexOf(a); if(i>=0){ col[k] = i; break; } } }
+  const need = ['arah','lot','buka','tutup'].filter(k=>col[k]===undefined);
+  if(need.length || (col.gmt8===undefined && col.tutupTime===undefined)) return { fresh:[], dup:0, bad:[], assumed:false, missing:true };
+  const pn = v => { let s = String(v==null?'':v).trim().replace(/\s/g,''); s = (s.includes(',') && !s.includes('.')) ? s.replace(',', '.') : s.replace(/,/g,''); return s==='' ? NaN : parseFloat(s); };
+  const pdt = v => { const m = String(v||'').trim().match(/^(\d{4})[-./](\d{2})[-./](\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/); return m ? `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]||'00'}` : ''; };
+  const get = (r,k) => col[k]===undefined ? '' : String(r[col[k]]==null ? '' : r[col[k]]).trim();
+  const seen = new Set(DATA.trades.map(t=>String(t.id)));
+  const fresh = [], bad = []; let dup = 0;
+  rows.slice(1).forEach((r, n)=>{
+    const line = n + 2;
+    const a = get(r,'arah'), arah = /beli|buy/i.test(a) ? 'Beli' : (/jual|sell/i.test(a) ? 'Jual' : '');
+    const lot = pn(get(r,'lot')), buka = pn(get(r,'buka')), tutup = pn(get(r,'tutup'));
+    const g8 = pdt(get(r,'gmt8') || get(r,'tutupTime'));
+    if(!arah || !(lot>0) || !(buka>0) || !(tutup>0) || !g8){ bad.push(line); return; }
+    const id = get(r,'id') || ('imp-' + Date.now() + '-' + line);
+    if(seen.has(id)){ dup++; return; }
+    seen.add(id);
+    let pips = pn(get(r,'pips')), laba = pn(get(r,'laba'));
+    if(!isFinite(pips)) pips = round2((arah==='Beli' ? (tutup-buka) : (buka-tutup)) * 10);
+    if(!isFinite(laba)) laba = round2(pips * lot * 10);
+    fresh.push({ id, arah, lot, buka, tutup, pips, laba,
+      tanggal: new Date(new Date(g8 + 'Z').getTime() - 5*3600*1000).toISOString().slice(0,19), tanggal_gmt8: g8,
+      waktu_buka: pdt(get(r,'wb')), trigger: get(r,'trigger'), trigger_exit: get(r,'trigger_exit'), emosi: get(r,'emosi'), jenis_entry: get(r,'jenis_entry') });
+  });
+  return { fresh, dup, bad, assumed: col.gmt8===undefined };
+}
+(function(){
+  const btn = document.getElementById('ledgerImportBtn'), inp = document.getElementById('ledgerImportInput');
+  if(!btn || !inp) return;
+  btn.addEventListener('click', ()=>inp.click());
+  inp.addEventListener('change', async ()=>{
+    const file = inp.files && inp.files[0]; inp.value = '';
+    if(!file) return;
+    let res;
+    try{ res = csvToTrades(await file.text()); }catch(e){ queueNotifyAfterReload('Gagal membaca file CSV.', 'error'); location.reload(); return; }
+    if(res.missing || res.empty){ await showConfirmModal(res.empty ? 'File CSV kosong atau hanya berisi judul kolom.' : 'Kolom wajib tidak ditemukan. CSV harus punya kolom Arah, Lot, Buka, Tutup, dan Tanggal tutup (pakai file hasil Ekspor CSV sebagai contoh).'); return; }
+    const extra = (res.dup ? ` ${res.dup} dilewati (ID sudah ada).` : '') + (res.bad.length ? ` ${res.bad.length} baris tidak valid diabaikan (baris ${res.bad.slice(0,5).join(', ')}${res.bad.length>5?', …':''}).` : '') + (res.assumed && res.fresh.length ? ' Kolom "Tanggal tutup (GMT+8)" tidak ada, jadi waktu dianggap GMT+8.' : '');
+    if(!res.fresh.length){ await showConfirmModal('Tidak ada transaksi baru untuk diimpor.' + extra); return; }
+    if(!await showConfirmModal(`Tambahkan ${res.fresh.length} transaksi baru dari "${file.name}"? Data yang sudah ada tidak diubah.` + extra)) return;
+    DATA.trades.push(...res.fresh);
+    DATA.trades.sort((x,y)=>parseGmt8(x.tanggal_gmt8) - parseGmt8(y.tanggal_gmt8));
+    rebuildEquitySeries();
+    recomputeAll();
+    if(!saveActiveData(DATA)){ await showConfirmModal('Gagal menyimpan ke penyimpanan lokal browser (mungkin penuh atau diblokir).'); return; }
+    queueNotifyAfterReload(`${res.fresh.length} transaksi berhasil diimpor dari CSV.`, 'success');
+    setTimeout(()=>{ location.reload(); }, 300);
+  });
+})();
+document.getElementById('ledgerMoreBtn').addEventListener('click', ()=>{ ledgerLimit += LEDGER_STEP; renderTrades(); });
+(function(){
+  const el = document.getElementById('limBigLossPct'); if(!el) return;
+  el.value = bigLossPct > 0 ? bigLossPct : '';
+  el.addEventListener('input', ()=>{
+    const v = el.value.trim(), n = parseFloat(v);
+    if(v === ''){ bigLossPct = 0; try{ localStorage.setItem('jurnalBigLossPct','off'); }catch(e){} }
+    else if(n>=1 && n<=50){ bigLossPct = n; try{ localStorage.setItem('jurnalBigLossPct', String(n)); }catch(e){} }
+    else return;
+    recomputeBigLoss(); renderTrades();
+  });
+})();
 window.renderTrades = renderTrades;
 
 // ---------- Tema: mode (gelap/terang/otomatis) + skema warna (v1.1.121) ----------
@@ -3790,6 +3945,8 @@ CS.set('csw_heroCurrency', HERO_CURRENCY);
 document.querySelectorAll('.cur-unit').forEach(el=>{ el.textContent = curUnitSymbol(); });
 CS.build('csw_filterArah', [{value:'',label:'Semua arah'}, {value:'Beli',label:'Beli'}, {value:'Jual',label:'Jual'}], 'Semua arah', ()=>{ if(window.renderTrades) window.renderTrades(); });
 CS.build('csw_filterHasil', [{value:'',label:'Semua hasil'}, {value:'win',label:'Menang'}, {value:'loss',label:'Kalah'}], 'Semua hasil', ()=>{ if(window.renderTrades) window.renderTrades(); });
+[['csw_filterEmosi','Semua emosi',EMOSI_OPTIONS],['csw_filterTrigger','Semua trigger',TRIGGER_OPTIONS],['csw_filterJenis','Semua jenis entry',JENIS_ENTRY_OPTIONS]].forEach(([id,ph,o])=>CS.build(id, [{value:'',label:ph}, ...o.map(x=>({value:x,label:x}))], ph, ()=>{ if(window.renderTrades) window.renderTrades(); }));
+CS.build('csw_filterSesi', [{value:'',label:'Semua sesi'}, ...LAP_SESSIONS.map((x,i)=>({value:String(i),label:x[0]}))], 'Semua sesi', ()=>{ if(window.renderTrades) window.renderTrades(); });
 CS.build('csw_filterCatatan', [{value:'',label:'Semua catatan'}, {value:'belum',label:'Belum ada catatan psikologi'}, {value:'sudah',label:'Sudah ada catatan'}], 'Semua catatan', ()=>{ if(window.renderTrades) window.renderTrades(); });
 [['csw_lapEmosi','Semua emosi',EMOSI_OPTIONS,v=>{lap2Emosi=v;}],['csw_lapTrigger','Semua trigger',TRIGGER_OPTIONS,v=>{lap2Trigger=v;}],['csw_lapJenis','Semua jenis',JENIS_ENTRY_OPTIONS,v=>{lap2Jenis=v;}]].forEach(([id,ph,opts,set])=>{
   CS.build(id, [{value:'semua',label:ph},...opts.map(o=>({value:o,label:o})),{value:'-',label:'Belum dicatat'}], ph, ()=>{ set(CS.get(id)); renderLap2(); });
@@ -3877,6 +4034,7 @@ DTP.build('ledgerTo', 'Sampai tanggal', { dateOnly:true, onChange:onLedgerDateCh
       DTP.set('entryWaktuBuka', '');
       document.getElementById('entryBuka').value = '';
       document.getElementById('entryTutup').value = '';
+      document.getElementById('entryLaba').value = '';
       DTP.set('entryWaktuTrade', nowLocalInputValue());
       CS.set('csw_entryTrigger', '');
       CS.set('csw_entryTriggerExit', '');
@@ -3893,7 +4051,12 @@ DTP.build('ledgerTo', 'Sampai tanggal', { dateOnly:true, onChange:onLedgerDateCh
   function closeEntryModal(){ overlay.classList.remove('show'); }
 
   document.querySelectorAll('.fab-mini').forEach(b=>{
-    b.addEventListener('click', ()=> openEntryModal(b.dataset.mode));
+    b.addEventListener('click', ()=>{
+      if(b.dataset.mode==='kalkulator'){
+        const fm = document.getElementById('fabMainBtn'); document.getElementById('fabMenu').classList.remove('show'); fm.classList.remove('open'); fm.setAttribute('aria-expanded','false');
+        document.getElementById('openCalcBtn').click();
+      } else openEntryModal(b.dataset.mode);
+    });
   });
   document.getElementById('entryModalCancel').addEventListener('click', closeEntryModal);
   overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeEntryModal(); });
@@ -3916,7 +4079,13 @@ DTP.build('ledgerTo', 'Sampai tanggal', { dateOnly:true, onChange:onLedgerDateCh
         errEl.style.display = 'block'; return;
       }
       const pips = round2((arah==='Beli' ? (tutup-buka) : (buka-tutup)) * 10);
-      const laba = round2(pips * lot * 10);
+      let laba = round2(pips * lot * 10);
+      const labaRaw = document.getElementById('entryLaba').value.trim();
+      if(labaRaw !== ''){
+        const lv = parseFloat(labaRaw);
+        if(!isFinite(lv)){ errEl.textContent = 'Laba aktual harus berupa angka (dalam ¢) atau dikosongkan.'; errEl.style.display = 'block'; return; }
+        laba = round2(lv);
+      }
       const tanggal_gmt8 = waktu + ':00';
       const tanggal = gmt8ToServerIso(waktu);
       const waktuBukaVal = DTP.get('entryWaktuBuka');
@@ -3993,8 +4162,12 @@ function gmt8ToServerIso(val){
     document.getElementById('dvJenisEntry').textContent = t.jenis_entry || '-';
     viewBox.style.display='block'; editBox.style.display='none';
     viewActions.style.display='flex'; editActions.style.display='none';
+    const ids = lastFilteredTrades.map(x=>x.id), ix = ids.indexOf(id);
+    document.getElementById('detailPrevBtn').disabled = ix <= 0;
+    document.getElementById('detailNextBtn').disabled = ix < 0 || ix >= ids.length - 1;
     overlay.classList.add('show');
   }
+  function stepDetail(dir){ const ids = lastFilteredTrades.map(x=>x.id), j = ids.indexOf(currentId) + dir; if(j>=0 && j<ids.length) openDetail(ids[j]); }
   const FILL_KEY = 'jurnalFillQueue', FILL_OPEN = 'jurnalFillOpen';
   function fillQueue(){ try{ const v = sessionStorage.getItem(FILL_KEY); return v ? JSON.parse(v) : null; }catch(e){ return null; } }
   function clearFillQueue(){ try{ sessionStorage.removeItem(FILL_KEY); sessionStorage.removeItem(FILL_OPEN); }catch(e){} }
@@ -4003,9 +4176,11 @@ function gmt8ToServerIso(val){
 
   tbody.addEventListener('click', (e)=>{
     const tr = e.target.closest('tr[data-id]');
-    if(tr) openDetail(tr.dataset.id);
+    if(tr && !tr.closest('table').classList.contains('selecting')) openDetail(tr.dataset.id);
   });
   document.getElementById('detailCloseBtn').addEventListener('click', closeDetail);
+  document.getElementById('detailPrevBtn').addEventListener('click', ()=>stepDetail(-1));
+  document.getElementById('detailNextBtn').addEventListener('click', ()=>stepDetail(1));
   overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeDetail(); });
 
   document.getElementById('detailEditBtn').addEventListener('click', ()=>{
@@ -4016,6 +4191,7 @@ function gmt8ToServerIso(val){
     DTP.set('editWaktuBuka', t.waktu_buka ? t.waktu_buka.slice(0,16) : '');
     document.getElementById('editBuka').value = t.buka;
     document.getElementById('editTutup').value = t.tutup;
+    document.getElementById('editLaba').value = t.laba;
     DTP.set('editWaktu', t.tanggal_gmt8.slice(0,16));
     CS.set('csw_editTrigger', t.trigger || '');
     CS.set('csw_editTriggerExit', t.trigger_exit || '');
@@ -4048,12 +4224,16 @@ function gmt8ToServerIso(val){
     // v1.1.104: pips & laba hanya dihitung ulang bila arah/lot/harga benar-benar diubah. Sebelumnya setiap
     // Simpan (termasuk sekadar mengisi catatan psikologi lewat "Simpan & lanjut") menimpa laba/pips asli
     // broker (yang sudah termasuk swap/komisi) dengan rumus lot × selisih harga.
+    const prevLaba = t.laba, labaIn = document.getElementById('editLaba').value.trim(), labaNum = labaIn==='' ? null : parseFloat(labaIn);
+    if(labaIn!=='' && !isFinite(labaNum)){ errEl.textContent = 'Laba aktual harus berupa angka (dalam ¢).'; errEl.style.display='block'; return; }
     const priceChanged = t.arah!==arah || t.lot!==lot || t.buka!==buka || t.tutup!==tutup;
     t.arah = arah; t.lot = lot; t.buka = buka; t.tutup = tutup;
     if(priceChanged){
       t.pips = round2((arah==='Beli' ? (tutup-buka) : (buka-tutup)) * 10);
       t.laba = round2(t.pips * lot * 10);
     }
+    // v1.1.125: laba yang diisi/diubah manual di kolom "Laba aktual" menang atas hitungan rumus (mis. sudah termasuk swap/komisi).
+    if(labaNum!==null && labaNum!==prevLaba) t.laba = round2(labaNum);
     // Waktu: jangan menimpa detik asli bila menit tidak diubah (input hanya sampai menit).
     if(waktu !== String(t.tanggal_gmt8||'').slice(0,16)){
       t.tanggal_gmt8 = waktu + ':00';
@@ -4102,8 +4282,9 @@ function gmt8ToServerIso(val){
       errEl.textContent = 'Gagal menyimpan ke penyimpanan lokal browser (mungkin penuh atau diblokir).';
       errEl.style.display='block'; return;
     }
+    try{ localStorage.setItem('jurnalUndoDelete', JSON.stringify({ trade:t, at:Date.now() })); }catch(e){}
     closeDetail();
-    queueNotifyAfterReload('Transaksi berhasil dihapus.', 'success');
+    queueNotifyAfterReload('Transaksi berhasil dihapus. Bisa dikembalikan lewat tombol "Batalkan hapus" di tab Transaksi (30 menit).', 'success');
     setTimeout(()=>{ location.reload(); }, 300);
   });
   window.openTradeDetail = openDetail;
@@ -4140,6 +4321,86 @@ function renderPsyPrompt(){
 // (dipakai filter tab Transaksi) sudah selesai dibangun sebelum renderTrades() pertama jalan.
 selectPeriod(Math.max(0, LIVE_PERIODS.findIndex(p=>p.label==='All Time'))); // default Ringkasan: All Time (v1.1.111)
 renderPsyPrompt();
+// ---------- Pilih & isi massal catatan psikologi (v1.1.126) ----------
+(function(){
+  const table = document.querySelector('table.ledger'), bar = document.getElementById('bulkBar'), selBtn = document.getElementById('ledgerSelectBtn');
+  if(!table || !bar || !selBtn) return;
+  [['csw_bulkEmosi','Isi emosi',EMOSI_OPTIONS],['csw_bulkTrigger','Isi trigger',TRIGGER_OPTIONS],['csw_bulkJenis','Isi jenis entry',JENIS_ENTRY_OPTIONS]].forEach(([id,ph,o])=>CS.build(id, o, ph));
+  const ui = ()=>{ document.getElementById('bulkCount').textContent = ledgerSel.size + ' dipilih'; };
+  const setMode = on => {
+    table.classList.toggle('selecting', on); bar.style.display = on ? 'flex' : 'none';
+    selBtn.textContent = on ? 'Selesai' : 'Pilih'; selBtn.setAttribute('aria-pressed', String(on));
+    if(!on) ledgerSel.clear();
+    ui(); renderTrades();
+  };
+  selBtn.addEventListener('click', ()=>setMode(!table.classList.contains('selecting')));
+  tbody.addEventListener('click', e=>{
+    const tr = e.target.closest('tr[data-id]');
+    if(!tr || !table.classList.contains('selecting')) return;
+    const id = tr.dataset.id;
+    if(ledgerSel.has(id)) ledgerSel.delete(id); else ledgerSel.add(id);
+    tr.classList.toggle('sel-on', ledgerSel.has(id));
+    const cb = tr.querySelector('.sel-cb'); if(cb) cb.checked = ledgerSel.has(id);
+    ui();
+  });
+  document.getElementById('bulkAllBtn').addEventListener('click', ()=>{ lastFilteredTrades.forEach(t=>ledgerSel.add(t.id)); ui(); renderTrades(); });
+  document.getElementById('bulkNoneBtn').addEventListener('click', ()=>{ ledgerSel.clear(); ui(); renderTrades(); });
+  document.getElementById('bulkApplyBtn').addEventListener('click', async ()=>{
+    const f = { emosi:CS.get('csw_bulkEmosi'), trigger:CS.get('csw_bulkTrigger'), jenis_entry:CS.get('csw_bulkJenis') };
+    const keys = Object.keys(f).filter(k=>f[k]);
+    if(!ledgerSel.size || !keys.length){ await showConfirmModal(!ledgerSel.size ? 'Pilih dulu transaksi yang mau diisi (ketuk barisnya, atau "Pilih semua hasil filter").' : 'Pilih minimal satu isian: emosi, trigger, atau jenis entry.'); return; }
+    if(!await showConfirmModal(`Isi ${ledgerSel.size} transaksi: ${keys.map(k=>k.replace('_',' ') + ' = ' + f[k]).join(', ')}? Isian yang tidak dipilih tidak diubah; isian lama pada kolom yang sama ditimpa.`)) return;
+    let n = 0;
+    DATA.trades.forEach(t=>{ if(ledgerSel.has(t.id)){ keys.forEach(k=>{ t[k] = f[k]; }); n++; } });
+    rebuildEquitySeries(); recomputeAll();
+    if(!saveActiveData(DATA)){ await showConfirmModal('Gagal menyimpan ke penyimpanan lokal browser (mungkin penuh atau diblokir).'); return; }
+    queueNotifyAfterReload(`${n} transaksi diperbarui.`, 'success');
+    setTimeout(()=>{ location.reload(); }, 300);
+  });
+})();
+// v1.1.122: pulihkan filter, sortir, jumlah baris, dan posisi gulir buku transaksi setelah reload (simpan/hapus/"Simpan & lanjut").
+(function(){
+  let s = null; try{ s = JSON.parse(sessionStorage.getItem(LEDGER_KEY)||'null'); }catch(e){}
+  if(!s) return;
+  ledgerRestoring = true;
+  try{
+    document.getElementById('searchBox').value = s.q || '';
+    document.getElementById('ledgerLotMin').value = s.lotMin || '';
+    document.getElementById('ledgerLotMax').value = s.lotMax || '';
+    CS.set('csw_filterArah', s.arah || ''); CS.set('csw_filterHasil', s.hasil || ''); CS.set('csw_filterCatatan', s.catatan || '');
+    CS.set('csw_filterEmosi', s.fEmosi || ''); CS.set('csw_filterTrigger', s.fTrig || ''); CS.set('csw_filterJenis', s.fJenis || ''); CS.set('csw_filterSesi', s.fSesi || '');
+    DTP.set('ledgerFrom', s.from || ''); DTP.set('ledgerTo', s.to || '');
+    if(s.sort && SORT_GETTERS[s.sort.key] && (s.sort.dir===1 || s.sort.dir===-1)){ currentSort = { key:s.sort.key, dir:s.sort.dir }; if(window.updateLedgerSortInd) window.updateLedgerSortInd(); }
+    ledgerLimit = Math.max(300, s.limit || 300);
+  }catch(e){}
+  ledgerRestoring = false;
+  renderTrades();
+  document.querySelectorAll('.quick-chip').forEach(b=>b.classList.toggle('active', !!s.chip && b.dataset.range===s.chip));
+  const sc = document.querySelector('.ledger-scroll'), applyScroll = ()=>{ if(sc && s.st) sc.scrollTop = s.st; };
+  setTimeout(applyScroll, 60);
+  const tb = document.querySelector('.main-tab-btn[data-tab="transaksi"]'); if(tb) tb.addEventListener('click', ()=>setTimeout(applyScroll, 60), { once:true });
+})();
+// v1.1.124: batalkan hapus (satu tingkat, 30 menit, hanya di browser ini; tidak ikut sinkron/ekspor).
+(function(){
+  const K = 'jurnalUndoDelete', bar = document.getElementById('undoDeleteBar');
+  let v = null; try{ v = JSON.parse(localStorage.getItem(K) || 'null'); }catch(e){}
+  const drop = ()=>{ try{ localStorage.removeItem(K); }catch(e){} if(bar) bar.style.display = 'none'; };
+  if(!bar || !v || !v.trade || !v.trade.id || Date.now() - v.at > 30*60000){ if(v) drop(); return; }
+  document.getElementById('undoDeleteText').textContent = 'Transaksi #' + v.trade.id + ' baru dihapus.';
+  bar.style.display = 'flex';
+  document.getElementById('undoDeleteX').addEventListener('click', drop);
+  document.getElementById('undoDeleteBtn').addEventListener('click', ()=>{
+    if(!DATA.trades.some(x=>x.id===v.trade.id)){
+      DATA.trades.push(v.trade);
+      DATA.trades.sort((x,y)=>parseGmt8(x.tanggal_gmt8) - parseGmt8(y.tanggal_gmt8));
+      rebuildEquitySeries(); recomputeAll();
+      if(!saveActiveData(DATA)){ showConfirmModal('Gagal menyimpan ke penyimpanan lokal browser (mungkin penuh atau diblokir).'); return; }
+    }
+    try{ localStorage.removeItem(K); }catch(e){}
+    queueNotifyAfterReload('Transaksi dikembalikan.', 'success');
+    setTimeout(()=>{ location.reload(); }, 300);
+  });
+})();
 (function(){
   let id = null;
   try{ id = sessionStorage.getItem('jurnalFillOpen'); sessionStorage.removeItem('jurnalFillOpen'); }catch(e){}
@@ -4153,9 +4414,14 @@ renderPsyPrompt();
 // ---------- Tentang aplikasi: versi + riwayat perubahan bahasa awam (v1.1.113) ----------
 // SETIAP RILIS: naikkan APP_VERSION, tambah entri di USER_CHANGELOG (tanggal ISO, bahasa pengguna akhir),
 // naikkan CACHE di sw.js, dan tambah entri di CHANGELOG.md. Versi hanya tampil di Setelan (bukan di footer).
-const APP_VERSION = '1.1.121';
+const APP_VERSION = '1.1.126';
 const USER_CHANGELOG = [
   { date:'2026-09-29', items:[
+    'Tab <strong>Transaksi</strong>: tombol <strong>Pilih</strong> untuk memilih beberapa transaksi (ketuk baris, atau "Pilih semua hasil filter") lalu mengisi emosi, trigger, dan jenis entry sekaligus, cocok dipadukan dengan filter "Belum ada catatan"; serta pengaturan baru di Setelan → <strong>Buku transaksi</strong> untuk memilih persentase rugi terbesar yang diberi garis merah (bawaan 10%).',
+    'Tab <strong>Transaksi</strong>: filter baru <strong>Emosi</strong>, <strong>Trigger</strong>, <strong>Jenis entry</strong>, dan <strong>Sesi pasar</strong>; tombol <strong>‹ ›</strong> di jendela detail untuk pindah ke transaksi sebelumnya/berikutnya tanpa menutupnya; kolom <strong>Laba aktual</strong> di Tambah/Edit transaksi (isi bila ingin memakai laba asli broker, termasuk swap dan komisi); dan <strong>Kalkulator lot</strong> juga tersedia di menu tombol (+).',
+    'Tab <strong>Transaksi</strong>: kolom <strong>Waktu buka</strong> dan <strong>Durasi</strong> (bisa diurutkan; disembunyikan di layar HP), ringkasan hasil filter di bawah tabel (menang, rugi, win rate, rata-rata menang/rugi, profit factor), chip cepat <strong>Hari Ini</strong>, <strong>Minggu Ini</strong> (mulai Senin), dan <strong>Bulan Lalu</strong>, serta tombol <strong>Batalkan hapus</strong> selama 30 menit setelah menghapus transaksi. Perbaikan: chip <strong>7 Hari</strong> dan <strong>30 Hari</strong> tidak lagi salah menghitung tanggal awal di awal bulan atau saat tanggal hari ini kecil.',
+    'Tab <strong>Transaksi</strong> bisa <strong>impor CSV</strong>: tombol ikon unggah di samping tombol ekspor. Aplikasi menampilkan ringkasan (jumlah transaksi baru, ID yang dilewati, baris tidak valid) dan meminta konfirmasi; transaksi baru ditambahkan tanpa mengubah data lama. Ekspor CSV kini juga memuat kolom <strong>Tanggal tutup (GMT+8)</strong> agar hasil ekspor bisa diimpor kembali dengan waktu yang tepat.',
+    'Tab <strong>Transaksi</strong>: daftar kini bisa dibuka seluruhnya lewat tombol <strong>Tampilkan lagi</strong> (sebelumnya berhenti di 300 baris); filter, urutan, dan posisi gulir tidak hilang lagi setelah menyimpan atau menghapus, jadi mengisi catatan psikologi berurutan lebih nyaman; titik hijau di samping ID menandai transaksi yang sudah punya catatan psikologi; ekspor CSV kini memuat waktu buka dan catatan psikologi; tombol <strong>Kalkulator lot</strong> pindah ke baris judul (di HP tinggal ikon) sehingga filter naik satu baris.',
     'Setelan punya bagian <strong>Tampilan</strong>: pilih mode <strong>Gelap / Terang / Otomatis</strong> (mengikuti perangkat) dan lima skema warna: Emas Klasik, Blue Ocean, Teal Green, Grafit Netral, dan Kontras Tinggi (untung biru, rugi oranye, ramah buta warna). Skema berlaku di mode gelap.',
     'Tombol <strong>Tutup</strong> di jendela (detail transaksi, detail hari, kalkulator, riwayat perubahan, notifikasi) diganti tombol <strong>✕</strong> di sudut kanan atas.',
     'Banyak tombol kini memakai <strong>ikon</strong> (unduh, cetak, sinkronkan/pulihkan cloud, edit, hapus, tutup, keluar, riwayat). Tombol penting seperti Simpan, Batal, Masuk, dan Daftar tetap berikon plus tulisan. Tahan atau arahkan kursor ke ikon untuk melihat namanya.',

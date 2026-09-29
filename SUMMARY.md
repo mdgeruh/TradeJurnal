@@ -5,7 +5,12 @@ Riwayat per rilis/tema: `CHANGELOG.md`. Fitur & cara pakai: `README.md`. File in
 ## Apa ini
 Dashboard trading journal single-file HTML untuk akun cent XAUUSD. Tab: Ringkasan, Analisis PNL, Performa, Laporan, Transaksi, Deposit + Setelan (⚙); Kalkulator berupa modal dari tombol "Kalkulator lot" di tab Transaksi (bukan tab, sejak v1.1.114); navigasi desktop ≥ 1100px berupa sidebar kiri yang bisa diciutkan lewat tombol melayang (v1.1.110). File utama: `index.html` + `style.css` + `app.js` + `sync.js` + `config.js` (v1.1.105); Supabase: `schema.sql` + `query-user-supabase.sql` (v1.1.116).
 
-## Status (v1.1.121)
+## Status (v1.1.126)
+- v1.1.126: Transaksi: mode Pilih + isi massal emosi/trigger/jenis entry, ambang garis merah rugi besar bisa diatur di Setelan; belum diuji di browser. Sisa Transaksi: tampilan kartu HP dan catatan bebas (butuh migrasi kolom Supabase `catatan`; lihat butir di Todo).
+- v1.1.125: Transaksi: filter Emosi/Trigger/Jenis entry/Sesi, tombol ‹ › di modal detail, Laba aktual opsional di Tambah/Edit (tanpa perubahan skema), Kalkulator lot di menu FAB; belum diuji di browser. Sisa Transaksi: tampilan kartu HP, aksi massal, ambang rugi besar, catatan bebas.
+- v1.1.124: Transaksi P2 sebagian: kolom Waktu buka/Durasi, ringkasan hasil filter, chip Hari Ini/Minggu Ini/Bulan Lalu, Batalkan hapus; fix chip 7/30 Hari (`gmt8DateKeyFromParts` tak valid saat d ≤ 0); belum diuji di browser.
+- v1.1.123: impor CSV di tab Transaksi (tambah saja, ID ganda dilewati, konfirmasi dulu; ekspor CSV kini punya kolom `Tanggal tutup (GMT+8)`); belum diuji di browser. Ide lanjutan: pratinjau baris, pilihan zona waktu, impor deposit, opsi perbarui transaksi ber-ID sama.
+- v1.1.122: tab Transaksi P1 selesai (tombol Tampilkan lagi, filter/sortir/gulir bertahan setelah reload, titik status catatan, CSV lengkap, escape HTML) + tombol Kalkulator lot pindah ke baris judul; belum diuji di browser. Sisa P2/P3 Transaksi ada di Todo.
 - Data aktif ada di localStorage (`jurnalXauusdData_v1`), bukan di file. File baru kosong (`kurs` = 0, mode Rp tampil Rp 0) sampai JSON diimpor lewat Setelan.
 - JSON ekspor terbaru (441 transaksi, sudah berisi `waktu_buka`) siap diimpor manual. Angka ringkasan dihitung otomatis, tidak dicatat di sini.
 - Tab Laporan: Paket A/B/Optimalisasi, style cetak PDF, dan L1–L17 selesai (v1.1.78–1.1.101); L18 juga sudah selesai (tombol Ekspor CSV). Tooltip kurva drawdown yang melebar keluar kartu sudah diperbaiki (v1.1.102); tooltip rolling & distribusi ditambahkan sekalian. Tidak ada bug fungsional terbuka; dua cek tampilan tooltip tercatat di Rawan bug.
@@ -48,6 +53,30 @@ Dashboard trading journal single-file HTML untuk akun cent XAUUSD. Tab: Ringkasa
 - **Verifikasi:** render & error konsol dicek tiap rilis lewat Playwright + Chromium (390/768/1280px); interaksi kompleks hanya dicek bila ada dugaan bug.
 
 ## Todo
+**Transaksi — improvement (prioritas, diusulkan 29 Sep; belum dikerjakan)**
+Kondisi sekarang: buku transaksi 8 kolom (Tanggal tutup, ID posisi, Arah, Lot, Buka, Tutup, Pips, Laba), filter (cari ID, Arah, Hasil, Catatan, rentang tanggal, lot min/max, chip 7 Hari/30 Hari/Bulan Ini), sortir per kolom, garis merah untuk rugi 10% terbesar, klik baris → modal detail (lihat/edit/hapus), tombol Kalkulator lot, ekspor CSV. Logika di `renderTrades()` (`app.js`, sekitar baris 2872–2955); modal detail di IIFE `openDetail` (sekitar baris 3976).
+- **P1 — tinggi, usaha kecil–sedang**
+  - [x] (selesai v1.1.122) **Batas 300 baris tanpa cara membuka sisanya:** `filtered.slice(0,300)` dan footer hanya menulis "Menampilkan 300 dari 441"; 141 transaksi tertua tak terjangkau kecuali difilter. Tambah tombol "Tampilkan 100 lagi" (atau render bertahap saat gulir).
+  - [x] (selesai v1.1.122) **Filter, sortir, dan posisi gulir hilang setelah Simpan/Hapus/"Simpan & lanjut"** karena `location.reload()`. Paling mengganggu di alur isi catatan psikologi (filter "Belum ada catatan" ter-reset tiap simpan). Simpan state di `sessionStorage` (mis. `jurnalLedgerState`) lalu pulihkan setelah reload; jangka panjang render ulang tanpa reload (`allTrades` sekarang `const` yang dihitung sekali saat halaman dibuka).
+  - [x] (selesai v1.1.122) **Status catatan psikologi terlihat di baris tabel:** titik/ikon ✓ vs kosong + emosi singkat, supaya tidak perlu membuka detail satu per satu. Sekarang hanya bisa dicek lewat filter Catatan; cakupan data asli baru ±1%.
+  - [x] (selesai v1.1.122) **Ekspor CSV dilengkapi:** tambah Waktu buka (GMT+8), Trigger entry/exit, Emosi, Jenis entry. Sekarang CSV tidak memuat data psikologi sama sekali, jadi tak bisa dianalisis di luar aplikasi; header "Laba (cent)" tetap tegas ¢.
+  - [x] (selesai v1.1.122) **Escape HTML di baris tabel:** `t.id` dan `t.arah` masuk `innerHTML` dan `data-id` tanpa `escapeHtml` (fungsi sudah ada, ±baris 518). ID dari impor JSON/input manual yang memuat karakter HTML bisa merusak tabel. Kecil, tapi murah diperbaiki.
+- **P2 — sedang**
+  - [x] (selesai v1.1.122) **Pindahkan posisi tombol "Kalkulator lot":** sekarang berdiri sendiri di baris `.ledger-toolbar` (rata kanan, di atas chip cepat dan filter), jadi memakan satu baris penuh dan mendorong filter serta tabel ke bawah, terutama di HP. Usulan: (1) taruh di baris judul "Buku transaksi" sejajar catatan jumlah transaksi, berupa ikon saja di layar < 720px dan ikon + label di desktop; hapus `.ledger-toolbar`. (2) Opsional: tambah juga sebagai item di menu FAB (+) ("Kalkulator lot") karena kalkulator dipakai sebelum entri baru dan FAB ada di semua tab; id `openCalcBtn`, `calc*`, dan `mmGridQuick` tidak boleh berubah. Tombol tetap bergaya emas dan tetap `aria-haspopup="dialog"`.
+  - [x] (selesai v1.1.124) **Kolom Waktu buka dan Durasi** (sortable; bisa disembunyikan lewat toggle "Kolom"). Sekarang tidak bisa mengurutkan menurut waktu buka.
+  - [x] (selesai v1.1.124) **Ringkasan hasil filter di footer:** selain "Jumlah", tampilkan jumlah menang/rugi, Win Rate, rata-rata menang/rugi, Profit Factor (data sudah ada di `filtered`).
+  - [x] (selesai v1.1.125) **Filter Emosi / Trigger / Jenis entry dan Sesi pasar** di tab Transaksi (dropdown sama seperti di Laporan); pencarian juga mencakup catatan, bukan hanya ID posisi.
+  - [x] (selesai v1.1.124) **Chip cepat tambahan:** Hari Ini, Minggu Ini, Bulan Lalu; pastikan chip aktif lepas saat tanggal diubah manual.
+  - [x] (selesai v1.1.125) **Laba aktual manual (opsional) di Tambah/Edit:** laba/pips input manual dihitung rumus (selisih harga × lot), tanpa swap/komisi; mengubah harga di Edit menimpa laba asli broker. Field baru → perbarui `schema.sql` dan `sync.js`.
+  - [x] (selesai v1.1.124) **Undo hapus:** hapus sekarang permanen (hanya konfirmasi). Beri "Batalkan" ±8 detik atau simpan cadangan sementara.
+  - [ ] **Tampilan kartu di layar sempit (< 720px):** tabel min-width 640px + 8 kolom memaksa gulir horizontal. Ganti jadi kartu ringkas (tanggal + ID, arah/lot, laba besar) yang tetap membuka detail saat diketuk.
+- **P3 — rendah**
+  - [x] (selesai v1.1.125) Navigasi ‹ › di modal detail (transaksi sebelumnya/berikutnya sesuai daftar terfilter) tanpa menutup modal.
+  - [x] (selesai v1.1.126) Aksi massal: pilih beberapa baris → isi emosi/trigger/jenis entry sekaligus (hapus massal sengaja tidak dibuat).
+  - [x] (selesai v1.1.126) Ambang garis merah "rugi besar" bisa dipilih (10% / 5%) dan ada legenda di tabel; sekarang hanya persentil 10% seluruh riwayat.
+  - [ ] Catatan bebas per transaksi (pelajaran/alasan entry) sebagai field teks; ikut `hasNote`, ekspor, dan sinkron. **Catatan 29 Sep:** butuh kolom Supabase baru `catatan text` (migrasi di `schema.sql`) + perubahan `tradeRow`/pull di `sync.js`; tanpa migrasi push gagal dan Pulihkan dari cloud menghapus catatan lokal. Pertimbangkan tidak memasukkannya ke `hasNote` agar cakupan psikologi (L16) tidak bergeser.
+- **Rawan bug (catat saat mengerjakan):** baris kosong memakai `colspan="8"` tetap, jadi tiap kolom baru harus mengubah header, `SORT_GETTERS`, `colspan`, CSV, dan style cetak; field turunan baru harus ikut `recomputeAll()`; `hasNote` dipakai filter Catatan dan antrean "Simpan & lanjut", jadi perubahan definisinya berdampak ke keduanya; ikuti alur rilis biasa (naikkan `APP_VERSION` dan `CACHE`, entri `USER_CHANGELOG` + `CHANGELOG.md`, cek Playwright 390/1280px dengan 441 transaksi sintetis dan data kosong).
+
 **Setelan — tema & skema warna custom (diusulkan 29 Sep; belum dikerjakan)**
 Kondisi sekarang: dua tema (gelap bawaan, terang) lewat 11 variabel CSS di `:root` dan override `html[data-theme="light"]` (`--ink`, `--ink-raised`, `--paper`, `--paper-dim`, `--paper-faint`, `--gold`, `--gold-dim`, `--gain`, `--loss`, `--line`, `--line-soft`); tombol ☾ di header mengganti tema, pilihan di localStorage `jurnalTheme` (`light`/`dark`). Grafik memakai `var(--…)`, jadi ikut tema; cetak memakai style cetak terang sendiri.
 - **P1 — tinggi, usaha sedang**
