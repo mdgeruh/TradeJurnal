@@ -5,11 +5,14 @@ Riwayat per rilis/tema: `CHANGELOG.md`. Fitur & cara pakai: `README.md`. File in
 ## Apa ini
 Dashboard trading journal single-file HTML untuk akun cent XAUUSD. Tab: Ringkasan, Analisis PNL, Performa, Laporan, Transaksi, Deposit + Setelan (⚙); Kalkulator berupa modal dari tombol "Kalkulator lot" di tab Transaksi (bukan tab, sejak v1.1.114); navigasi desktop ≥ 1100px berupa sidebar kiri yang bisa diciutkan lewat tombol melayang (v1.1.110). File utama: `index.html` + `style.css` + `app.js` + `sync.js` + `config.js` (v1.1.105); Supabase: `schema.sql` + `query-user-supabase.sql` (v1.1.116).
 
-## Status (v1.1.118)
+## Status (v1.1.121)
 - Data aktif ada di localStorage (`jurnalXauusdData_v1`), bukan di file. File baru kosong (`kurs` = 0, mode Rp tampil Rp 0) sampai JSON diimpor lewat Setelan.
 - JSON ekspor terbaru (441 transaksi, sudah berisi `waktu_buka`) siap diimpor manual. Angka ringkasan dihitung otomatis, tidak dicatat di sini.
 - Tab Laporan: Paket A/B/Optimalisasi, style cetak PDF, dan L1–L17 selesai (v1.1.78–1.1.101); L18 juga sudah selesai (tombol Ekspor CSV). Tooltip kurva drawdown yang melebar keluar kartu sudah diperbaiki (v1.1.102); tooltip rolling & distribusi ditambahkan sekalian. Tidak ada bug fungsional terbuka; dua cek tampilan tooltip tercatat di Rawan bug.
 - Sejak v1.1.105: kode dipecah jadi folder datar dan ada sinkron Supabase manual (`sync.js`); v1.1.106: bisa dipasang sebagai PWA. v1.1.108: layout desktop ≥ 1100px (lebar 1240px, 2 kolom di Ringkasan/Performa/Setelan). v1.1.109–1.1.110: navigasi desktop berupa sidebar kiri yang bisa diciutkan lewat tombol bulat melayang (pilihan di `jurnalSidebar`). v1.1.111: kurva Ringkasan default All Time. v1.1.112: status batas harian di kartu PNL Hari Ini. v1.1.113: Setelan → Tentang aplikasi (versi + modal Riwayat perubahan bahasa pengguna; versi tak lagi di footer). v1.1.114: tab Kalkulator dihapus dari nav; kalkulator jadi modal dari tab Transaksi (id `calc*`/`mmGridQuick` tetap, logika hitung tidak berubah). v1.1.115: lencana DD saat ini + garis puncak di kurva Ringkasan dan kartu ajakan catatan psikologi (P1 Ringkasan tuntas).
+- v1.1.121: Setelan → Tampilan: mode Gelap/Terang/Otomatis + 5 skema (`html[data-scheme]` di `style.css`, `SCHEMES` di `app.js`, kunci `jurnalTheme`/`jurnalScheme`). Skema hanya untuk mode gelap. Sisa todo tema: aksen custom, skema rilis 2, reset, `theme_color` manifest, audit warna hardcoded, uji visual.
+- v1.1.120: tombol Tutup di modal jadi ✕ sudut (`.modal-x`, sticky/float; elemen pertama `.modal-box`, id tombol tetap).
+- v1.1.119: tombol berikon (`.has-ic`, `.ic-only`, `.bi`, `.btn-sr` di `style.css`; SVG inline di `index.html`). Tombol yang teksnya diubah `app.js` ("Simpan & lanjut") sengaja tanpa ikon; bila tombol baru diberi ikon, jangan timpa isinya dengan `textContent`.
 - v1.1.118 (lanjutan): info tanggal/jam sinkron & pemulihan terakhir di Setelan (`jurnalSyncInfo`, localStorage, per browser). Indikator di Ringkasan (todo P3) belum.
 - v1.1.116–117: tambah `query-user-supabase.sql` (query admin + buat akun login; dijalankan manual, tidak dimuat aplikasi). Blok buat akun v1.1.117 memakai satu perintah CTE (tanpa `do $$`). Belum diuji ke proyek Supabase asli.
 - Belum diuji ke proyek Supabase asli dan belum dicek di perangkat asli (sentuhan, PWA, sidebar); daftar cek manual ada di Todo.
@@ -45,6 +48,30 @@ Dashboard trading journal single-file HTML untuk akun cent XAUUSD. Tab: Ringkasa
 - **Verifikasi:** render & error konsol dicek tiap rilis lewat Playwright + Chromium (390/768/1280px); interaksi kompleks hanya dicek bila ada dugaan bug.
 
 ## Todo
+**Setelan — tema & skema warna custom (diusulkan 29 Sep; belum dikerjakan)**
+Kondisi sekarang: dua tema (gelap bawaan, terang) lewat 11 variabel CSS di `:root` dan override `html[data-theme="light"]` (`--ink`, `--ink-raised`, `--paper`, `--paper-dim`, `--paper-faint`, `--gold`, `--gold-dim`, `--gain`, `--loss`, `--line`, `--line-soft`); tombol ☾ di header mengganti tema, pilihan di localStorage `jurnalTheme` (`light`/`dark`). Grafik memakai `var(--…)`, jadi ikut tema; cetak memakai style cetak terang sendiri.
+- **P1 — tinggi, usaha sedang**
+  - [x] **(selesai v1.1.121; 5 skema rilis 1 + mode Otomatis, belum diuji di browser)** **Bagian "Tampilan" di Setelan: pemilih skema warna** berupa kartu swatch (pratinjau langsung, tanpa muat ulang) + mode **Gelap / Terang / Otomatis** (ikut sistem, `prefers-color-scheme`). Implementasi: tiap skema = satu blok `html[data-scheme="…"]` yang menimpa 11 variabel yang sama (varian gelap dan terang), pilihan di localStorage `jurnalScheme` (+ `jurnalTheme` untuk mode). Terapkan lewat skrip kecil inline di `<head>` sebelum CSS agar tidak berkedip. Tidak masuk `DATA`/ekspor JSON (seperti `jurnalDayLimits`); tombol **Kembali ke bawaan**.
+- **P2 — sedang**
+  - [ ] **Warna aksen custom:** `<input type="color">` untuk `--gold`; `--gold-dim` dihitung otomatis (redup ±25%); tolak/peringatkan bila rasio kontras aksen terhadap `--ink` < 4,5:1 (WCAG AA), dan jadikan aksen dipakai juga untuk tombol utama, tab aktif, dan garis kurva.
+  - [ ] **Pasangan untung/rugi ramah buta warna:** opsi biru/oranye menggantikan hijau/merah (sekitar 8% pria kesulitan membedakan merah–hijau). Warna gain/loss **tidak boleh** ikut terganti oleh aksen custom; hanya lewat opsi ini.
+  - [ ] Ikut skema: `<meta name="theme-color">` dan `theme_color` di `manifest.webmanifest` (PWA), bila memungkinkan diubah lewat JS saat skema berganti.
+- **Rawan bug (catat saat mengerjakan):** cari warna hardcoded (hex/rgba) di `app.js`/`style.css`/`index.html` yang tidak lewat variabel (grafik SVG, heatmap, badge, tooltip `ChartHover`) dan ganti ke `var(--…)`; cetak harus tetap memakai tema terang tetap apa pun skemanya; uji tiap skema di 390/1280px dan cetak PDF; pastikan `--loss` tetap terbaca di atas `--ink-raised`.
+- **Saran skema awal** (pendapat saya; rasio kontras teks terhadap `--ink` sudah dihitung ≥ 4,5:1 untuk `--paper-dim`, aksen, gain, dan loss; belum dilihat di layar):
+
+| Skema | `--ink` | `--ink-raised` | `--paper` | `--paper-dim` | Aksen (`--gold`) | `--gain` | `--loss` |
+|---|---|---|---|---|---|---|---|
+| **Emas Klasik** (bawaan, tetap default: identitas XAUUSD) | #1B1712 | #231E17 | #EDE6D6 | #9C907B | #C9A24B | #84AB7C | #C06B54 |
+| **Midnight Biru** (abu-biru gelap ala terminal trading; mirip Blue Ocean, jadi kandidat dibuang bila dirasa dobel) | #0F1720 | #16212D | #E4EAF1 | #8FA0B3 | #5AA9E6 | #5FBF8F | #E0705F |
+| **Blue Ocean** (biru laut dalam + aksen biru cerah, tenang dan bersih) | #071B33 | #0E2A4A | #E3EEF8 | #8FA9C4 | #4DB8FF | #5FD0A0 | #EE7B66 |
+| **Teal Green** (hijau-kebiruan segar, tidak menyilaukan di malam hari) | #0B1B1C | #112628 | #E2F0EF | #8DAEAC | #2EC4B6 | #A6D96A | #F0806A |
+| **Grafit Netral** (minim warna, fokus ke angka) | #121212 | #1B1B1B | #ECECEC | #A0A0A0 | #E0B84D | #79B98A | #D9736A |
+| **Ungu Senja** (lembut untuk sesi panjang) | #17131F | #1F1A2B | #ECE8F5 | #9D95B0 | #B392F0 | #7BC49A | #E07A8B |
+| **Kontras Tinggi / Ramah Buta Warna** (untung biru, rugi oranye) | #0A0A0A | #151515 | #FFFFFF | #B8B8B8 | #FFD166 | #4DA3FF | #FF9F43 |
+| **Kertas Putih** (terang, siang hari/cetak layar) | #FAFAF8 | #F0EFEA | #1F1E1B | #5E5C55 | #8A5F12 | #2F7A45 | #A8402B |
+
+  Catatan pilihan: aksen sengaja **bukan merah** dan tidak boleh sama dengan warna untung, supaya tidak tertukar dengan untung/rugi. Karena itu di **Teal Green** aksennya teal kebiruan (#2EC4B6) sedangkan untung digeser ke hijau-kuning (#A6D96A); jangan diubah jadi hijau murni. Urutan saya: rilis 1 = pemilih + Emas Klasik, Blue Ocean, Teal Green, Grafit, Kontras Tinggi + mode Otomatis; rilis 2 = aksen custom dan Midnight Biru/Ungu Senja/Kertas Putih; `--paper-faint`, `--gold-dim`, `--line`, `--line-soft` diturunkan dari skema (campur `--paper`/`--ink`) agar tiap skema cukup mendefinisikan 7 warna di tabel.
+
 **Ringkasan — improvement (prioritas, diusulkan 29 Sep; belum dikerjakan)**
 Kondisi sekarang: kartu hero (saldo, PNL kumulatif, Hari Ini, 7H, 30H), kurva ekuitas + lencana DD saat ini & garis puncak + pemilih periode (default All Time), stat strip 6 metrik, kartu ajakan catatan psikologi, kutipan acak.
 - **P1 — tinggi, usaha kecil**

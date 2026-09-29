@@ -3079,29 +3079,45 @@ document.getElementById('ledgerExportBtn').addEventListener('click', ()=>{
 });
 window.renderTrades = renderTrades;
 
-// ---------- Theme toggle ----------
+// ---------- Tema: mode (gelap/terang/otomatis) + skema warna (v1.1.121) ----------
 (function(){
-  const toggleBtn = document.getElementById('themeToggle');
-  function setTheme(theme, persist){
-    if(theme==='light'){
-      document.documentElement.setAttribute('data-theme','light');
-      toggleBtn.textContent = '☀';
-    } else {
-      document.documentElement.removeAttribute('data-theme');
-      toggleBtn.textContent = '☾';
-    }
-    if(persist){ try{ localStorage.setItem('jurnalTheme', theme); }catch(e){} }
+  const root = document.documentElement, toggleBtn = document.getElementById('themeToggle');
+  const SCHEMES = [
+    {id:'emas', n:'Emas Klasik', c:['#1B1712','#C9A24B','#84AB7C','#C06B54']},
+    {id:'ocean', n:'Blue Ocean', c:['#071B33','#4DB8FF','#5FD0A0','#EE7B66']},
+    {id:'teal', n:'Teal Green', c:['#0B1B1C','#2EC4B6','#A6D96A','#F0806A']},
+    {id:'grafit', n:'Grafit Netral', c:['#121212','#E0B84D','#79B98A','#D9736A']},
+    {id:'kontras', n:'Kontras Tinggi', c:['#0A0A0A','#FFD166','#4DA3FF','#FF9F43']}
+  ];
+  const mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: light)') : null;
+  let mode = 'dark', scheme = 'emas';
+  try{
+    const m = localStorage.getItem('jurnalTheme'), s = localStorage.getItem('jurnalScheme');
+    if(m==='light'||m==='dark'||m==='auto') mode = m;
+    if(SCHEMES.some(x=>x.id===s)) scheme = s;
+  }catch(e){}
+  const isLight = () => mode==='light' || (mode==='auto' && mq && mq.matches);
+  const grid = document.getElementById('schemeGrid'), chips = [...document.querySelectorAll('#themeModes [data-mode]')];
+  if(grid) grid.innerHTML = SCHEMES.map(s => `<button type="button" class="scheme-card" data-scheme-id="${s.id}" aria-pressed="false"><span class="scheme-sw">${s.c.map(c=>`<i style="background:${c}"></i>`).join('')}</span><span>${s.n}</span></button>`).join('');
+  function apply(persist){
+    const light = isLight();
+    if(light) root.setAttribute('data-theme','light'); else root.removeAttribute('data-theme');
+    if(scheme!=='emas') root.setAttribute('data-scheme',scheme); else root.removeAttribute('data-scheme');
+    toggleBtn.textContent = light ? '☀' : '☾';
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if(meta) meta.setAttribute('content', light ? '#F3EDE0' : SCHEMES.find(x=>x.id===scheme).c[0]);
+    chips.forEach(c => c.classList.toggle('active', c.dataset.mode===mode));
+    document.querySelectorAll('.scheme-card').forEach(c => c.setAttribute('aria-pressed', c.dataset.schemeId===scheme ? 'true' : 'false'));
+    if(persist){ try{ localStorage.setItem('jurnalTheme', mode); localStorage.setItem('jurnalScheme', scheme); }catch(e){} }
     if(window.renderEquityChart) window.renderEquityChart();
     if(window.renderAnCalendar) window.renderAnCalendar();
     if(window.renderSplitArah) window.renderSplitArah();
   }
-  toggleBtn.addEventListener('click', ()=>{
-    const isLight = document.documentElement.getAttribute('data-theme')==='light';
-    setTheme(isLight ? 'dark' : 'light', true);
-  });
-  let saved = 'dark';
-  try{ const v = localStorage.getItem('jurnalTheme'); if(v==='light'||v==='dark') saved = v; }catch(e){}
-  setTheme(saved, false);
+  toggleBtn.addEventListener('click', () => { mode = isLight() ? 'dark' : 'light'; apply(true); });
+  chips.forEach(c => c.addEventListener('click', () => { mode = c.dataset.mode; apply(true); }));
+  if(grid) grid.addEventListener('click', e => { const b = e.target.closest('.scheme-card'); if(b){ scheme = b.dataset.schemeId; apply(true); } });
+  if(mq){ const on = () => { if(mode==='auto') apply(false); }; if(mq.addEventListener) mq.addEventListener('change', on); else if(mq.addListener) mq.addListener(on); }
+  apply(false);
 })();
 
 // ---------- Main tabs (grouping sections) — sinkron nav atas & bawah ----------
@@ -4137,9 +4153,12 @@ renderPsyPrompt();
 // ---------- Tentang aplikasi: versi + riwayat perubahan bahasa awam (v1.1.113) ----------
 // SETIAP RILIS: naikkan APP_VERSION, tambah entri di USER_CHANGELOG (tanggal ISO, bahasa pengguna akhir),
 // naikkan CACHE di sw.js, dan tambah entri di CHANGELOG.md. Versi hanya tampil di Setelan (bukan di footer).
-const APP_VERSION = '1.1.118';
+const APP_VERSION = '1.1.121';
 const USER_CHANGELOG = [
   { date:'2026-09-29', items:[
+    'Setelan punya bagian <strong>Tampilan</strong>: pilih mode <strong>Gelap / Terang / Otomatis</strong> (mengikuti perangkat) dan lima skema warna: Emas Klasik, Blue Ocean, Teal Green, Grafit Netral, dan Kontras Tinggi (untung biru, rugi oranye, ramah buta warna). Skema berlaku di mode gelap.',
+    'Tombol <strong>Tutup</strong> di jendela (detail transaksi, detail hari, kalkulator, riwayat perubahan, notifikasi) diganti tombol <strong>✕</strong> di sudut kanan atas.',
+    'Banyak tombol kini memakai <strong>ikon</strong> (unduh, cetak, sinkronkan/pulihkan cloud, edit, hapus, tutup, keluar, riwayat). Tombol penting seperti Simpan, Batal, Masuk, dan Daftar tetap berikon plus tulisan. Tahan atau arahkan kursor ke ikon untuk melihat namanya.',
     'Di Setelan → Sinkron Supabase kini tampil <strong>tanggal dan jam terakhir disinkronkan</strong> ke cloud, dan terakhir dipulihkan dari cloud (waktu perangkat ini).',
     'Tombol sinkron di Setelan kini berbunyi <strong>Sinkronkan ke cloud</strong> dan <strong>Pulihkan dari cloud</strong> (sebelumnya "Kirim ke awan" dan "Tarik dari awan"); semua tulisan "awan" diganti "cloud". Fungsinya sama.',
     'Query pembuatan akun di <strong>query-user-supabase.sql</strong> diperbaiki agar mudah disalin dan dijalankan di Supabase, termasuk dari HP.',
