@@ -1,5 +1,7 @@
 # Jurnal Trading XAUUSD
 
+**Live:** https://trade-jurnal-eight.vercel.app/
+
 Dashboard jurnal trading akun **cent XAUUSD**: satu folder datar (`index.html`, `style.css`, `app.js`, `sync.js`, `config.js`), tanpa build tool. Sinkron opsional ke Supabase. Data tersimpan di **localStorage** browser. Satu-satunya sumber daya eksternal adalah Google Fonts (Fraunces, IBM Plex Mono); saat offline tampilan memakai font cadangan.
 
 ## Cara pakai
