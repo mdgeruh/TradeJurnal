@@ -18,7 +18,7 @@ Dashboard jurnal trading akun **cent XAUUSD**: satu folder datar (`index.html`, 
 ## Tab
 Navigasi: layar ≥ 1100px memakai **sidebar kiri** yang bisa diciutkan (tombol bulat melayang di tepi sidebar); 721–1099px tab horizontal di atas; ≤ 720px bottom nav.
 
-1. **Ringkasan:** kartu hero (saldo, PNL Kumulatif/Hari Ini/7H/30H, status batas harian di bawah PNL Hari Ini bila batas diisi di Setelan, tombol 👁 untuk menyembunyikan angka), pemilih periode (default All Time), kurva ekuitas, stat strip (Transaksi, Win Rate, Laba/Rugi, PF, Max DD, Expectancy).
+1. **Ringkasan:** kartu hero (saldo, PNL Kumulatif/Hari Ini/7H/30H, status batas harian di bawah PNL Hari Ini bila batas diisi di Setelan, tombol 👁 untuk menyembunyikan angka), pemilih periode (default All Time), kurva ekuitas dengan lencana **DD saat ini** (dari puncak, basis All Time) dan garis **puncak berjalan** putus-putus, stat strip (Transaksi, Win Rate, Laba/Rugi, PF, Max DD, Expectancy), serta kartu **ajakan catatan psikologi** (jumlah transaksi belum dicatat + tombol "Isi sekarang" yang membuka alur "Simpan & lanjut", tersembunyi bila semua sudah dicatat).
 2. **Analisis PNL:** statistik rentang bergulir (7H–1T/Sesuaikan) dan kalender PNL Harian (klik tanggal untuk detail).
 3. **Performa:** bulanan & mingguan, rekor menang/rugi terbesar, donut Split arah Beli vs Jual.
 4. **Laporan:** lihat bagian berikut.

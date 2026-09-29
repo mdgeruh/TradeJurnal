@@ -892,7 +892,7 @@ function computeLapDD(range){
     const bal = eq[i][1];
     if(ts < range.start){ peak = bal; continue; }
     if(peak === null || bal > peak) peak = bal;
-    series.push({ts, bal, peak});
+    series.push({ts, bal, peak, i});
   }
   const episodes = []; let cur = null;
   for(let i=0;i<series.length;i++){
@@ -2018,9 +2018,29 @@ let lastPeriodPL = 0;
 // Tanpa ini, ganti periode/tab (yang rebuild seluruh innerHTML SVG) ikut memicu ulang
 // animasi 1.1 detik itu tiap kali, terasa "berkedip" kalau user gonta-ganti periode cepat.
 let eqAnimated = false;
+// ---------- Ringkasan: DD saat ini + puncak berjalan (v1.1.115) ----------
+// Memakai computeLapDD (sama dengan Laporan L7, All Time) supaya angkanya konsisten. Tidak mengikuti pemilih periode kurva.
+function eqDrawdownAllTime(){
+  const d = computeLapDD({start:-Infinity, end:Infinity});
+  const peakAt = {};
+  for(const p of d.series) peakAt[p.i] = p.peak;
+  return {d, peakAt};
+}
+function renderEqDdBadge(d){
+  const el = document.getElementById('eqDdBadge'); if(!el) return;
+  if(!d || !d.last){ el.innerHTML = ''; return; }
+  if(d.now){
+    const nominal = d.last.peak - d.last.bal;
+    el.innerHTML = `<span class="eq-dd-badge down" title="Dihitung dari seluruh riwayat (sama dengan Laporan \u2192 Drawdown), tidak mengikuti pemilih periode."><span>DD saat ini</span><b>-${fmtPct(d.now.pct)}</b><span>dari puncak</span><span class="eq-dd-sub">-${fmtMoney(nominal)} \u00b7 sejak ${lapFmtDate(d.now.since)}</span></span>`;
+  } else {
+    el.innerHTML = `<span class="eq-dd-badge up" title="Dihitung dari seluruh riwayat (sama dengan Laporan \u2192 Drawdown), tidak mengikuti pemilih periode."><span>Ekuitas</span><b>di puncak</b></span>`;
+  }
+}
 function renderEquityChart(){
   const eqFull = DATA.equity;
   const box = document.getElementById('chartBox');
+  const ddAll = (eqFull && eqFull.length) ? eqDrawdownAllTime() : null;
+  renderEqDdBadge(ddAll ? ddAll.d : null);
   if(!eqFull || eqFull.length === 0){
     box.innerHTML = '<div style="padding:40px 12px;text-align:center;color:var(--paper-faint);">Belum ada data transaksi. Impor data JSON di tab Setelan untuk mulai, atau data akan otomatis tersimpan di penyimpanan lokal setelah sinkron berikutnya.</div>';
     return;
@@ -2072,6 +2092,7 @@ function renderEquityChart(){
   const times = idxs.map(i => Math.min(scopeEnd, Math.max(scopeStart, fullTimes[i])));
   const vals = idxs.map(i => eqFull[i][1]);
   const modalVals = (modalFull && modalFull.length===eqFull.length) ? idxs.map(i=>modalFull[i]) : null;
+  const peakVals = ddAll ? idxs.map((i,k)=> ddAll.peakAt[i] !== undefined ? ddAll.peakAt[i] : vals[k]) : null;
 
   // ---------- Tarik kurva mendatar sampai akhir rentang (hari ini / akhir periode) ----------
   // Tanpa ini, garis berhenti persis di transaksi terakhir walau periodenya masih berjalan.
@@ -2079,6 +2100,7 @@ function renderEquityChart(){
     times.push(scopeEnd);
     vals.push(vals[vals.length-1]);
     if(modalVals) modalVals.push(modalVals[modalVals.length-1]);
+    if(peakVals) peakVals.push(peakVals[peakVals.length-1]);
     idxs.push(idxs[idxs.length-1]); // titik tambahan ini mewakili saldo terakhir yang sama, bukan transaksi baru
   }
   const tMin = scopeStart, tMax = Math.max(scopeEnd, scopeStart+1);
@@ -2114,6 +2136,11 @@ function renderEquityChart(){
   const showBottomLabel = bottomIdx !== athIdx;
 
   const eqPts = times.map((t,i)=>({x:x(t), y:y(vals[i])}));
+  // Garis puncak berjalan (putus-putus), hanya digambar bila ada jarak dari kurva (ada drawdown di rentang ini).
+  let showPeak = false;
+  if(peakVals){ for(let k=0;k<vals.length;k++){ if(peakVals[k] - vals[k] > 1e-9){ showPeak = true; break; } } }
+  const peakLineColor = cssVar('--paper-faint');
+  const peakPtsStr = showPeak ? times.map((t,k)=>`${x(t).toFixed(1)},${y(peakVals[k]).toFixed(1)}`).join(' ') : '';
   const d = buildSmoothPath(eqPts);
   const areaD = d + ` L ${x(times[times.length-1])} ${y(yLo)} L ${x(times[0])} ${y(yLo)} Z`;
 
@@ -2162,6 +2189,7 @@ function renderEquityChart(){
           <stop offset="0%" stop-color="${lineColor}" stop-opacity="0.30"/>
           <stop offset="100%" stop-color="${lineColor}" stop-opacity="0"/>
         </linearGradient>
+      <clipPath id="eqPlotClip"><rect x="${padL}" y="${padT}" width="${plotW}" height="${plotH}"/></clipPath>
       </defs>
       <g class="eq-grid">${gridLines}</g>
       <path d="${areaD}" fill="url(#eqFill)" stroke="none"/>
@@ -2170,6 +2198,7 @@ function renderEquityChart(){
             stroke-dasharray="3000" stroke-dashoffset="3000"`}>${eqAnimated ? '' : `
         <animate attributeName="stroke-dashoffset" from="3000" to="0" dur="1.1s" fill="freeze" calcMode="spline" keySplines="0.2 0 0.1 1"/>`}
       </path>
+      ${showPeak ? `<polyline points="${peakPtsStr}" fill="none" stroke="${peakLineColor}" stroke-width="1.1" stroke-dasharray="4 3" opacity="0.85" clip-path="url(#eqPlotClip)" style="pointer-events:none;"/>` : ''}
       <g class="eq-axis">${yLabels}${xLabels}</g>
       <rect id="eqDrawdownRect" x="${x(times[peakIdx])}" y="${padT}" width="${Math.max(1.5, x(times[troughIdx])-x(times[peakIdx]))}" height="${plotH}" fill="${lossColor}" opacity="0.10" style="pointer-events:none;"/>
       <line x1="${x(times[peakIdx])}" y1="${padT}" x2="${x(times[peakIdx])}" y2="${padT+plotH}" stroke="${lossColor}" stroke-width="1" stroke-dasharray="3 3" opacity="0.5"/>
@@ -2186,6 +2215,7 @@ function renderEquityChart(){
     <div class="eq-period-label" id="eqPeriodLabel">${periodLabel ? 'Menampilkan: ' + periodLabel : ''}</div>
     <div class="eq-legend">
       <span class="eq-legend-item"><span class="eq-legend-swatch" style="background:${lossColor};opacity:0.4"></span>Drawdown terbesar: ${fmtMoney(maxDD)} (${fmtDate(eqFull[idxs[peakIdx]][0])} &rarr; ${fmtDate(eqFull[idxs[troughIdx]][0])})</span>
+      ${showPeak ? `<span class="eq-legend-item"><span class="eq-legend-swatch eq-legend-dash" style="border-top-color:${peakLineColor}"></span>Puncak berjalan</span>` : ''}
       ${modalD ? `<span class="eq-legend-item"><span class="eq-legend-swatch" style="background:${lineColor}"></span>Saldo Berjalan / Ekuitas</span>
       <span class="eq-legend-item"><span class="eq-legend-swatch eq-legend-dash" style="border-top-color:${modalColor}"></span>Modal Kumulatif (Deposit − Penarikan)</span>` : ''}
     </div>
@@ -4063,9 +4093,37 @@ function gmt8ToServerIso(val){
   window.openTradeDetail = openDetail;
 })();
 
+// ---------- Ringkasan: ajakan isi catatan psikologi (v1.1.115) ----------
+// Menghitung transaksi tanpa catatan (hasNote) dan membuka alur "Simpan & lanjut" yang sudah ada (antrean di sessionStorage).
+function renderPsyPrompt(){
+  const box = document.getElementById('psyPromptCard'); if(!box) return;
+  const trades = DATA.trades || [];
+  const missing = trades.filter(t=>!hasNote(t));
+  if(!trades.length || !missing.length){ box.hidden = true; return; }
+  const cover = (trades.length - missing.length) / trades.length * 100;
+  document.getElementById('psyPromptTitle').textContent = `${missing.length} transaksi belum ada catatan psikologi`;
+  document.getElementById('psyPromptSub').textContent = `Cakupan catatan baru ${cover.toFixed(cover < 10 ? 1 : 0).replace('.', ',')}% dari ${trades.length} transaksi. Makin lengkap, makin berguna analisis psikologi di Laporan. Diurutkan dari transaksi terbaru.`;
+  box.hidden = false;
+}
+(function(){
+  const btn = document.getElementById('psyPromptBtn');
+  if(!btn) return;
+  btn.addEventListener('click', ()=>{
+    const missing = (DATA.trades || []).filter(t=>!hasNote(t))
+      .sort((p,q) => parseGmt8(q.tanggal_gmt8) - parseGmt8(p.tanggal_gmt8));
+    if(!missing.length || !window.openTradeDetail) return;
+    try{ sessionStorage.setItem('jurnalFillQueue', JSON.stringify(missing.slice(1).map(t=>t.id))); }catch(e){}
+    const tabBtn = document.querySelector('.main-tab-btn[data-tab="transaksi"]');
+    if(tabBtn) tabBtn.click();
+    window.openTradeDetail(missing[0].id);
+    const eb = document.getElementById('detailEditBtn'); if(eb) eb.click();
+  });
+})();
+
 // Pemicu render awal dipindah ke sini (paling akhir skrip) supaya modul CS/DTP
 // (dipakai filter tab Transaksi) sudah selesai dibangun sebelum renderTrades() pertama jalan.
 selectPeriod(Math.max(0, LIVE_PERIODS.findIndex(p=>p.label==='All Time'))); // default Ringkasan: All Time (v1.1.111)
+renderPsyPrompt();
 (function(){
   let id = null;
   try{ id = sessionStorage.getItem('jurnalFillOpen'); sessionStorage.removeItem('jurnalFillOpen'); }catch(e){}
@@ -4079,12 +4137,12 @@ selectPeriod(Math.max(0, LIVE_PERIODS.findIndex(p=>p.label==='All Time'))); // d
 // ---------- Tentang aplikasi: versi + riwayat perubahan bahasa awam (v1.1.113) ----------
 // SETIAP RILIS: naikkan APP_VERSION, tambah entri di USER_CHANGELOG (tanggal ISO, bahasa pengguna akhir),
 // naikkan CACHE di sw.js, dan tambah entri di CHANGELOG.md. Versi hanya tampil di Setelan (bukan di footer).
-const APP_VERSION = '1.1.114';
+const APP_VERSION = '1.1.115';
 const USER_CHANGELOG = [
-  { date:'2026-09-30', items:[
-    '<strong>Kalkulator</strong> tidak lagi jadi tab sendiri. Buka lewat tombol <strong>Kalkulator lot</strong> di tab Transaksi; hasilnya muncul di jendela kecil, jadi Anda tidak perlu pindah halaman.'
-  ]},
   { date:'2026-09-29', items:[
+    'Kurva ekuitas di Ringkasan kini punya lencana <strong>DD saat ini</strong> (turun berapa persen dari puncak) dan <strong>garis puncak</strong> putus-putus. Angkanya sama dengan yang ada di Laporan.',
+    'Ringkasan menampilkan kartu <strong>ajakan mengisi catatan psikologi</strong>: jumlah transaksi yang belum dicatat, dengan tombol <strong>Isi sekarang</strong> untuk mengisinya satu per satu dari yang terbaru.',
+    '<strong>Kalkulator</strong> tidak lagi jadi tab sendiri. Buka lewat tombol <strong>Kalkulator lot</strong> di tab Transaksi; hasilnya muncul di jendela kecil, jadi Anda tidak perlu pindah halaman.',
     '<strong>Riwayat perubahan</strong> kini bisa dibuka dari Setelan, lengkap dengan info versi aplikasi.',
     'Kartu <strong>PNL Hari Ini</strong> menampilkan sisa batas rugi harian dan batas jumlah transaksi (bar hijau, emas, lalu merah saat hampir atau sudah tercapai). Batasnya diatur di Setelan.',
     'Di layar lebar, menu pindah ke <strong>sidebar kiri</strong> yang bisa diciutkan, dan tampilan memakai lebih banyak kolom.',
