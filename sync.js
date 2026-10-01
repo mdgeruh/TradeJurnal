@@ -17,7 +17,8 @@
   }
   const needNow = () => { try{ return /access_token|type=recovery|[?&]code=/.test(location.hash + location.search) || Object.keys(localStorage).some(k => /^sb-.*-auth-token$/.test(k)); }catch(e){ return false; } };
   document.querySelectorAll('#settingsGearBtn, [data-tab="setelan"]').forEach(b => b.addEventListener('click', loadLib));
-  if(needNow()) loadLib();
+  const gateOn = () => document.documentElement.classList.contains('gate-on');
+  if(needNow() || gateOn()) loadLib();
 
   function syncMain(){
   const $ = id => document.getElementById(id);
@@ -31,14 +32,52 @@
   const setBusy = b => btns.forEach(x => { x.disabled = b; });
   btns.forEach(x => { x.disabled = false; });   // awal bersih (bila percobaan muat sebelumnya gagal)
 
+  // ---- Halaman login (v1.1.146) ----
+  const gate = $('loginGate'), lgNote = $('lgNote');
+  let lgMode = 'login', lgBusy = false;
+  const lgSay = (msg, kind) => { lgNote.textContent = msg; lgNote.className = 'lg-note' + (kind ? ' ' + kind : ''); };
+  function gateShow(){ document.documentElement.classList.add('gate-on'); }
+  function gateHide(){ document.documentElement.classList.remove('gate-on'); }
+  function gateBusy(b){ lgBusy = b; ['lgSubmit','lgSkip','lgForgot'].forEach(i => { $(i).disabled = b; }); }
+  function setMode(m){
+    lgMode = m;
+    $('lgTabLogin').classList.toggle('active', m === 'login'); $('lgTabLogin').setAttribute('aria-selected', m === 'login');
+    $('lgTabSignup').classList.toggle('active', m === 'signup'); $('lgTabSignup').setAttribute('aria-selected', m === 'signup');
+    $('lgPass2Wrap').hidden = m !== 'signup';
+    $('lgForgot').hidden = m !== 'login';
+    $('lgSubmit').textContent = m === 'login' ? 'Masuk' : 'Buat akun';
+    $('lgPass').autocomplete = m === 'login' ? 'current-password' : 'new-password';
+    lgSay('');
+  }
+  function skipGate(){ try{ localStorage.setItem('jurnalGateSkip', '1'); }catch(e){} gateHide(); }
+  $('lgTabLogin').addEventListener('click', () => setMode('login'));
+  $('lgTabSignup').addEventListener('click', () => setMode('signup'));
+  $('lgSkip').addEventListener('click', skipGate);
+  $('lgEye').addEventListener('click', () => {
+    const show = $('lgPass').type === 'password';
+    $('lgPass').type = show ? 'text' : 'password'; if($('lgPass2')) $('lgPass2').type = show ? 'text' : 'password';
+    $('lgEye').textContent = show ? 'Sembunyi' : 'Lihat'; $('lgEye').setAttribute('aria-pressed', show);
+    $('lgEye').setAttribute('aria-label', show ? 'Sembunyikan password' : 'Tampilkan password');
+  });
+  gate.addEventListener('keydown', e => { if(e.key === 'Escape' && !lgBusy) skipGate(); });
+  // Tanpa Supabase (library gagal dimuat / config kosong) halaman login tidak berguna: jurnal tetap bisa dipakai lokal.
+  function gateUnavailable(msg){
+    if(!gateOn()) return;
+    lgSay(msg, 'err');
+    ['lgSubmit','lgForgot'].forEach(i => { $(i).disabled = true; });
+  }
+
   if(!window.supabase){
     say('Library Supabase gagal dimuat. Cek koneksi internet lalu muat ulang.', false);
+    gateUnavailable('Tidak bisa terhubung ke layanan masuk. Cek koneksi internet, atau lanjut tanpa masuk.');
     btns.forEach(x => x.disabled = true); return;
   }
   if(!cfg.url || /ISI_/.test(cfg.url) || !cfg.anonKey){
     say('Isi url proyek Supabase di config.js dulu.', false);
+    gateHide();
     btns.forEach(x => x.disabled = true); return;
   }
+  gateBusy(false);   // tombol halaman login aktif setelah library siap
   const sb = window.supabase.createClient(cfg.url, cfg.anonKey);
   let session = null;
 
@@ -92,6 +131,43 @@
     $('syncUser').textContent = on ? 'Masuk sebagai ' + session.user.email : '';
     showLast();
   }
+
+  // Satu jalur untuk form di Setelan dan halaman login; `from` memilih sumber isian dan tempat pesan.
+  async function gateAuth(){
+    const email = $('lgEmail').value.trim(), password = $('lgPass').value;
+    if(!/^\S+@\S+\.\S+$/.test(email)){ lgSay('Isi alamat email yang valid.', 'err'); $('lgEmail').focus(); return; }
+    if(password.length < 6){ lgSay('Password minimal 6 karakter.', 'err'); $('lgPass').focus(); return; }
+    if(lgMode === 'signup' && password !== $('lgPass2').value){ lgSay('Ulangi password dengan sama persis.', 'err'); $('lgPass2').focus(); return; }
+    gateBusy(true); lgSay('Memproses…');
+    try{
+      if(lgMode === 'signup'){
+        const { data, error } = await sb.auth.signUp({ email, password });
+        if(error) throw new Error(error.message);
+        if(data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0){ lgSay('Email ini sudah terdaftar. Pilih Masuk, atau gunakan Lupa password.', 'err'); return; }
+        if(!data.session){ lgSay('Akun dibuat. Buka email Anda untuk konfirmasi, lalu pilih Masuk.', 'ok'); setMode('login'); lgSay('Akun dibuat. Buka email Anda untuk konfirmasi, lalu pilih Masuk.', 'ok'); return; }
+      } else {
+        const { error } = await sb.auth.signInWithPassword({ email, password });
+        if(error) throw new Error(/invalid login/i.test(error.message) ? 'Email atau password salah.' : error.message);
+      }
+      $('lgPass').value = ''; $('lgPass2').value = ''; lgSay('');
+      // onAuthStateChange menutup halaman login
+    }catch(e){ lgSay('Gagal: ' + e.message, 'err'); }
+    finally{ gateBusy(false); }
+  }
+  async function gateForgot(){
+    const email = $('lgEmail').value.trim();
+    if(!/^\S+@\S+\.\S+$/.test(email)){ lgSay('Isi email akun Anda dulu di kolom email.', 'err'); $('lgEmail').focus(); return; }
+    if(!/^https?:$/.test(location.protocol)){ lgSay('Reset password butuh aplikasi dibuka lewat alamat web (http/https).', 'err'); return; }
+    gateBusy(true); lgSay('Mengirim tautan…');
+    try{
+      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+      if(error) throw new Error(error.message);
+      lgSay('Jika email itu terdaftar, tautan reset sudah dikirim. Cek email (juga folder spam), ikuti tautannya, lalu isi password baru.', 'ok');
+    }catch(e){ lgSay('Gagal: ' + e.message, 'err'); }
+    finally{ gateBusy(false); }
+  }
+  $('lgForm').addEventListener('submit', e => { e.preventDefault(); if(!lgBusy) gateAuth(); });
+  $('lgForgot').addEventListener('click', gateForgot);
 
   async function auth(kind){
     const email = $('syncEmail').value.trim(), password = $('syncPass').value;
@@ -222,10 +298,17 @@
   $('syncForgotBtn').addEventListener('click', forgot);
   $('syncChangePassBtn').addEventListener('click', changePass);
   $('syncSignupBtn').addEventListener('click', () => auth('signup'));
-  $('syncLogoutBtn').addEventListener('click', async () => { await sb.auth.signOut(); say(''); });
+  // Keluar: halaman login muncul lagi (pilihan "Lanjut tanpa masuk" dicabut). Data di perangkat ini tidak dihapus.
+  $('syncLogoutBtn').addEventListener('click', async () => { try{ localStorage.removeItem('jurnalGateSkip'); }catch(e){} await sb.auth.signOut(); say(''); });
   $('syncPushBtn').addEventListener('click', push);
   $('syncPullBtn').addEventListener('click', pull);
-  sb.auth.onAuthStateChange((ev, s) => { session = s; render(); if(ev === 'PASSWORD_RECOVERY') recoveryMode(); });
-  sb.auth.getSession().then(({ data }) => { session = data.session; render(); });
+  const recoveryUrl = /access_token|type=recovery|[?&]code=/.test(location.hash + location.search);   // dibaca sebelum supabase-js membersihkan URL
+  function gateSync(ev){
+    if(session){ gateHide(); return; }
+    if(ev === 'SIGNED_OUT'){ gateShow(); setMode('login'); lgSay('Anda sudah keluar.', ''); }
+    else if(ev === 'INIT' && !recoveryUrl && localStorage.getItem('jurnalGateSkip') !== '1') gateShow();   // sesi tersimpan sudah kedaluwarsa
+  }
+  sb.auth.onAuthStateChange((ev, s) => { session = s; render(); gateSync(ev); if(ev === 'PASSWORD_RECOVERY'){ gateHide(); recoveryMode(); } });
+  sb.auth.getSession().then(({ data }) => { session = data.session; render(); gateSync('INIT'); if(gateOn()) setTimeout(() => $('lgEmail').focus(), 50); });
   }
 })();

@@ -16,6 +16,12 @@ if(localStorage.getItem('jurnalCB')==='1')d.setAttribute('data-cb','1');
 var ac=JSON.parse(localStorage.getItem('jurnalAccent')||'null'),a=ac&&ac[light?'l':'d'];if(a&&a.length===2){d.style.setProperty('--gold',a[0]);d.style.setProperty('--gold-dim',a[1]);}}catch(e){}})();
 </script>
 <script>
+// Halaman login (v1.1.146): tampil sejak render pertama bila belum ada sesi Supabase tersimpan, bukan sedang membuka tautan reset password,
+// dan pengguna belum memilih "Lanjut tanpa masuk". sync.js mencabut kelas ini bila Supabase tidak terpasang/tidak terjangkau.
+(function(){try{var h=location.hash+location.search,ls=localStorage,has=/access_token|type=recovery|[?&]code=/.test(h)||Object.keys(ls).some(function(k){return /^sb-.*-auth-token$/.test(k);});
+if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.add('gate-on');}catch(e){}})();
+</script>
+<script>
 // Status sidebar desktop (v1.1.109): diterapkan sebelum render pertama supaya tidak melompat. Tanpa pilihan tersimpan: layar < 1280px mulai ciut.
 (function(){try{var v=localStorage.getItem('jurnalSidebar');var c=v?v==='collapsed':window.innerWidth<1280;if(c)document.documentElement.classList.add('sb-collapsed');}catch(e){}})();
 </script>
@@ -33,6 +39,36 @@ var ac=JSON.parse(localStorage.getItem('jurnalAccent')||'null'),a=ac&&ac[light?'
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div class="login-gate" id="loginGate" role="dialog" aria-modal="true" aria-labelledby="lgTitle">
+  <div class="lg-card">
+    <div class="lg-brand">Jurnal <em>XAUUSD</em></div>
+    <p class="lg-sub" id="lgTitle">Masuk untuk menyinkronkan jurnal ke cloud dan membukanya di perangkat lain.</p>
+    <div class="lg-tabs" role="tablist" aria-label="Masuk atau daftar">
+      <button type="button" class="lg-tab active" role="tab" aria-selected="true" id="lgTabLogin" data-mode="login">Masuk</button>
+      <button type="button" class="lg-tab" role="tab" aria-selected="false" id="lgTabSignup" data-mode="signup">Daftar</button>
+    </div>
+    <form class="lg-form" id="lgForm" novalidate>
+      <label class="lg-field" for="lgEmail"><span>Email</span>
+        <input type="email" id="lgEmail" class="lg-input" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false" placeholder="nama@email.com">
+      </label>
+      <label class="lg-field" for="lgPass"><span>Password</span>
+        <span class="lg-pass">
+          <input type="password" id="lgPass" class="lg-input" autocomplete="current-password" placeholder="minimal 6 karakter">
+          <button type="button" class="lg-eye" id="lgEye" aria-label="Tampilkan password" aria-pressed="false">Lihat</button>
+        </span>
+      </label>
+      <label class="lg-field" for="lgPass2" id="lgPass2Wrap" hidden><span>Ulangi password</span>
+        <input type="password" id="lgPass2" class="lg-input" autocomplete="new-password" placeholder="ketik ulang password">
+      </label>
+      <button type="submit" class="lg-primary" id="lgSubmit" disabled>Masuk</button>
+      <button type="button" class="lg-link" id="lgForgot" disabled>Lupa password?</button>
+    </form>
+    <p class="lg-note" id="lgNote" role="status" aria-live="polite"></p>
+    <div class="lg-sep"><span>atau</span></div>
+    <button type="button" class="lg-skip" id="lgSkip">Lanjut tanpa masuk</button>
+    <p class="lg-foot">Tanpa masuk, jurnal tetap berjalan dan tersimpan di perangkat ini saja. Anda bisa masuk kapan saja lewat Setelan → Akun.</p>
+  </div>
+</div>
 <div class="wrap">
 
   <header class="masthead">
