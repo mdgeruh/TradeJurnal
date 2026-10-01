@@ -21,7 +21,7 @@ Dokumen lain: `release_note.md` (catatan rilis pengguna), `roadmap.md` (rencana 
 ## Tab
 Navigasi: ≥ 1100px sidebar kiri yang bisa diciutkan; 721–1099px tab horizontal; ≤ 720px bottom nav. Tombol **+** (FAB) menambah transaksi, deposit, atau penarikan manual; semua agregat dihitung ulang dari data mentah.
 
-1. **Ringkasan:** hero (saldo; PNL Hari Ini/7H/30H/Minggu Ini/Bulan Ini; status batas harian; tombol 👁 menyamarkan angka PNL), chip periode 7H · 1B · 3B · 1T · All · Sesuaikan (bawaan All, berdiri sendiri per tab), kurva **Ekuitas / PNL kumulatif** (garis modal dan puncak berjalan, pita drawdown, lencana **DD saat ini**, tooltip, legenda yang bisa diketuk), stat strip 9 kartu (Transaksi, Win Rate, Laba/Rugi, PF, Max DD, Expectancy, Streak, Rata² menang/rugi + RR), dan kartu ajakan mengisi catatan psikologi.
+1. **Ringkasan:** hero (saldo; PNL Hari Ini/7H/30H/Minggu Ini/Bulan Ini; status batas harian; tombol 👁 menyamarkan angka PNL), chip periode 7H · 1B · 3B · 1T · All · Sesuaikan (bawaan All, berdiri sendiri per tab), kurva **Ekuitas / PNL kumulatif** (garis modal dan puncak berjalan, pita drawdown, lencana **DD saat ini**, tooltip, legenda yang bisa diketuk), stat strip 9 kartu (Transaksi, Win Rate, Laba/Rugi, PF, Max DD, Expectancy, Streak, Rata² menang/rugi + RR), kartu ajakan mengisi catatan psikologi, dan kartu **Transaksi terakhir** (5 transaksi terbaru: hasil, emosi, trigger; ketuk untuk detail).
 2. **Analisis PNL:** statistik rentang bergulir dan kalender PNL harian (ketuk tanggal untuk detail).
 3. **Performa:** bulanan dan mingguan, rekor menang/rugi, donut Split arah Beli vs Jual.
 4. **Laporan:** lihat bagian di bawah.

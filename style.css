@@ -1192,3 +1192,23 @@ html.gate-on body{overflow:hidden;}
 /* Lapisan FAB tidak boleh menelan ketukan di sekitarnya (tombol Keluar di Setelan → Akun tertutup, v1.1.148) */
 .fab-wrap{pointer-events:none;}
 .fab-wrap .fab-main{pointer-events:auto;}
+
+/* Ringkasan: transaksi terakhir (v1.1.149) */
+.recent-card{margin:0 0 20px;border:1px solid var(--line);background:var(--ink-raised);border-radius:10px;padding:14px 16px 6px;}
+.recent-card[hidden]{display:none;}
+.recent-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:6px;}
+.recent-head h2{margin:0;font-size:15px;font-weight:600;color:var(--paper);}
+.recent-all{background:none;border:0;color:var(--gold);font:inherit;font-size:12.5px;cursor:pointer;padding:6px 0;}
+.recent-list{list-style:none;margin:0;padding:0;}
+.recent-list li+li{border-top:1px solid var(--line-soft);}
+.recent-row{display:flex;align-items:center;gap:12px;width:100%;background:none;border:0;color:inherit;font:inherit;text-align:left;padding:10px 0;cursor:pointer;min-height:48px;}
+.recent-row:hover .recent-date{color:var(--paper);}
+.recent-dir{flex:none;width:44px;text-align:center;font-size:11px;letter-spacing:.04em;text-transform:uppercase;padding:3px 0;border-radius:4px;border:1px solid var(--line);color:var(--paper-dim);}
+.recent-mid{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+.recent-date{font-size:13px;color:var(--paper-dim);}
+.recent-meta{font-size:12.5px;color:var(--paper);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.recent-meta.none{color:var(--paper-faint);font-style:italic;}
+.recent-pnl{flex:none;font-variant-numeric:tabular-nums;font-weight:600;font-size:14px;}
+.recent-pnl.gain{color:var(--gain);} .recent-pnl.loss{color:var(--loss);}
+.recent-card.hidden-values .recent-pnl{filter:blur(7px);user-select:none;}
+@media print{.recent-card{display:none;}}

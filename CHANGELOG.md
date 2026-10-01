@@ -3,6 +3,10 @@
 Perubahan Jurnal XAUUSD, terbaru di atas. Semua rilis 22 Sep – 1 Okt 2026. Versi berbahasa pengguna akhir ada di aplikasi (Setelan → Tentang aplikasi). v1.1.144 ke atas dicatat per versi; sebelumnya diringkas per tema. Status dan jebakan bug: `SUMMARY.md`; rencana dan todo: `roadmap.md`.
 
 ## Rilis terbaru
+### 1.1.149 — 1 Okt
+- **Ringkasan → Transaksi terakhir (todo P3):** kartu `#recentCard` (di bawah ajakan catatan psikologi, di atas kutipan) berisi 5 elemen pertama `allTrades` (terbaru dulu): arah, tanggal-jam + lot, emosi · trigger (atau "Belum ada catatan psikologi"), dan hasil berwarna `--gain`/`--loss` lewat `fmtMoney`. Baris memanggil `openTradeDetail(id)`; **Lihat semua** mengklik tab Transaksi. Disembunyikan bila belum ada transaksi dan saat cetak; ikut `setPnlHidden` (kelas `hidden-values` → blur pada `.recent-pnl`). Kodenya harus berada **setelah** `const allTrades` (sebelumnya sempat ditaruh lebih awal dan kena TDZ).
+- **Diuji Playwright** (390 gelap / 1280 terang, 18 cek): tersembunyi saat kosong, 5 baris terbaru-dulu, teks tanpa catatan, detail terbuka, mata menyamarkan, Lihat semua → Transaksi, tanpa luapan horizontal dan tanpa error halaman.
+- `APP_VERSION` → 1.1.149, `USER_CHANGELOG` digabung ke entri 2026-10-01, `sw.js`: `CACHE` → `jurnal-v1.1.149`.
 ### 1.1.148 — 1 Okt
 - **Keluar tidak bekerja (bug):** (1) `.fab-wrap` (pembungkus tombol +) menutupi `#syncLogoutBtn` di HP sehingga ketukan tidak sampai → `.fab-wrap{pointer-events:none}` dan hanya `.fab-main` yang `auto`. (2) `signOut()` global bisa gagal saat jaringan buruk dan sesi tetap utuh → `doLogout()` di `sync.js` memakai `signOut({scope:'local'})`, memeriksa `getSession()`, menghapus kunci `sb-*-auth-token` bila sesi masih ada lalu `location.reload()`; `jurnalGateSkip` dihapus lebih dulu sehingga halaman login muncul.
 - **Sub-navigasi Setelan:** chip (`lap-gran-btn`) diganti `.sg-tabs` (grid 5 kolom, garis bawah emas animasi, ikon SVG `SETELAN_ICONS` di atas label pada HP dan di samping label ≥720px). ARIA `tablist/tab/aria-selected`, roving `tabIndex`, panah kiri/kanan (berputar), Home/End; kelompok terakhir tetap diingat (`jurnalSetelanGroup`).

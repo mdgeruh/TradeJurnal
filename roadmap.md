@@ -2,10 +2,10 @@
 
 Satu-satunya daftar rencana dan todo proyek (dulu ada di `SUMMARY.md`). Prioritas: **P1** tinggi, **P2** sedang, **P3** rendah. Tidak ada tanggal tetap. Setiap butir yang mengubah kode mengikuti **Alur rilis** di `README.md`; saat selesai, hapus dari sini (centang bila perlu satu rilis), pindahkan tema barunya ke tabel "Sudah selesai", dan catat di `release_note.md` dan `CHANGELOG.md`. Jebakan bug tiap area ada di `SUMMARY.md`.
 
-## Sudah selesai (v1.1.148)
+## Sudah selesai (v1.1.149)
 | Tema | Isi |
 |---|---|
-| Fondasi | Ringkasan, Performa, Deposit, Transaksi, input manual (+), data di localStorage, tanpa build tool |
+| Fondasi | Ringkasan (+ 5 transaksi terakhir), Performa, Deposit, Transaksi, input manual (+), data di localStorage, tanpa build tool |
 | Analisis | Analisis PNL; Laporan L1–L18 (tren, psikologi, heatmap, sesi pasar, drawdown, distribusi PNL/Pips, bandingkan dua periode); cetak PDF A4 |
 | Transaksi | Catatan psikologi dan bebas, filter lengkap, isi massal, impor/ekspor CSV, batalkan hapus, kartu HP |
 | Tampilan | Gelap/Terang/Otomatis, 8 skema warna, aksen custom, mode buta warna, mata uang USD/USC/Rp, zona waktu, format tanggal |
@@ -42,7 +42,6 @@ Hampir semua fitur baru hanya diuji di Chromium dengan data sintetis dan Supabas
 **Ringkasan**
 - [ ] Indikator sinkron Supabase (terakhir dikirim/diambil; ada perubahan lokal belum dikirim).
 - [ ] Ganti kutipan acak dengan checklist/aturan trading pribadi yang bisa diedit (atau hapus kartunya).
-- [ ] Daftar 5 transaksi terakhir dengan hasil dan emosi.
 
 **Optimalisasi**
 - [ ] Host sendiri font (Fraunces, IBM Plex Mono) sebagai `woff2` subset Latin + tambah ke `SHELL` di `sw.js` (offline penuh tanpa dependensi luar).
