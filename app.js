@@ -422,6 +422,7 @@ renderHeroMoney();
     snapshotEl.classList.toggle('hidden-values', hidden);
     eyeBtn.textContent = hidden ? '\u25cc' : '\u25c9';
     eyeBtn.setAttribute('aria-pressed', hidden ? 'true' : 'false');
+    const rc = document.getElementById('recentCard'); if(rc) rc.classList.toggle('hidden-values', hidden);
   }
   window.setPnlHidden = setPnlHidden;
   // Setelan → Preferensi "Angka PNL saat dibuka" (v1.1.145): jurnalHideNum = '1' → tersamar sejak muat
@@ -2933,6 +2934,26 @@ window.renderDepositLog = renderDepositLog;
 
 // ---------- Trades ledger ----------
 const allTrades = [...DATA.trades].reverse(); // newest first
+// ---------- Ringkasan: 5 transaksi terakhir (v1.1.149) ----------
+(function(){
+  const card = document.getElementById('recentCard'), list = document.getElementById('recentList');
+  if(!card || !list) return;
+  const rows = allTrades.slice(0,5);   // allTrades: terbaru dulu
+  if(!rows.length) return;
+  list.innerHTML = rows.map(t => {
+    const win = t.laba > 0, flat = t.laba === 0;
+    const meta = [t.emosi, t.trigger].filter(Boolean).join(' · ');
+    return `<li><button type="button" class="recent-row" data-id="${escapeHtml(t.id)}">
+      <span class="recent-dir ${t.arah==='Beli'?'buy':'sell'}">${escapeHtml(t.arah||'')}</span>
+      <span class="recent-mid"><span class="recent-date">${fmtDateTime(t.tanggal)} · ${escapeHtml(String(t.lot))} lot</span>
+      <span class="recent-meta${meta?'':' none'}">${meta ? escapeHtml(meta) : 'Belum ada catatan psikologi'}</span></span>
+      <span class="recent-pnl ${flat?'':win?'gain':'loss'}">${win?'+':''}${fmtMoney(t.laba)}</span></button></li>`;
+  }).join('');
+  card.hidden = false;
+  list.addEventListener('click', e => { const b = e.target.closest('.recent-row'); if(b && window.openTradeDetail) window.openTradeDetail(b.dataset.id); });
+  document.getElementById('recentAll').addEventListener('click', () => { const tb = document.querySelector('.main-tab-btn[data-tab="transaksi"]'); if(tb) tb.click(); });
+})();
+
 const tbody = document.getElementById('ledgerBody');
 
 // Ambang "rugi besar": 10% kerugian terburuk secara historis (persentil, bukan angka tetap)
@@ -4856,7 +4877,7 @@ function renderBackupStatus(){
   sync();
 })();
 
-const APP_VERSION = '1.1.148';
+const APP_VERSION = '1.1.149';
 const APP_BUILD_DATE = '2026-10-01';   // ikut diganti tiap rilis (ISO), tampil di Setelan → Tentang
 const USER_CHANGELOG = [
   { date:'2026-10-01', items:[
@@ -4866,6 +4887,7 @@ const USER_CHANGELOG = [
 
     'Setelan → Trading → <strong>Kalkulator lot</strong>: atur sendiri <strong>nilai pip per lot</strong> akun Anda serta angka bawaan <strong>risiko (%)</strong>, <strong>stop loss</strong>, dan <strong>rasio risk:reward</strong>. Kalkulator lot di tab Transaksi langsung memakainya, dan tombol reset di kalkulator kembali ke angka ini. Ikut tersimpan di ekspor JSON.',
     'Setelan → Preferensi → <strong>Angka PNL saat dibuka</strong>: pilih <strong>Tersembunyi</strong> agar angka PNL di Ringkasan selalu disamarkan setiap aplikasi dibuka (cocok bila sering membuka di tempat umum). Tombol mata tetap bisa menampilkannya sementara.',
+    'Ringkasan: kartu baru <strong>Transaksi terakhir</strong> menampilkan 5 transaksi terbaru lengkap dengan hasil, emosi, dan trigger. Ketuk satu baris untuk membuka detailnya, atau <strong>Lihat semua</strong> untuk ke tab Transaksi. Angkanya ikut tersamar bila tombol mata aktif.',
     'Perbaikan: tombol <strong>Keluar</strong> di Setelan → Akun kini benar-benar bekerja (sebelumnya bisa tertutup tombol + dan sesi tidak terhapus bila jaringan bermasalah); setelah keluar, halaman login muncul lagi. Menu Setelan juga tampil lebih modern: tab dengan ikon dan garis penanda, bukan tombol chip, dan bisa digeser dengan tombol panah.',
     'Perbaikan: pada data baru, rasio risk:reward di kalkulator lot kini mulai dari 1,5, bukan 0. Banner <strong>Versi baru siap</strong> juga tidak lagi terjepit jadi tiga baris di layar sempit.'
   ]},

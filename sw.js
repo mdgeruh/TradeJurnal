@@ -1,7 +1,7 @@
 // Service worker: cache-dulu (stale-while-revalidate) supaya aplikasi tampil instan; cache diperbarui di latar
 // dan versi baru dipakai pada pembukaan berikutnya (CACHE dinaikkan tiap rilis, cache lama dihapus saat aktif).
 // Panggilan ke Supabase (domain lain) tidak pernah di-cache.
-const CACHE = 'jurnal-v1.1.148';
+const CACHE = 'jurnal-v1.1.149';
 const SHELL = ['./', 'index.html', 'style.css', 'app.js', 'sync.js', 'config.js', 'pwa.js',
   'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 const CDN = ['cdn.jsdelivr.net', 'fonts.googleapis.com', 'fonts.gstatic.com'];
