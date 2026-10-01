@@ -213,6 +213,7 @@
   // Setelah membuka tautan reset dari email, supabase-js memicu PASSWORD_RECOVERY dengan sesi sementara: arahkan ke form ganti password.
   function recoveryMode(){
     const gear = document.getElementById('settingsGearBtn'); if(gear) gear.click();
+    if(window.showSetelanGroup) window.showSetelanGroup('akun');
     say('Tautan reset diterima. Isi password baru di bawah, lalu tekan Simpan password.', true);
     setTimeout(() => { const r = $('syncPassRow'); if(r && r.scrollIntoView) r.scrollIntoView({ block: 'center' }); $('syncNewPass').focus(); }, 350);
   }

@@ -22,13 +22,15 @@ Navigasi: layar ≥ 1100px memakai **sidebar kiri** yang bisa diciutkan (tombol 
 2. **Analisis PNL:** statistik rentang bergulir (7H–1T/Sesuaikan) dan kalender PNL Harian (klik tanggal untuk detail).
 3. **Performa:** bulanan & mingguan, rekor menang/rugi terbesar, donut Split arah Beli vs Jual.
 4. **Laporan:** lihat bagian berikut.
-5. **Transaksi:** buku transaksi (cari ID posisi atau isi catatan bebas; filter Arah/Hasil/Catatan psikologi/Emosi/Trigger/Jenis entry/Sesi/tanggal/lot, chip cepat Hari Ini/Minggu Ini/7 Hari/30 Hari/Bulan Ini/Bulan Lalu, kolom Waktu buka & Durasi, tombol Pilih untuk isi massal emosi/trigger/jenis entry, ringkasan hasil filter, tombol Batalkan hapus (30 menit); ekspor dan **impor CSV** — impor hanya menambah transaksi baru, ID yang sudah ada dilewati, ada konfirmasi dulu). Klik baris untuk detail (lihat, edit, hapus; tombol ‹ › pindah ke transaksi sebelumnya/berikutnya); di layar < 720px daftar tampil sebagai kartu ringkas dengan menu Urutkan sendiri; tiap transaksi bisa diberi **catatan bebas** (ikon ✎ di sel ID, ikut dicari dan diekspor CSV); "Simpan & lanjut" mengisi catatan psikologi berurutan. Tombol **Kalkulator lot** (di baris judul, kanan) membuka modal kalkulator money management: risiko per trade (%), stop loss (pips), R:R → lot & target sesuai saldo terkini (tutup lewat Tutup, ketuk latar, atau Esc).
+5. **Transaksi:** buku transaksi (cari ID posisi atau isi catatan bebas; filter Arah/Hasil/Catatan psikologi/Emosi/Trigger/Jenis entry/Sesi/tanggal/lot, chip cepat Hari Ini/Minggu Ini/7 Hari/30 Hari/Bulan Ini/Bulan Lalu, kolom Waktu buka & Durasi, tombol Pilih untuk isi massal emosi/trigger/jenis entry, ringkasan hasil filter, tombol Batalkan hapus (30 menit); ekspor dan **impor CSV** — impor hanya menambah transaksi baru, ID yang sudah ada dilewati, ada konfirmasi dulu). Klik baris untuk detail (lihat, edit, hapus; tombol ‹ › pindah ke transaksi sebelumnya/berikutnya); di layar < 720px daftar tampil sebagai kartu ringkas dengan menu Urutkan sendiri; tiap transaksi bisa diberi **catatan bebas** (ikon ✎ di sel ID, ikut dicari dan diekspor CSV); "Simpan & lanjut" mengisi catatan psikologi berurutan. Tombol **Kalkulator lot** (di baris judul, kanan) membuka modal kalkulator money management: risiko per trade (%), stop loss (pips), R:R → lot & target sesuai saldo terkini; angka bawaannya diatur di Setelan → Trading → Kalkulator lot (tutup lewat Tutup, ketuk latar, atau Esc).
 6. **Deposit:** log deposit, penarikan, kompensasi margin call; ringkasan modal bersih.
 
 **Setelan** (⚙), berurutan dari atas:
 - **Kurs:** Rupiah per 1 USD (validasi > 0), dipakai mode Rp dan semua angka "≈ Rp"; ikut ekspor JSON dan sinkron. Setelah disimpan tampilan dimuat ulang.
 - **Batas harian pribadi:** maks rugi & maks transaksi per hari.
 - **Buku transaksi:** ambang garis merah "rugi besar" (1–50%, kosong = nonaktif).
+- **Kalkulator lot:** nilai pip per 1 lot (¢, bawaan 10) serta angka bawaan risiko (1%), stop loss (150 pips), dan R:R (1,5) untuk modal Kalkulator lot; tersimpan di data jurnal (ikut ekspor JSON, tidak ikut sinkron).
+- **Preferensi:** mata uang, zona waktu, format tanggal, dan **Angka PNL saat dibuka** (Tampil / Tersembunyi).
 - **Tampilan:** mode Gelap / Terang / Otomatis, 5 skema warna (Emas Klasik, Blue Ocean, Teal Green, Grafit Netral, Kontras Tinggi), warna aksen sendiri per mode (ditolak bila kontras rendah atau mirip warna untung/rugi), opsi untung biru / rugi oranye (ramah buta warna), dan tombol **Atur ulang tampilan**.
 - **Sinkron Supabase** (Masuk/Daftar, **Lupa password**, **Ganti password**), **Status cadangan**, **ekspor HTML/JSON** (HTML = satu berkas mandiri: gaya, kode, dan data di dalamnya; butuh dibuka lewat http/https saat mengekspor), **impor JSON** (konfirmasi sebelum menimpa), dan **Reset ke Bawaan** (auto-backup JSON dulu).
 - **Tentang aplikasi** (paling bawah): **versi aplikasi** (mis. `v1.1.135`; satu-satunya tempat versi ditampilkan) dan tombol **Lihat riwayat** yang membuka jendela **Riwayat perubahan** berbahasa pengguna akhir (tanpa istilah teknis), dikelompokkan per tanggal dan diurutkan dari yang **terbaru**. Tutup lewat ✕, ketuk latar, atau Esc.
@@ -57,6 +59,7 @@ Navigasi: layar ≥ 1100px memakai **sidebar kiri** yang bisa diciutkan (tombol 
 | `jurnalAccent` | localStorage | Aksen custom per mode: `{d:[gold,gold-dim], l:[gold,gold-dim]}` (opsional) |
 | `jurnalCB` | localStorage | `1` = untung biru / rugi oranye (ramah buta warna) |
 | `jurnalTzOffset` | localStorage | Zona waktu tampilan |
+| `jurnalHideNum` | localStorage | `1` = angka PNL Ringkasan disamarkan saat dibuka |
 | `jurnalSidebar` | localStorage | Sidebar desktop: `collapsed` / `expanded` |
 | `jurnalBigLossPct` | localStorage | Ambang garis merah rugi besar di Transaksi (%); tidak ikut ekspor |
 | `jurnalUndoDelete` | localStorage | Transaksi yang baru dihapus untuk "Batalkan hapus" (30 menit); tidak ikut sinkron/ekspor |

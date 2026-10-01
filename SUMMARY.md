@@ -5,7 +5,11 @@ Riwayat per rilis/tema: `CHANGELOG.md`. Fitur & cara pakai: `README.md`. File in
 ## Apa ini
 Dashboard trading journal (folder datar, tanpa build tool) untuk akun cent XAUUSD. Tab: Ringkasan, Analisis PNL, Performa, Laporan, Transaksi, Deposit + Setelan (⚙). Kalkulator lot berupa modal dari tombol di tab Transaksi. Navigasi desktop ≥ 1100px berupa sidebar kiri yang bisa diciutkan. File utama: `index.html`, `style.css`, `app.js`, `sync.js`, `config.js`, `pwa.js`, `sw.js`; Supabase: `schema.sql`, `query-user-supabase.sql`, `migrasi-catatan.sql`.
 
-## Status (v1.1.141)
+## Status (v1.1.145)
+- v1.1.145: Setelan → Trading → Kalkulator lot (nilai pip per lot, risiko/SL/R:R bawaan di `DATA.dashboard.mm`, lewat `calcParams()`) dan Preferensi → Angka PNL saat dibuka (`jurnalHideNum`); diuji Playwright 390/1280px (31 cek); belum di perangkat asli.
+- v1.1.144: Setelan dibagi 5 kelompok dengan sub-navigasi (Tampilan · Trading · Data · Akun · Tentang); diuji Playwright 390px; belum di perangkat asli. Section Setelan baru wajib diberi `data-sgroup`; alur yang memfokuskan elemen Setelan harus memanggil `showSetelanGroup()` dulu.
+- v1.1.143: Setelan → Penyimpanan & pengaturan (ringkasan localStorage ±5 MB, ekspor/impor pengaturan tervalidasi); diuji Playwright (390px, gelap; ekspor, impor valid/tidak valid, berkas salah, data transaksi tetap 160); belum di perangkat asli.
+- v1.1.142: chip periode Laporan disamakan dengan Ringkasan (tinggi 34px), cincin fokus keyboard emas untuk chip periode dan filter cepat Transaksi; keputusan: Performa dan Deposit tanpa filter periode. Diuji Playwright (390/1280px, gelap/terang, keyboard, "Sesuaikan"); belum di perangkat sentuh asli.
 - Semua fitur di README berjalan; tab Transaksi, Laporan (L1–L18, cetak PDF), Setelan → Tampilan (mode + 5 skema + aksen custom + mode buta warna), catatan bebas per transaksi, impor/ekspor CSV, sinkron Supabase manual, dan PWA sudah selesai. Tidak ada bug fungsional terbuka.
 - v1.1.141: keadaan kosong Ringkasan punya tombol Impor JSON / Masuk & Pulihkan dari cloud; penamaan reset di Setelan diperjelas ("Hapus semua data di perangkat ini", tombol "Hapus & Reset"); render malas Laporan diturunkan ke P3; belum diuji di browser.
 - v1.1.140: L14 Distribusi hasil per transaksi punya pilihan satuan PNL/Pips (`lapDistUnit`, `lapDistPipsData`); belum diuji di browser.
@@ -35,6 +39,7 @@ Dashboard trading journal (folder datar, tanpa build tool) untuk akun cent XAUUS
 - **Akun Supabase (v1.1.135):** `PASSWORD_RECOVERY` diproses di `sync.js` (`recoveryMode()`); jangan `await` di dalam `onAuthStateChange`. Password tidak boleh masuk localStorage/`DATA`.
 - **Urutan skrip:** modul `CS`/`DTP` harus didefinisikan sebelum render awal yang memakainya (blank page v1.1.64).
 - **Field turunan:** semua field hasil hitung dari `DATA.trades` harus ikut `recomputeAll()`.
+- **Parameter kalkulator (v1.1.145):** `mm.pipval/risk/sl/tp_pips` adalah isian pengguna, bukan field turunan: jangan ditimpa di `recomputeAll()` (hanya `mm.equity`). Baca lewat `calcParams()` (nilai aman bila kosong/0), bukan `mm.*` langsung.
 - **Format nominal:** tanda minus di depan simbol (`-$x`, `-Rp x`); pakai `fmtMoney`/`fmtRp`, jangan tulis `'Rp ' + n` sendiri.
 - **Setelan lokal:** `jurnalDayLimits`, `jurnalBigLossPct`, tema/skema/aksen, dst. sengaja tidak ikut `DATA`/ekspor JSON; ubah ekspor hati-hati agar impor lama tetap kompatibel. Id elemen Setelan dipakai `app.js` dan `sync.js`.
 - **Tombol berikon** (`.has-ic`, `.ic-only`, `.bi`): jangan timpa isinya dengan `textContent`; "Simpan & lanjut" sengaja tanpa ikon.
@@ -74,10 +79,8 @@ Kelompok berdasarkan area; prioritas P1 tinggi, P2 sedang, P3 rendah. Setiap but
 
 ### 1. Ringkasan
 (Perbaikan kurva ekuitas P1 sudah selesai di v1.1.133 dan dihapus dari daftar.)
-**P1 — chip periode (sisa)**
-- [ ] Laporan: `#lapGranTabs` (Harian/Mingguan/Bulanan/3 Bulan/1 Tahun/All Time + navigator ‹ ›) sudah bergaya chip dengan All di ujung; keputusan: tetap per kalender (navigator dipakai Bandingkan dua periode, L17). Cek saja visual chip sama dengan Ringkasan di 390px, lalu hapus butir ini.
-- [ ] Performa dan Deposit belum punya filter periode: putuskan perlu/tidak; bila perlu, pakai `buildPeriodChips` dengan default All.
-- [ ] Cek 1280px, mode terang, dan keyboard (Tab/Enter) untuk chip; "Sesuaikan" di 390px saat date-picker terbuka.
+**P1**
+(Butir chip periode selesai di v1.1.142 dan dihapus; Performa dan Deposit sengaja tanpa filter periode karena Performa sudah per bulan/minggu dan Deposit punya pencarian + filter tipe.)
 - Catatan: pilihan periode berdiri sendiri per tab (mulai dari All saat dibuka, tidak disimpan); Ringkasan tidak lagi punya pilihan kalender (Minggu/Bulan/Tahun Ini/Lalu), lihat P2 "PNL Bulan Ini".
 - Rawan bug: skala Y/area jangan mengubah skala garis puncak; cetak memakai variabel terang sendiri. Struktur kurva: `#chartBox` > `.eq-plot` (svg + tooltip + label) + `.eq-legend`; tooltip berada di strip `padding-top` `#chartBox`, jadi jangan ubah `top`/padding tanpa cek 390px. Chip Transaksi memakai selektor `.ledger-quick-range .quick-chip` (jangan global: `.quick-chip` juga dipakai Setelan → Tampilan).
 
@@ -92,10 +95,10 @@ Kelompok berdasarkan area; prioritas P1 tinggi, P2 sedang, P3 rendah. Setiap but
 (P1 selesai di v1.1.135 dan dihapus dari daftar.)
 
 **P2**
-- [ ] Kelompokkan Setelan dengan sub-navigasi/akordeon (Tampilan · Trading · Data · Akun · Tentang): Data = Ekspor + Impor + Reset; Akun = Sinkron.
-- [ ] Ekspor/impor pengaturan (`jurnalDayLimits`, `jurnalBigLossPct`, tema/skema/aksen, mata uang, zona waktu): opsi "Sertakan pengaturan" atau berkas terpisah; sinkron ke tabel `pengaturan` bila diinginkan.
-- [ ] Ukuran lot/kontrak & parameter akun (nilai pip, ukuran kontrak) dan default risiko kalkulator (`mm.risk` 1%, `sl` 150 pips) sebagai isian (kini tertanam di `DATA.dashboard.mm`).
-- [ ] Data & privasi: ringkasan penyimpanan (jumlah transaksi, ukuran localStorage, batas ±5 MB), "Ekspor lalu hapus riwayat lama", mode sembunyi angka default.
+- [x] (selesai v1.1.144, berupa sub-navigasi, bukan akordeon) Kelompokkan Setelan dengan sub-navigasi/akordeon (Tampilan · Trading · Data · Akun · Tentang): Data = Ekspor + Impor + Reset; Akun = Sinkron.
+- [x] (selesai v1.1.143, tanpa sinkron ke tabel `pengaturan`) Ekspor/impor pengaturan (`jurnalDayLimits`, `jurnalBigLossPct`, tema/skema/aksen, mata uang, zona waktu): opsi "Sertakan pengaturan" atau berkas terpisah; sinkron ke tabel `pengaturan` bila diinginkan.
+- [ ] Data & privasi (sisa; ringkasan penyimpanan v1.1.143, sembunyi angka default v1.1.145): "Ekspor lalu hapus riwayat lama" (perlu rancangan: memengaruhi kurva ekuitas, saldo, Max DD, dan Laporan; misalnya diganti satu baris saldo awal).
+- [ ] Opsional: sinkron parameter kalkulator dan pengaturan ke tabel `pengaturan` Supabase (kini hanya `kurs`; perlu kolom baru + migrasi).
 
 **P3**
 - [ ] Tentang: tautan README/panduan, info PWA terpasang (Instal aplikasi), "Periksa pembaruan" (paksa `sw.js` update + muat ulang), tanggal build.

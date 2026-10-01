@@ -829,7 +829,8 @@
 
   /* ---------- Laporan: tren profit/rugi (navigator periode & filter mandiri, terpisah dari tab Ringkasan) ---------- */
   .lap-gran-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;}
-  #periodChips .lap-gran-btn, #anGranTabs .lap-gran-btn{padding:7px 11px;min-height:34px;}
+  #periodChips .lap-gran-btn, #anGranTabs .lap-gran-btn, #lapGranTabs .lap-gran-btn, #setelanSubnav .lap-gran-btn{padding:7px 11px;min-height:34px;}
+  .lap-gran-btn:focus-visible, .ledger-quick-range .quick-chip:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
   .lap-gran-btn{background:none;border:1px solid var(--line);color:var(--paper-dim);font-family:'IBM Plex Mono',monospace;font-size:11px;padding:7px 13px;cursor:pointer;border-radius:999px;}
   .lap-gran-btn:hover{border-color:var(--gold);color:var(--gold);}
   .lap-gran-btn.active{background:var(--paper);color:var(--ink);border-color:var(--paper);}
@@ -890,6 +891,11 @@
   .bulk-bar .custom-select{width:auto;min-width:130px;margin-bottom:0;}
   .bulk-bar .custom-select-btn{font-size:12px;padding:7px 10px;}
   @media print{ .bulk-bar{display:none;} }
+  .sg-off{display:none !important;}
+  #setelanSubnav{margin-bottom:18px;}
+  .storage-meter{height:6px;margin-top:8px;background:var(--line);border-radius:3px;overflow:hidden;}
+  .storage-meter i{display:block;height:100%;width:0;background:var(--gold);}
+  .storage-meter i.warn{background:var(--loss);}
   .ledger-stats{font-size:11px;color:var(--paper-faint);padding-top:4px;}
   .undo-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 12px;margin-bottom:10px;border:1px solid var(--gold);color:var(--paper-dim);font-size:12.5px;}
   .undo-bar span{flex:1 1 auto;}

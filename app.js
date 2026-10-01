@@ -418,11 +418,17 @@ renderHeroMoney();
 
   const eyeBtn = document.getElementById('eyeToggle');
   const snapshotEl = document.getElementById('pnlSnapshot');
-  eyeBtn.addEventListener('click', ()=>{
-    const hidden = snapshotEl.classList.toggle('hidden-values');
+  function setPnlHidden(hidden){
+    snapshotEl.classList.toggle('hidden-values', hidden);
     eyeBtn.textContent = hidden ? '\u25cc' : '\u25c9';
     eyeBtn.setAttribute('aria-pressed', hidden ? 'true' : 'false');
-  });
+  }
+  window.setPnlHidden = setPnlHidden;
+  // Setelan → Preferensi "Angka PNL saat dibuka" (v1.1.145): jurnalHideNum = '1' → tersamar sejak muat
+  let hideDefault = false;
+  try{ hideDefault = localStorage.getItem('jurnalHideNum') === '1'; }catch(e){}
+  setPnlHidden(hideDefault);
+  eyeBtn.addEventListener('click', ()=> setPnlHidden(!snapshotEl.classList.contains('hidden-values')));
 })();
 
 // ---------- Periode Ringkasan: chip bulat (v1.1.134), default All ----------
@@ -2044,6 +2050,7 @@ function renderEquityChart(){
     if(eImp) eImp.addEventListener('click', () => { const f = document.getElementById('importJsonInput'); if(f) f.click(); });   // pemilih berkas yang sama dengan Setelan → Impor (tetap ada konfirmasi)
     if(eCloud) eCloud.addEventListener('click', () => {
       const gear = document.getElementById('settingsGearBtn'); if(gear) gear.click();   // pindah ke Setelan (sekaligus memuat supabase-js)
+      if(window.showSetelanGroup) window.showSetelanGroup('akun');
       setTimeout(() => { const s = document.getElementById('syncSection'); if(s) s.scrollIntoView({behavior:'smooth', block:'start'}); }, 80);
     });
     return;
@@ -2748,6 +2755,19 @@ window.renderSplitArah = renderSplitArah;
 
 // ---------- Money management ----------
 const mm = DATA.dashboard.mm;
+// Parameter kalkulator dengan nilai aman (v1.1.145). tp_pips 0/kosong (file baru) → R:R bawaan 1,5,
+// bukan 0 seperti sebelumnya (dulu tp_pips/sl = 0 lalu diklem ke 0,01).
+const CALC_DEFAULTS = { pipval:10, risk:0.01, sl:150, rr:1.5 };
+function calcParams(){
+  const pos = (v, d) => (typeof v==='number' && isFinite(v) && v>0) ? v : d;
+  const sl = pos(mm.sl, CALC_DEFAULTS.sl);
+  return {
+    pipval: pos(mm.pipval, CALC_DEFAULTS.pipval),
+    risk: pos(mm.risk, CALC_DEFAULTS.risk),
+    sl,
+    rr: (typeof mm.tp_pips==='number' && mm.tp_pips>0) ? mm.tp_pips / sl : CALC_DEFAULTS.rr
+  };
+}
 
 // ---------- Kalkulator money management (interaktif; tampil di modal dari tab Transaksi, v1.1.114) ----------
 (function(){
@@ -2760,13 +2780,12 @@ const mm = DATA.dashboard.mm;
   const resetBtn = document.getElementById('calcResetBtn');
   if(!elSaldo || !gridQuick) return;
 
-  const pipval = mm.pipval || 10;
-  const defaultRr = (mm.sl>0) ? (mm.tp_pips / mm.sl) : 1.5;
-
+  // Parameter dibaca ulang tiap kali (bisa diubah di Setelan → Kalkulator lot sejak v1.1.145)
   function setDefaults(){
-    elRisk.value = (mm.risk*100).toFixed(1);
-    elSl.value = mm.sl;
-    elRr.value = defaultRr.toFixed(1);
+    const p = calcParams();
+    elRisk.value = +(p.risk*100).toFixed(2);
+    elSl.value = p.sl;
+    elRr.value = +p.rr.toFixed(2);
   }
   elSaldo.value = mm.equity; // statis, selalu mengikuti saldo jurnal terkini — bukan input yang bisa diubah user
   setDefaults();
@@ -2778,7 +2797,7 @@ const mm = DATA.dashboard.mm;
     const rr = Math.max(0.01, parseFloat(elRr.value) || 0.01);
 
     const riskCent = saldo * riskPct;
-    const lot = riskCent / (sl * pipval);
+    const lot = riskCent / (sl * calcParams().pipval);
     const tpPips = sl * rr;
     const tpCent = riskCent * rr;
 
@@ -2810,6 +2829,7 @@ const mm = DATA.dashboard.mm;
   if(resetBtn){
     resetBtn.addEventListener('click', ()=>{ setDefaults(); render(); });
   }
+  window.applyCalcDefaults = ()=>{ setDefaults(); render(); };
   render();
 
   const quotes = [
@@ -3599,6 +3619,74 @@ document.getElementById('exportJsonBtn').addEventListener('click', ()=>{
   markBackup('json');
   showNotifyModal('Backup JSON berhasil didownload.', 'success');
 });
+
+// ---------- Penyimpanan & cadangan pengaturan (v1.1.143) ----------
+// Hanya kunci preferensi (bukan data jurnal, bukan status cadangan/undo, bukan sesi Supabase). Tiap nilai divalidasi sebelum ditulis.
+const SETTINGS_VALIDATORS = {
+  jurnalTheme: v => ['dark','light','auto'].includes(v),
+  jurnalScheme: v => /^[a-z0-9-]{1,30}$/.test(v),
+  jurnalAccent: v => { try{ const o = JSON.parse(v); return !!o && typeof o==='object' && !Array.isArray(o) && Object.entries(o).every(([k,c]) => k.length<=30 && typeof c==='string' && /^#[0-9a-fA-F]{3,8}$/.test(c)); }catch(e){ return false; } },
+  jurnalCB: v => v==='0' || v==='1',
+  jurnalHeroCurrency: v => ['USD','USC','IDR'].includes(v),
+  jurnalTzOffset: v => [180,420,480,540].includes(Number(v)),
+  jurnalDateFmt: v => v==='teks' || v==='angka',
+  jurnalEqMode: v => v==='equity' || v==='pnl',
+  jurnalDayLimits: v => { try{ const o = JSON.parse(v); return !!o && typeof o==='object' && ['maxLoss','maxTrades'].every(k => o[k]===null || o[k]===undefined || (typeof o[k]==='number' && isFinite(o[k]) && o[k]>=0)); }catch(e){ return false; } },
+  jurnalBigLossPct: v => v==='off' || (isFinite(+v) && +v>=1 && +v<=50),
+  jurnalSidebar: v => v==='collapsed' || v==='expanded',
+  jurnalHideNum: v => v==='0' || v==='1'
+};
+function refreshStorageInfo(){
+  const t = document.getElementById('storageText'), bar = document.getElementById('storageBar');
+  if(!t || !bar) return;
+  let chars = 0, mine = 0;
+  try{
+    for(let i=0;i<localStorage.length;i++){ const k = localStorage.key(i), n = k.length + (localStorage.getItem(k)||'').length; chars += n; if(k===JOURNAL_LS_KEY) mine = n; }
+  }catch(e){ t.textContent = 'Penyimpanan lokal tidak bisa dibaca di browser ini.'; return; }
+  const kb = c => (c*2/1024).toLocaleString('id-ID',{maximumFractionDigits:1}) + ' KB', pct = Math.min(100, chars*2/(5*1024*1024)*100);
+  t.textContent = `${DATA.trades.length.toLocaleString('id-ID')} transaksi dan ${DATA.deposit.log.length.toLocaleString('id-ID')} baris deposit. Data jurnal ≈ ${kb(mine)}; seluruh penyimpanan lokal ≈ ${kb(chars)} dari batas kira-kira 5 MB (${pct.toLocaleString('id-ID',{maximumFractionDigits:1})}%). Batas sebenarnya bergantung browser.`;
+  bar.style.width = pct.toFixed(1) + '%'; bar.classList.toggle('warn', pct >= 70);
+}
+refreshStorageInfo();
+document.getElementById('settingsGearBtn').addEventListener('click', refreshStorageInfo);
+document.getElementById('exportSettingsBtn').addEventListener('click', ()=>{
+  const settings = {};
+  try{ Object.keys(SETTINGS_VALIDATORS).forEach(k => { const v = localStorage.getItem(k); if(v!==null && SETTINGS_VALIDATORS[k](v)) settings[k] = v; }); }catch(e){}
+  downloadTextFile(`jurnal-xauusd-pengaturan-${dateStampNow()}.json`, JSON.stringify({ app:'jurnal-xauusd', type:'settings', version:APP_VERSION, settings }, null, 2), 'application/json;charset=utf-8;');
+  showNotifyModal(Object.keys(settings).length ? `Pengaturan berhasil didownload (${Object.keys(settings).length} butir).` : 'Belum ada pengaturan yang diubah dari bawaan, jadi berkas berisi pengaturan kosong.', 'success');
+});
+document.getElementById('importSettingsInput').addEventListener('change', async e=>{
+  const file = e.target.files[0]; e.target.value = '';
+  if(!file) return;
+  let obj;
+  try{ obj = JSON.parse(await file.text()); }catch(err){ await showConfirmModal('Berkas bukan JSON yang valid.'); return; }
+  if(!obj || obj.app!=='jurnal-xauusd' || obj.type!=='settings' || !obj.settings || typeof obj.settings!=='object'){ await showConfirmModal('Ini bukan berkas pengaturan dashboard ini. Pakai berkas hasil "Ekspor pengaturan" (bukan ekspor data).'); return; }
+  const ok = [], bad = [];
+  Object.entries(obj.settings).forEach(([k,v]) => { if(SETTINGS_VALIDATORS[k] && typeof v==='string' && v.length<=2000 && SETTINGS_VALIDATORS[k](v)) ok.push([k,v]); else bad.push(k); });
+  if(!ok.length){ await showConfirmModal('Tidak ada pengaturan valid di berkas ini.' + (bad.length ? ` ${bad.length} butir diabaikan.` : '')); return; }
+  if(!await showConfirmModal(`Terapkan ${ok.length} pengaturan dari "${file.name}"?` + (bad.length ? ` ${bad.length} butir tidak dikenal atau tidak valid akan diabaikan.` : '') + ' Pengaturan lama pada butir yang sama akan diganti; data transaksi tidak berubah.')) return;
+  try{ ok.forEach(([k,v]) => localStorage.setItem(k, v)); }catch(err){ await showConfirmModal('Gagal menyimpan pengaturan ke penyimpanan lokal browser.'); return; }
+  queueNotifyAfterReload(`${ok.length} pengaturan diterapkan.`, 'success');
+  setTimeout(()=>{ location.reload(); }, 300);
+});
+
+// ---------- Sub-navigasi Setelan (v1.1.144): Tampilan · Trading · Data · Akun · Tentang ----------
+// Tiap <section data-sgroup="..."> di #tabpanel-setelan hanya tampil bila kelompoknya aktif; section tanpa data-sgroup tampil di semua kelompok.
+const SETELAN_GROUPS = [{key:'tampilan',label:'Tampilan'},{key:'trading',label:'Trading'},{key:'data',label:'Data'},{key:'akun',label:'Akun'},{key:'tentang',label:'Tentang'}];
+function showSetelanGroup(g){
+  if(!SETELAN_GROUPS.some(x=>x.key===g)) g = 'tampilan';
+  document.querySelectorAll('#tabpanel-setelan [data-sgroup]').forEach(sec => sec.classList.toggle('sg-off', sec.dataset.sgroup !== g));
+  const nav = document.getElementById('setelanSubnav');
+  if(nav) nav.querySelectorAll('.lap-gran-btn').forEach(b => { const on = b.dataset.key===g; b.classList.toggle('active', on); b.setAttribute('aria-selected', String(on)); });
+  try{ sessionStorage.setItem('jurnalSetelanGroup', g); }catch(e){}
+}
+window.showSetelanGroup = showSetelanGroup;
+(function(){
+  const nav = document.getElementById('setelanSubnav'); if(!nav) return;
+  let g = 'tampilan'; try{ g = sessionStorage.getItem('jurnalSetelanGroup') || g; }catch(e){}
+  buildPeriodChips(nav, { items: SETELAN_GROUPS, active: g, onSelect: showSetelanGroup });
+  showSetelanGroup(g);
+})();
 
 const IMPORT_REQUIRED_KEYS = ['summary','periods','equity','months','weeks','trades','deposit','period_ranges'];
 document.getElementById('importJsonInput').addEventListener('change', async (e)=>{
@@ -4679,6 +4767,39 @@ function renderBackupStatus(){
   inp.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); save(); } });
 })();
 
+// ---------- Setelan → Kalkulator lot: nilai pip & default risiko (v1.1.145) ----------
+// Disimpan di DATA.dashboard.mm (ikut ekspor JSON/HTML, tidak disinkron). Tanpa reload: kalkulator
+// membaca calcParams() tiap kali, lalu applyCalcDefaults() mengisi ulang inputnya.
+(function setupCalcParams(){
+  const f = { pipval:'cpPipval', risk:'cpRisk', sl:'cpSl', rr:'cpRr' };
+  const el = {}; for(const k in f){ el[k] = document.getElementById(f[k]); if(!el[k]) return; }
+  const note = document.getElementById('cpNote'), save = document.getElementById('cpSaveBtn'), reset = document.getElementById('cpResetBtn');
+  const num = v => parseFloat(String(v).replace(',', '.'));
+  function fill(p){ el.pipval.value = +p.pipval.toFixed(4); el.risk.value = +(p.risk*100).toFixed(2); el.sl.value = +p.sl.toFixed(2); el.rr.value = +p.rr.toFixed(2); }
+  function msg(t, warn){ note.textContent = t; note.classList.toggle('warn', !!warn); }
+  fill(calcParams());
+  document.getElementById('settingsGearBtn').addEventListener('click', ()=>{ fill(calcParams()); msg(''); });
+  reset.addEventListener('click', ()=>{ fill(CALC_DEFAULTS); msg('Angka bawaan diisi. Tekan Simpan untuk memakainya.'); });
+  function doSave(){
+    const pv = num(el.pipval.value), r = num(el.risk.value), sl = num(el.sl.value), rr = num(el.rr.value);
+    if(!(pv > 0) || pv > 1e6) return msg('Nilai pip harus angka lebih dari 0, mis. 10.', true);
+    if(!(r >= 0.1 && r <= 100)) return msg('Risiko harus 0,1–100%.', true);
+    if(!(sl >= 1) || sl > 1e5) return msg('Stop loss minimal 1 pip.', true);
+    if(!(rr >= 0.1) || rr > 100) return msg('Rasio risk:reward minimal 0,1.', true);
+    const m = DATA.dashboard.mm;
+    m.pipval = Math.round(pv*10000)/10000;
+    m.risk = Math.round(r*100)/10000;
+    m.sl = Math.round(sl*100)/100;
+    m.tp_pips = Math.round(m.sl*rr*100)/100;
+    if(!saveActiveData(DATA)) return msg('Gagal menyimpan ke penyimpanan lokal browser (penuh atau diblokir).', true);
+    fill(calcParams());
+    if(window.applyCalcDefaults) window.applyCalcDefaults();
+    msg(r > 3 ? `Tersimpan. Risiko ${r.toLocaleString('id-ID')}% tergolong agresif.` : 'Tersimpan. Kalkulator lot memakai angka ini.', r > 3);
+  }
+  save.addEventListener('click', doSave);
+  Object.values(el).forEach(i => i.addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); doSave(); } }));
+})();
+
 // ---------- Setelan → Preferensi: mata uang, zona waktu, format tanggal (v1.1.138) ----------
 // Kontrol di header/hero tetap ada; Setelan memanggil fungsi/handler yang sama (satu sumber kebenaran).
 (function(){
@@ -4689,7 +4810,18 @@ function renderBackupStatus(){
   dEl.innerHTML = chip('teks','30 Sep 2026') + chip('angka','30/09/2026');
   tzEl.innerHTML = TZ_OPTIONS.map(o=>`<option value="${o.value}">${o.label}</option>`).join('');
   const mark = (el, cur) => el.querySelectorAll('[data-v]').forEach(b => { const on = b.dataset.v===cur; b.classList.toggle('active', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
-  function sync(){ mark(curEl, HERO_CURRENCY); mark(dEl, DATE_FMT); tzEl.value = String(CURRENT_TZ_OFFSET); }
+  const hEl = document.getElementById('prefHide');
+  const hideNow = () => { try{ return localStorage.getItem('jurnalHideNum')==='1' ? '1' : '0'; }catch(e){ return '0'; } };
+  if(hEl){
+    hEl.innerHTML = chip('0','Tampil') + chip('1','Tersembunyi');
+    hEl.addEventListener('click', e => {
+      const b = e.target.closest('[data-v]'); if(!b) return;
+      try{ localStorage.setItem('jurnalHideNum', b.dataset.v); }catch(err){}
+      if(window.setPnlHidden) window.setPnlHidden(b.dataset.v==='1');
+      sync();
+    });
+  }
+  function sync(){ mark(curEl, HERO_CURRENCY); mark(dEl, DATE_FMT); tzEl.value = String(CURRENT_TZ_OFFSET); if(hEl) mark(hEl, hideNow()); }
   curEl.addEventListener('click', e => { const b = e.target.closest('[data-v]'); if(b && b.dataset.v!==HERO_CURRENCY) setHeroCurrency(b.dataset.v); });
   dEl.addEventListener('click', e => {
     const b = e.target.closest('[data-v]'); if(!b || b.dataset.v===DATE_FMT) return;
@@ -4707,9 +4839,17 @@ function renderBackupStatus(){
   sync();
 })();
 
-const APP_VERSION = '1.1.141';
+const APP_VERSION = '1.1.145';
 const USER_CHANGELOG = [
+  { date:'2026-10-01', items:[
+    'Setelan → Trading → <strong>Kalkulator lot</strong>: atur sendiri <strong>nilai pip per lot</strong> akun Anda serta angka bawaan <strong>risiko (%)</strong>, <strong>stop loss</strong>, dan <strong>rasio risk:reward</strong>. Kalkulator lot di tab Transaksi langsung memakainya, dan tombol reset di kalkulator kembali ke angka ini. Ikut tersimpan di ekspor JSON.',
+    'Setelan → Preferensi → <strong>Angka PNL saat dibuka</strong>: pilih <strong>Tersembunyi</strong> agar angka PNL di Ringkasan selalu disamarkan setiap aplikasi dibuka (cocok bila sering membuka di tempat umum). Tombol mata tetap bisa menampilkannya sementara.',
+    'Perbaikan: pada data baru, rasio risk:reward di kalkulator lot kini mulai dari 1,5, bukan 0.'
+  ]},
   { date:'2026-09-30', items:[
+    'Setelan kini dikelompokkan dengan menu di bagian atas: <strong>Tampilan</strong>, <strong>Trading</strong> (kurs, batas harian, garis merah), <strong>Data</strong> (ekspor, impor, penyimpanan), <strong>Akun</strong> (sinkron), dan <strong>Tentang</strong>, sehingga halamannya tidak lagi panjang.',
+    'Setelan → <strong>Penyimpanan &amp; pengaturan</strong>: ringkasan ruang penyimpanan (jumlah transaksi, ukuran data jurnal, pemakaian terhadap batas kira-kira 5 MB) serta <strong>Ekspor/Impor pengaturan</strong> (tema, skema, aksen, mata uang, zona waktu, format tanggal, batas harian, garis merah) untuk memindahkan tampilan ke perangkat lain tanpa menyentuh data transaksi.',
+    'Chip periode di <strong>Laporan</strong> (Harian, Mingguan, Bulanan, …) kini berukuran sama dengan chip di Ringkasan dan Analisis PNL, lebih mudah diketuk di HP. Chip periode dan filter cepat Transaksi juga menampilkan cincin fokus emas saat dipilih dengan keyboard (sebelumnya hampir tak terlihat di mode gelap).',
     'Ringkasan yang masih kosong kini punya tombol langsung: <strong>Impor JSON</strong> dan <strong>Masuk &amp; Pulihkan dari cloud</strong>. Di Setelan, pengaturan reset diberi nama lebih jelas (<strong>Hapus semua data di perangkat ini</strong>) dan konfirmasinya menyebut jumlah data yang akan terhapus.',
     'Laporan → Distribusi hasil per transaksi: pilih <strong>PNL</strong> atau <strong>Pips</strong> untuk melihat sebaran hasil dalam pips (median, P10/P90, dan ketergantungan pada transaksi terbaik).',
     'Aplikasi terbuka lebih cepat: pustaka sinkron Supabase kini baru dimuat saat Setelan dibuka. Bila ada versi baru, muncul banner <strong>Versi baru siap</strong> dengan tombol Muat ulang (tidak muat ulang sendiri, jadi isian Anda aman).',
