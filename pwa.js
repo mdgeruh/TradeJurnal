@@ -16,3 +16,25 @@ function showUpdateBanner(){
   document.getElementById('updateReload').addEventListener('click', () => location.reload());
   document.getElementById('updateLater').addEventListener('click', () => b.remove());
 }
+
+// Setelan → Tentang (v1.1.147): tangkap event pemasangan lebih awal (event ini muncul sebelum Setelan dibuka)
+// dan sediakan pemeriksaan pembaruan manual. Ditulis defensif: tanpa service worker (file://, artefak) tetap aman.
+window.__installPrompt = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); window.__installPrompt = e; window.dispatchEvent(new Event('jurnalInstallReady')); });
+window.addEventListener('appinstalled', () => { window.__installPrompt = null; window.dispatchEvent(new Event('jurnalInstallReady')); });
+// Hasil: 'unsupported' | 'latest' | 'downloaded' (versi baru siap; banner "Versi baru siap" muncul lewat controllerchange) | 'error'
+window.jurnalCheckUpdate = async function(){
+  if(!('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return 'unsupported';
+  try{
+    const reg = await navigator.serviceWorker.getRegistration();
+    if(!reg) return 'unsupported';
+    const before = reg.installing || reg.waiting;
+    await reg.update();
+    const w = reg.installing || reg.waiting;
+    if(w && w !== before){
+      await new Promise(res => { if(w.state === 'activated' || w.state === 'redundant') return res(); w.addEventListener('statechange', () => { if(w.state === 'activated' || w.state === 'redundant') res(); }); setTimeout(res, 8000); });
+      return 'downloaded';
+    }
+    return before ? 'downloaded' : 'latest';
+  }catch(e){ return 'error'; }
+};

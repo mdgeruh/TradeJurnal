@@ -510,7 +510,7 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
 
   <div class="tab-panel" data-panel="setelan" id="tabpanel-setelan" role="tabpanel" aria-labelledby="settingsGearBtn">
 
-  <div class="lap-gran-tabs" id="setelanSubnav" role="tablist" aria-label="Kelompok setelan"></div>
+  <div class="sg-tabs" id="setelanSubnav" role="tablist" aria-label="Kelompok setelan"></div>
 
   <section data-sgroup="tampilan">
     <div class="section-head">
@@ -810,6 +810,26 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
         <span>Versi yang sedang Anda pakai sekarang.</span>
       </div>
       <span class="app-version-badge" id="appVersionVal">v-</span>
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc">
+        <strong>Tanggal build</strong>
+        <span id="appBuildVal">-</span>
+      </div>
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc">
+        <strong>Periksa pembaruan</strong>
+        <span id="updHint">Cek apakah ada versi aplikasi yang lebih baru.</span>
+      </div>
+      <button type="button" id="updCheckBtn" class="quick-chip">Periksa</button>
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc">
+        <strong>Aplikasi terpasang</strong>
+        <span id="pwaStatus">-</span>
+      </div>
+      <button type="button" id="pwaInstallBtn" class="quick-chip" hidden>Instal aplikasi</button>
     </div>
     <div class="settings-row">
       <div class="settings-desc">

@@ -299,7 +299,23 @@
   $('syncChangePassBtn').addEventListener('click', changePass);
   $('syncSignupBtn').addEventListener('click', () => auth('signup'));
   // Keluar: halaman login muncul lagi (pilihan "Lanjut tanpa masuk" dicabut). Data di perangkat ini tidak dihapus.
-  $('syncLogoutBtn').addEventListener('click', async () => { try{ localStorage.removeItem('jurnalGateSkip'); }catch(e){} await sb.auth.signOut(); say(''); });
+  // v1.1.148: Keluar memakai scope 'local' (cukup menghapus sesi di perangkat ini, tanpa panggilan jaringan yang bisa gagal),
+  // lalu memastikan sesi benar-benar hilang. Sebelumnya signOut() global yang gagal (offline/token kedaluwarsa) membiarkan sesi tetap aktif tanpa pesan.
+  async function doLogout(){
+    try{ localStorage.removeItem('jurnalGateSkip'); }catch(e){}
+    setBusy(true); say('Keluar…');
+    try{ await sb.auth.signOut({ scope: 'local' }); }catch(e){}
+    try{
+      const { data } = await sb.auth.getSession();
+      if(data && data.session){   // masih ada: hapus paksa kunci sesi lalu muat ulang agar klien bersih
+        Object.keys(localStorage).filter(k => /^sb-.*-auth-token/.test(k)).forEach(k => localStorage.removeItem(k));
+        say('Anda sudah keluar.', true); setTimeout(() => location.reload(), 300); return;
+      }
+    }catch(e){}
+    session = null; render(); gateSync('SIGNED_OUT'); say('');
+    setBusy(false);
+  }
+  $('syncLogoutBtn').addEventListener('click', doLogout);
   $('syncPushBtn').addEventListener('click', push);
   $('syncPullBtn').addEventListener('click', pull);
   const recoveryUrl = /access_token|type=recovery|[?&]code=/.test(location.hash + location.search);   // dibaca sebelum supabase-js membersihkan URL

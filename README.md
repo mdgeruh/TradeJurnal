@@ -34,7 +34,7 @@ Dikelompokkan dengan sub-navigasi di atas:
 - **Trading:** **Kurs** (Rp per USD); **Batas harian** (maks rugi dan maks transaksi); **Buku transaksi** (ambang garis merah "rugi besar", 1–50%); **Kalkulator lot** (nilai pip per lot, bawaan 10¢; risiko 1%, stop loss 150 pips, R:R 1,5).
 - **Data:** ekspor HTML mandiri atau JSON (status cadangan di sini), impor JSON (konfirmasi sebelum menimpa), **Penyimpanan & pengaturan** (ringkasan ruang localStorage, ekspor/impor pengaturan), **Hapus semua data di perangkat ini** (auto-backup JSON dulu).
 - **Akun:** Sinkron Supabase (Masuk/Daftar, Lupa/Ganti password, Sinkronkan ke cloud, Pulihkan dari cloud, Keluar).
-- **Tentang:** versi aplikasi (satu-satunya tempat versi tampil) dan **Lihat riwayat** (riwayat perubahan berbahasa pengguna, terbaru di atas).
+- **Tentang:** versi aplikasi (satu-satunya tempat versi tampil), tanggal build, **Periksa pembaruan**, status **Aplikasi terpasang** dengan tombol **Instal aplikasi** (browser yang mendukung), dan **Lihat riwayat** (riwayat perubahan berbahasa pengguna, terbaru di atas).
 
 ## Laporan
 - **Periode & filter:** navigator Harian / Mingguan / Bulanan / 3 Bulan / 1 Tahun / **All Time (bawaan)**. Filter Arah, Sesi (Asia / London / New York menurut jam buka), Emosi, Trigger entry, Jenis entry (tiap filter punya "Belum dicatat"); digabung (AND).
@@ -71,7 +71,7 @@ Hanya `jurnalXauusdData_v1` yang ikut ekspor JSON dan sinkron; kunci pengaturan 
 Butuh https (Vercel sudah otomatis). Android: Chrome → ⋮ → **Instal aplikasi**. iOS: Safari → Bagikan → **Tambah ke Layar Utama**. Data aplikasi terpasang terpisah dari browser: masuk lalu **Pulihkan dari cloud**. Versi baru terbaca saat aplikasi dibuka lagi; banner **Versi baru siap** menawarkan Muat ulang.
 
 ## Alur rilis
-1. Naikkan `APP_VERSION` (`app.js`) dan `CACHE` (`sw.js`) ke nomor yang sama.
+1. Naikkan `APP_VERSION` dan `APP_BUILD_DATE` (`app.js`) dan `CACHE` (`sw.js`) ke nomor yang sama.
 2. Tambah butir di `USER_CHANGELOG` (`app.js`): tanggal ISO, bahasa pengguna tanpa istilah teknis atau nomor versi; tanggal yang sama digabung (tampilan diurutkan otomatis).
 3. Tambah entri teknis di `CHANGELOG.md` dan butir yang sama di `release_note.md` (ganti baris **Versi saat ini**).
 4. Perbarui `SUMMARY.md` (status, jebakan bug), `roadmap.md` (selesai/todo), dan `README.md` bila fitur berubah. Perubahan dokumen saja tidak menaikkan versi.
