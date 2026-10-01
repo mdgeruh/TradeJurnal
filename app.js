@@ -4839,9 +4839,12 @@ function renderBackupStatus(){
   sync();
 })();
 
-const APP_VERSION = '1.1.145';
+const APP_VERSION = '1.1.146';
 const USER_CHANGELOG = [
   { date:'2026-10-01', items:[
+    'Ada <strong>halaman login</strong> saat aplikasi dibuka: <strong>Masuk</strong> atau <strong>Daftar</strong> dengan email dan password, tombol <strong>Lihat</strong> untuk memeriksa password, dan <strong>Lupa password</strong> (tautan reset lewat email). Setelah masuk, jurnal langsung terbuka dan bisa disinkronkan ke cloud dari Setelan → Akun.',
+    'Belum mau masuk? Pilih <strong>Lanjut tanpa masuk</strong>: jurnal tetap berjalan seperti biasa dan tersimpan di perangkat ini. Pilihan itu diingat, jadi halaman login tidak muncul lagi sampai Anda menekan <strong>Keluar</strong> di Setelan → Akun.',
+
     'Setelan → Trading → <strong>Kalkulator lot</strong>: atur sendiri <strong>nilai pip per lot</strong> akun Anda serta angka bawaan <strong>risiko (%)</strong>, <strong>stop loss</strong>, dan <strong>rasio risk:reward</strong>. Kalkulator lot di tab Transaksi langsung memakainya, dan tombol reset di kalkulator kembali ke angka ini. Ikut tersimpan di ekspor JSON.',
     'Setelan → Preferensi → <strong>Angka PNL saat dibuka</strong>: pilih <strong>Tersembunyi</strong> agar angka PNL di Ringkasan selalu disamarkan setiap aplikasi dibuka (cocok bila sering membuka di tempat umum). Tombol mata tetap bisa menampilkannya sementara.',
     'Perbaikan: pada data baru, rasio risk:reward di kalkulator lot kini mulai dari 1,5, bukan 0.'
