@@ -586,19 +586,6 @@
   .settings-desc{display:flex;flex-direction:column;gap:3px;max-width:440px;}
   .settings-desc strong{font-size:13px;color:var(--paper);font-weight:500;}
   .settings-desc span{font-size:11.5px;color:var(--paper-faint);line-height:1.4;}
-  #importJsonInput{
-    font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--paper-dim);
-    max-width:220px;
-  }
-  #importJsonInput::file-selector-button,
-  #importJsonInput::-webkit-file-upload-button{
-    background:none;border:1px solid var(--line);color:var(--paper-dim);
-    font-family:'IBM Plex Mono',monospace;font-size:11px;padding:7px 12px;cursor:pointer;
-    margin-right:10px;transition:color .15s,border-color .15s;
-  }
-  #importJsonInput::file-selector-button:hover,
-  #importJsonInput::-webkit-file-upload-button:hover{color:var(--gold);border-color:var(--gold);}
-
   /* ---------- Modal (konfirmasi & notifikasi) ---------- */
   .modal-overlay{
     position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:300;
@@ -928,6 +915,8 @@
     body.printing-laporan .masthead-right, body.printing-laporan .laporan-print-btn, body.printing-laporan .laporan-btn-group,
     body.printing-laporan .tab-panel:not([data-panel="laporan"]){ display:none !important; }
     body.printing-laporan .wrap{max-width:100%;padding:0 8px;}
+    body.printing-laporan #tabpanel-laporan .sg-off[data-lgroup]{display:block !important;}
+    body.printing-laporan #laporanSubnav{display:none !important;}
     body.printing-laporan{
       --ink:#fff;--ink-raised:#f5f4f0;--paper:#181410;--paper-dim:#4a4438;--paper-faint:#6e6555;
       --gold:#8a6d1f;--gain:#2f7a3d;--loss:#a23c28;--line:#cfc9ba;--line-soft:#e6e2d6;
@@ -1212,3 +1201,67 @@ html.gate-on body{overflow:hidden;}
 .recent-pnl.gain{color:var(--gain);} .recent-pnl.loss{color:var(--loss);}
 .recent-card.hidden-values .recent-pnl{filter:blur(7px);user-select:none;}
 @media print{.recent-card{display:none;}}
+
+/* Laporan: Periode & filter bisa dilipat (v1.1.153) */
+.lap-filter-sec{padding-top:6px;padding-bottom:6px;}
+.lap-fold-h{margin:0;font-size:inherit;font-weight:inherit;}
+.lap-fold-btn{display:flex;align-items:center;gap:12px;width:100%;min-height:48px;background:none;border:0;padding:8px 0;color:var(--paper);font:inherit;text-align:left;cursor:pointer;}
+.lap-fold-title{font-family:'Fraunces',serif;font-weight:500;font-size:20px;flex:none;}
+.lap-fold-sum{font-family:'IBM Plex Mono',monospace;font-weight:400;flex:1;min-width:0;font-size:12px;color:var(--paper-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:none;text-align:right;}
+.lap-fold-chev{flex:none;width:20px;height:20px;margin-left:auto;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;color:var(--paper-dim);transition:transform .2s;}
+.lap-fold-sum + .lap-fold-chev{margin-left:0;}
+.lap-fold-btn:hover .lap-fold-chev{color:var(--gold);}
+.lap-fold-btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:6px;}
+.lap-fold-note{max-width:none;text-align:left;margin:0 0 14px;}
+.lap-filter-sec.lf-closed .lap-fold-sum{display:block;}
+.lap-filter-sec.lf-closed .lap-fold-chev{transform:rotate(-90deg);}
+.lap-filter-sec.lf-closed .lap-fold-body{display:none;}
+@media print{body.printing-laporan .lap-filter-sec.lf-closed .lap-fold-body{display:block !important;} body.printing-laporan .lap-fold-btn{pointer-events:none;} body.printing-laporan .lap-fold-chev,body.printing-laporan .lap-fold-sum{display:none !important;}}
+@media (max-width:600px){
+  .lap-fold-btn{flex-wrap:wrap;row-gap:2px;}
+  .lap-fold-title{order:1;}
+  .lap-fold-btn .lap-fold-chev{order:2;margin-left:auto;}
+  .lap-fold-sum{order:3;flex:0 0 100%;text-align:left;white-space:normal;overflow:visible;padding-bottom:4px;}
+}
+
+/* Ringkasan: aturan trading (v1.1.153) */
+.rules-card{margin:0 0 20px;border:1px solid var(--line);background:var(--ink-raised);border-radius:10px;padding:14px 16px 12px;}
+.rules-card .recent-head{align-items:center;}
+.rules-prog{margin-left:auto;font-size:12px;color:var(--paper-dim);font-variant-numeric:tabular-nums;}
+.rules-prog:empty{display:none;}
+.rules-list{list-style:none;margin:0;padding:0;}
+.rules-list[hidden],.rules-edit[hidden],.rules-card .quote-box[hidden]{display:none;}
+.rules-list li+li{border-top:1px solid var(--line-soft);}
+.rules-item{display:flex;align-items:flex-start;gap:12px;padding:11px 0;cursor:pointer;font-size:13.5px;line-height:1.5;color:var(--paper);min-height:44px;}
+.rules-item input{flex:none;width:18px;height:18px;margin:2px 0 0;accent-color:var(--gold);cursor:pointer;}
+.rules-item.done span{color:var(--paper-faint);text-decoration:line-through;}
+.rules-edit textarea{width:100%;min-height:130px;resize:vertical;background:var(--ink);color:var(--paper);border:1px solid var(--line);border-radius:6px;padding:10px 12px;font:inherit;font-size:13px;line-height:1.55;}
+.rules-edit textarea:focus{outline:2px solid var(--gold);outline-offset:1px;}
+.rules-hint{font-size:12px;color:var(--paper-faint);margin:8px 0 10px;}
+.rules-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.rules-card .quote-box{margin-top:0;}
+.rules-list:not([hidden]) ~ .quote-box{margin-top:12px;}
+.rules-item span{min-width:0;overflow-wrap:anywhere;}
+
+/* Tombol pilih file dan kotak centang kustom (v1.1.156) */
+.file-hidden{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none;clip:rect(0 0 0 0);}
+.rules-item input,.sel-cb{-webkit-appearance:none;appearance:none;flex:none;width:18px;height:18px;margin:2px 0 0;border:1.5px solid var(--paper-faint);border-radius:5px;background:transparent;cursor:pointer;position:relative;transition:background .15s,border-color .15s;}
+.sel-cb{margin:0 8px 0 0;vertical-align:middle;}
+.rules-item input:hover,.sel-cb:hover{border-color:var(--gold);}
+.rules-item input:checked,.sel-cb:checked{background:var(--gold);border-color:var(--gold);}
+.rules-item input:checked::after,.sel-cb:checked::after{content:"";position:absolute;left:5px;top:1.5px;width:4px;height:9px;border:solid var(--ink);border-width:0 2px 2px 0;transform:rotate(45deg);}
+.rules-item input:focus-visible,.sel-cb:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
+
+.rules-add{display:flex;gap:8px;align-items:center;margin-top:10px;}
+.rules-add[hidden]{display:none;}
+.rules-add input{flex:1;min-width:0;background:var(--ink);color:var(--paper);border:1px solid var(--line);border-radius:6px;padding:9px 12px;font:inherit;font-size:13px;min-height:40px;}
+.rules-add input:focus{outline:2px solid var(--gold);outline-offset:1px;}
+.rules-add .ledger-reset-btn{flex:none;min-height:40px;}
+
+/* Indikator sinkron cloud (v1.1.158) */
+.sync-pill{display:inline-flex;align-items:center;gap:8px;margin-top:8px;padding:5px 12px;min-height:30px;background:none;border:1px solid var(--line);border-radius:999px;color:var(--paper-dim);font:inherit;font-size:11.5px;cursor:pointer;}
+.sync-pill[hidden]{display:none;}
+.sync-pill:hover{border-color:var(--gold);color:var(--paper);}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--gain);flex:none;}
+.sync-pill[data-state="warn"] .sync-dot{background:var(--loss);}
+@media print{.sync-pill{display:none !important;}}

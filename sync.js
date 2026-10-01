@@ -28,7 +28,7 @@
     noteEl.textContent = msg;
     noteEl.style.color = ok === true ? 'var(--gain)' : ok === false ? 'var(--loss)' : '';
   };
-  const btns = ['syncLoginBtn','syncSignupBtn','syncLogoutBtn','syncPushBtn','syncPullBtn','syncForgotBtn','syncChangePassBtn'].map($);
+  const btns = ['syncLoginBtn','syncLogoutBtn','syncPushBtn','syncPullBtn','syncChangePassBtn'].map($);
   const setBusy = b => btns.forEach(x => { x.disabled = b; });
   btns.forEach(x => { x.disabled = false; });   // awal bersih (bila percobaan muat sebelumnya gagal)
 
@@ -169,25 +169,6 @@
   $('lgForm').addEventListener('submit', e => { e.preventDefault(); if(!lgBusy) gateAuth(); });
   $('lgForgot').addEventListener('click', gateForgot);
 
-  async function auth(kind){
-    const email = $('syncEmail').value.trim(), password = $('syncPass').value;
-    if(!email || password.length < 6){ say('Isi email dan password (minimal 6 karakter).', false); return; }
-    setBusy(true); say('Memproses…');
-    try{
-      if(kind === 'signup'){
-        const { data, error } = await sb.auth.signUp({ email, password });
-        if(error) throw new Error(error.message);
-        if(data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0){ say('Email ini sudah terdaftar. Tekan Masuk, atau pakai Lupa password bila lupa.', false); return; }
-        if(!data.session){ say('Akun dibuat. Buka email untuk konfirmasi, lalu tekan Masuk.', true); return; }
-      } else {
-        const { error } = await sb.auth.signInWithPassword({ email, password });
-        if(error) throw new Error(error.message);
-      }
-      $('syncPass').value = ''; say('');
-    }catch(e){ say('Gagal: ' + e.message, false); }
-    finally{ setBusy(false); }
-  }
-
   async function push(){
     const uid = session.user.id;
     const trades = [...new Map(DATA.trades.map(t => [str(t.id), tradeRow(t, uid)])).values()];
@@ -261,18 +242,6 @@
     finally{ setBusy(false); }
   }
 
-  async function forgot(){
-    const email = $('syncEmail').value.trim();
-    if(!/^\S+@\S+\.\S+$/.test(email)){ say('Isi email akun Anda dulu di kolom email di atas.', false); return; }
-    if(!/^https?:$/.test(location.protocol)){ say('Reset password butuh aplikasi dibuka lewat alamat web (http/https), bukan berkas lokal.', false); return; }
-    setBusy(true); say('Mengirim tautan…');
-    try{
-      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
-      if(error) throw new Error(error.message);
-      say('Jika email itu terdaftar, tautan reset sudah dikirim. Buka email Anda (cek juga folder spam), ikuti tautannya, lalu Anda kembali ke sini untuk mengisi password baru.', true);
-    }catch(e){ say('Gagal: ' + e.message, false); }
-    finally{ setBusy(false); }
-  }
   async function changePass(){
     const p1 = $('syncNewPass').value, p2 = $('syncNewPass2').value;
     if(p1.length < 6){ say('Password baru minimal 6 karakter.', false); return; }
@@ -294,10 +263,9 @@
     setTimeout(() => { const r = $('syncPassRow'); if(r && r.scrollIntoView) r.scrollIntoView({ block: 'center' }); $('syncNewPass').focus(); }, 350);
   }
 
-  $('syncLoginBtn').addEventListener('click', () => auth('login'));
-  $('syncForgotBtn').addEventListener('click', forgot);
+  // v1.1.150: Masuk/Daftar/Lupa password hanya lewat halaman login; tombol di Setelan cukup membukanya.
+  $('syncLoginBtn').addEventListener('click', () => { gateShow(); setMode('login'); setTimeout(() => $('lgEmail').focus(), 50); });
   $('syncChangePassBtn').addEventListener('click', changePass);
-  $('syncSignupBtn').addEventListener('click', () => auth('signup'));
   // Keluar: halaman login muncul lagi (pilihan "Lanjut tanpa masuk" dicabut). Data di perangkat ini tidak dihapus.
   // v1.1.148: Keluar memakai scope 'local' (cukup menghapus sesi di perangkat ini, tanpa panggilan jaringan yang bisa gagal),
   // lalu memastikan sesi benar-benar hilang. Sebelumnya signOut() global yang gagal (offline/token kedaluwarsa) membiarkan sesi tetap aktif tanpa pesan.
@@ -324,7 +292,7 @@
     if(ev === 'SIGNED_OUT'){ gateShow(); setMode('login'); lgSay('Anda sudah keluar.', ''); }
     else if(ev === 'INIT' && !recoveryUrl && localStorage.getItem('jurnalGateSkip') !== '1') gateShow();   // sesi tersimpan sudah kedaluwarsa
   }
-  sb.auth.onAuthStateChange((ev, s) => { session = s; render(); gateSync(ev); if(ev === 'PASSWORD_RECOVERY'){ gateHide(); recoveryMode(); } });
+  sb.auth.onAuthStateChange((ev, s) => { session = s; render(); window.dispatchEvent(new Event('jurnalAuthChanged')); gateSync(ev); if(ev === 'PASSWORD_RECOVERY'){ gateHide(); recoveryMode(); } });
   sb.auth.getSession().then(({ data }) => { session = data.session; render(); gateSync('INIT'); if(gateOn()) setTimeout(() => $('lgEmail').focus(), 50); });
   }
 })();

@@ -87,6 +87,7 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
       </div>
     </div>
     <div class="updated" id="updatedLine">—</div>
+    <button type="button" class="sync-pill" id="syncPill" hidden title="Status sinkron cloud (ketuk untuk membuka Setelan → Akun)"><i class="sync-dot" aria-hidden="true"></i><span id="syncPillText"></span></button>
   </header>
 
   <nav class="main-tabs" id="mainTabs" role="tablist" aria-label="Bagian dashboard">
@@ -182,7 +183,18 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
     <ul class="recent-list" id="recentList"></ul>
   </section>
 
-  <section>
+  <section class="rules-card" id="rulesCard" aria-labelledby="rulesTitle">
+    <div class="recent-head"><h2 id="rulesTitle">Aturan trading</h2><span class="rules-prog" id="rulesProg"></span><button type="button" class="recent-all" id="rulesEditBtn">Tambah aturan</button></div>
+    <ul class="rules-list" id="rulesList"></ul>
+    <form class="rules-add" id="rulesAdd" hidden autocomplete="off">
+      <input type="text" id="rulesAddInput" maxlength="120" placeholder="Tambah aturan baru…" aria-label="Aturan baru">
+      <button type="submit" class="ledger-reset-btn has-ic" id="rulesAddBtn"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg><span>Tambah</span></button>
+    </form>
+    <div class="rules-edit" id="rulesEdit" hidden>
+      <textarea id="rulesText" rows="6" maxlength="1600" aria-label="Aturan trading, satu aturan per baris" placeholder="Satu aturan per baris, mis.&#10;Tunggu konfirmasi RSI divergence&#10;Risiko maksimal 1% per transaksi"></textarea>
+      <div class="rules-hint">Satu aturan per baris, maksimal 12 aturan (120 karakter per aturan). Centang di kartu direset tiap hari (GMT+8).</div>
+      <div class="rules-actions"><button type="button" class="ledger-reset-btn modal-btn-primary" id="rulesSave">Simpan</button><button type="button" class="ledger-reset-btn" id="rulesCancel">Batal</button></div>
+    </div>
     <div class="quote-box" id="quoteBox"></div>
   </section>
 
@@ -368,11 +380,16 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
     <div class="laporan-btn-group"><button type="button" class="laporan-print-btn has-ic ic-only" id="laporanCsvBtn" title="Unduh ringkasan Laporan periode &amp; filter terpilih (CSV)" aria-label="Ekspor CSV"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M5 21h14"/></svg><span class="btn-sr">Ekspor CSV</span></button><button type="button" class="laporan-print-btn has-ic ic-only" id="laporanPrintBtn" aria-label="Cetak / PDF" title="Cetak / PDF"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V3h12v6"/><rect x="6" y="14" width="12" height="7"/><path d="M6 17H4a1 1 0 0 1-1-1v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a1 1 0 0 1-1 1h-2"/></svg><span class="btn-sr">Cetak / PDF</span></button></div>
   </div>
 
-  <section>
-    <div class="section-head">
-      <h2>Tren profit / rugi</h2>
-      <div class="section-note">Periode &amp; filter di sini berlaku untuk seluruh halaman Laporan.</div>
-    </div>
+  <div class="sg-tabs" id="laporanSubnav" role="tablist" aria-label="Bagian laporan"></div>
+
+  <section class="lap-filter-sec" id="lapFilterSec">
+    <h2 class="lap-fold-h"><button type="button" class="lap-fold-btn" id="lapFilterToggle" aria-expanded="true" aria-controls="lapFilterBody" title="Buka/tutup periode &amp; filter">
+      <span class="lap-fold-title">Periode &amp; filter</span>
+      <span class="lap-fold-sum" id="lapFilterSum"></span>
+      <svg class="bi lap-fold-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </button></h2>
+    <div class="lap-fold-body" id="lapFilterBody">
+    <div class="section-note lap-fold-note">Berlaku untuk semua bagian Laporan di bawah.</div>
     <div class="lap-gran-tabs" id="lapGranTabs" role="tablist" aria-label="Granularitas periode laporan"></div>
     <div class="lap-range-nav">
       <button type="button" class="lap-range-nav-btn" id="lapNavPrev" aria-label="Periode sebelumnya">‹</button>
@@ -382,6 +399,11 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
     <div class="lap-filter-row" id="lapArahFilter" aria-label="Filter arah transaksi"></div>
     <div class="lap-filter-row" id="lapSesiFilter" aria-label="Filter sesi pasar" style="margin-top:-8px;"></div>
     <div class="lap-filter-row" id="lapPsyFilter" aria-label="Filter catatan psikologi" style="margin-top:-8px;"><div class="custom-select" id="csw_lapEmosi"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter emosi"><span class="cs-label">Semua emosi</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Filter emosi"></ul></div><div class="custom-select" id="csw_lapTrigger"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter trigger entry"><span class="cs-label">Semua trigger</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Filter trigger entry"></ul></div><div class="custom-select" id="csw_lapJenis"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter jenis entry"><span class="cs-label">Semua jenis</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Filter jenis entry"></ul></div></div>
+    </div>
+  </section>
+
+  <section data-lgroup="tren">
+    <div class="section-head"><h2>Tren profit / rugi</h2></div>
     <div class="stats lap-kpi" id="lapKpi" aria-live="polite"></div>
     <div class="chart-box" id="lapTrendBox"></div>
     <div class="lap-trend-legend"><span><i style="background:var(--gain);"></i>Profit</span><span><i style="background:var(--loss);"></i>Rugi</span></div>
@@ -389,7 +411,7 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
     <div class="lap-summary-grid" id="lapSummaryGrid"></div>
   </section>
 
-  <section>
+  <section data-lgroup="ringkasan">
     <div class="section-head">
       <h2>Ringkasan performa periode</h2>
       <div class="section-note">Statistik transaksi pada periode yang dipilih.</div>
@@ -397,7 +419,7 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
     <div class="stats" id="laporanStatStrip" aria-live="polite"></div>
   </section>
 
-  <section class="lap-sec-psy">
+  <section class="lap-sec-psy" data-lgroup="psikologi">
     <div class="section-head">
       <h2>Analisis psikologi trading</h2>
       <div class="section-note">Berdasarkan trigger &amp; emosi yang dicatat manual; transaksi tanpa catatan tidak dihitung. Isi cepat: tab Transaksi → filter &quot;Belum ada catatan&quot; → Edit → &quot;Simpan &amp; lanjut&quot;.</div>
@@ -420,7 +442,7 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
     </div>
   </section>
 
-  <section class="lap-sec-cmp">
+  <section class="lap-sec-cmp" data-lgroup="bandingkan">
     <div class="section-head">
       <h2>Bandingkan dua periode</h2>
       <div class="section-note">Pilih dua periode bebas (mis. bulan ini vs bulan lalu, atau paruh pertama vs kedua riwayat) untuk melihat KPI berdampingan dengan selisih. Bagian ini tidak ikut periode utama Laporan di atas, tetapi filter Arah, Sesi, Emosi, Trigger, dan Jenis entry tetap berlaku.</div>
@@ -437,7 +459,7 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
     <div class="psy-cover" id="lapCmpNote" style="margin-top:8px;"></div>
   </section>
 
-  <section class="lap-sec-adv">
+  <section class="lap-sec-adv" data-lgroup="lanjutan">
     <div class="section-head">
       <h2>Analisis lanjutan</h2>
       <div class="section-note">Streak, jam &amp; hari buka, sesi pasar, durasi posisi, lot &amp; ukuran posisi, transaksi per hari, drawdown, dan return terhadap modal, dari transaksi periode terpilih.</div>
@@ -667,27 +689,10 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
     <div class="sync-box" id="syncAuthBox">
       <div class="settings-row">
         <div class="settings-desc">
-          <strong>Masuk</strong>
-          <span>Email &amp; password akun Supabase Auth Anda. Belum punya? Isi lalu tekan Daftar.</span>
+          <strong id="syncStatus">Belum masuk</strong>
+          <span>Masuk atau daftar di halaman login untuk sinkron ke cloud. Lupa password juga ada di sana.</span>
         </div>
-        <div class="sync-fields">
-          <input type="email" id="syncEmail" class="settings-input" placeholder="email" autocomplete="username" aria-label="Email">
-          <input type="password" id="syncPass" class="settings-input" placeholder="password (min. 6)" autocomplete="current-password" aria-label="Password">
-        </div>
-      </div>
-      <div class="settings-row">
-        <div class="settings-desc"><strong id="syncStatus">Belum masuk</strong></div>
-        <div class="sync-actions">
-          <button type="button" id="syncLoginBtn" class="ledger-reset-btn has-ic"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg><span>Masuk</span></button>
-          <button type="button" id="syncSignupBtn" class="ledger-reset-btn has-ic"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M19 8v6"/><path d="M16 11h6"/></svg><span>Daftar</span></button>
-        </div>
-      </div>
-          <div class="settings-row">
-        <div class="settings-desc">
-          <strong>Lupa password?</strong>
-          <span>Isi email di atas, lalu kami kirim tautan untuk membuat password baru ke email itu.</span>
-        </div>
-        <button type="button" id="syncForgotBtn" class="quick-chip">Kirim tautan reset</button>
+        <button type="button" id="syncLoginBtn" class="ledger-reset-btn has-ic"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg><span>Masuk</span></button>
       </div>
     </div>
     <div class="sync-box" id="syncActionBox" hidden>
@@ -764,7 +769,8 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
         <strong>Pilih file JSON</strong>
         <span>Dashboard akan memuat ulang dengan data dari file yang dipilih, tersimpan di browser ini.</span>
       </div>
-      <input type="file" id="importJsonInput" accept="application/json,.json">
+      <input type="file" id="importJsonInput" class="file-hidden" accept="application/json,.json" tabindex="-1" aria-hidden="true">
+      <button type="button" id="importJsonBtn" class="ledger-reset-btn has-ic"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3"/><path d="M7 7l5-5 5 5"/><path d="M5 21h14"/></svg><span>Pilih file</span></button>
     </div>
     <div class="settings-row">
       <div class="settings-desc">
@@ -800,7 +806,8 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
         <strong>Impor pengaturan</strong>
         <span>Pilih berkas hasil Ekspor pengaturan. Dashboard memuat ulang dengan pengaturan itu; data transaksi tidak berubah.</span>
       </div>
-      <input type="file" id="importSettingsInput" accept="application/json,.json">
+      <input type="file" id="importSettingsInput" class="file-hidden" accept="application/json,.json" tabindex="-1" aria-hidden="true">
+      <button type="button" id="importSettingsBtn" class="ledger-reset-btn has-ic"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3"/><path d="M7 7l5-5 5 5"/><path d="M5 21h14"/></svg><span>Pilih file</span></button>
     </div>
   </section>
 
