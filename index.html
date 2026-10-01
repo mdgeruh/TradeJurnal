@@ -474,7 +474,9 @@ var ac=JSON.parse(localStorage.getItem('jurnalAccent')||'null'),a=ac&&ac[light?'
 
   <div class="tab-panel" data-panel="setelan" id="tabpanel-setelan" role="tabpanel" aria-labelledby="settingsGearBtn">
 
-  <section>
+  <div class="lap-gran-tabs" id="setelanSubnav" role="tablist" aria-label="Kelompok setelan"></div>
+
+  <section data-sgroup="tampilan">
     <div class="section-head">
       <h2>Tampilan</h2>
       <div class="section-note">Pilih mode, skema warna, warna aksen, dan pasangan warna untung/rugi. Tersimpan di browser ini, tidak ikut ekspor JSON; cetak Laporan tetap memakai tema terang.</div>
@@ -506,7 +508,7 @@ var ac=JSON.parse(localStorage.getItem('jurnalAccent')||'null'),a=ac&&ac[light?'
     </div>
   </section>
 
-  <section id="kursSection">
+  <section id="kursSection" data-sgroup="trading">
     <div class="section-head">
       <h2>Kurs</h2>
       <div class="section-note">Dipakai untuk mode Rp dan semua angka &quot;≈ Rp&quot;. Ikut ekspor JSON dan sinkron Supabase.</div>
@@ -524,7 +526,7 @@ var ac=JSON.parse(localStorage.getItem('jurnalAccent')||'null'),a=ac&&ac[light?'
     <div class="section-note accent-msg" id="kursNote" role="status" aria-live="polite" style="text-align:left;"></div>
   </section>
 
-  <section id="prefSection">
+  <section id="prefSection" data-sgroup="tampilan">
     <div class="section-head">
       <h2>Preferensi</h2>
       <div class="section-note">Sama dengan pintasan di header dan kartu Ringkasan; keduanya selalu selaras. Mengganti mata uang memuat ulang aplikasi.</div>
@@ -541,9 +543,13 @@ var ac=JSON.parse(localStorage.getItem('jurnalAccent')||'null'),a=ac&&ac[light?'
       <div class="settings-desc"><strong>Format tanggal</strong><span>Berlaku di tabel transaksi dan riwayat deposit.</span></div>
       <div class="theme-modes" id="prefDate" role="group" aria-label="Format tanggal"></div>
     </div>
+    <div class="settings-row">
+      <div class="settings-desc"><strong>Angka PNL saat dibuka</strong><span>Pilih Tersembunyi agar angka PNL (Hari Ini, 7H, 30H, dst.) di kartu Ringkasan langsung disamarkan setiap aplikasi dibuka, sama seperti tombol mata. Tombol mata tetap bisa menampilkannya sementara.</span></div>
+      <div class="theme-modes" id="prefHide" role="group" aria-label="Angka PNL saat dibuka"></div>
+    </div>
   </section>
 
-  <section>
+  <section data-sgroup="trading">
     <div class="section-head">
       <h2>Batas harian</h2>
       <div class="section-note">Batas pribadi untuk analisis overtrading di tab Laporan. Kosongkan untuk menonaktifkan. Hari dihitung menurut GMT+8. Tersimpan di browser ini (localStorage), tidak ikut ekspor JSON.</div>
@@ -564,7 +570,7 @@ var ac=JSON.parse(localStorage.getItem('jurnalAccent')||'null'),a=ac&&ac[light?'
     </div>
   </section>
 
-  <section>
+  <section data-sgroup="trading">
     <div class="section-head">
       <h2>Buku transaksi</h2>
       <div class="section-note">Tersimpan di browser ini (localStorage), tidak ikut ekspor JSON.</div>
@@ -578,7 +584,41 @@ var ac=JSON.parse(localStorage.getItem('jurnalAccent')||'null'),a=ac&&ac[light?'
     </div>
   </section>
 
-  <section id="syncSection">
+  <section id="calcParamSection" data-sgroup="trading">
+    <div class="section-head">
+      <h2>Kalkulator lot</h2>
+      <div class="section-note">Parameter akun dan nilai bawaan modal Kalkulator lot (tab Transaksi). Disimpan bersama data jurnal: ikut ekspor JSON dan salinan HTML, tidak ikut sinkron Supabase.</div>
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc">
+        <strong>Nilai pip per 1 lot (¢)</strong>
+        <span>Laba/rugi dalam sen untuk gerak 1 pip pada lot 1,00 di akun ini. Bawaan 10. Ukuran kontrak sudah tercakup di angka ini.</span>
+      </div>
+      <input type="number" id="cpPipval" class="settings-input" min="0.0001" step="any" inputmode="decimal" placeholder="10" aria-label="Nilai pip per 1 lot dalam sen">
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc"><strong>Risiko per transaksi (%)</strong><span>Bawaan 1. Di atas 3% kalkulator menampilkan peringatan.</span></div>
+      <input type="number" id="cpRisk" class="settings-input" min="0.1" max="100" step="0.1" inputmode="decimal" placeholder="1" aria-label="Risiko bawaan per transaksi dalam persen">
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc"><strong>Stop loss (pips)</strong><span>Bawaan 150.</span></div>
+      <input type="number" id="cpSl" class="settings-input" min="1" step="1" inputmode="decimal" placeholder="150" aria-label="Stop loss bawaan dalam pips">
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc"><strong>Rasio risk:reward (×)</strong><span>Take profit = stop loss × rasio. Bawaan 1,5.</span></div>
+      <input type="number" id="cpRr" class="settings-input" min="0.1" step="0.1" inputmode="decimal" placeholder="1.5" aria-label="Rasio risk reward bawaan">
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc"><strong>Simpan</strong><span>Kalkulator langsung memakai angka baru, tanpa muat ulang.</span></div>
+      <div class="accent-ctl">
+        <button type="button" class="quick-chip" id="cpResetBtn">Bawaan</button>
+        <button type="button" class="quick-chip" id="cpSaveBtn">Simpan</button>
+      </div>
+    </div>
+    <div class="section-note accent-msg" id="cpNote" role="status" aria-live="polite" style="text-align:left;"></div>
+  </section>
+
+  <section id="syncSection" data-sgroup="akun">
     <div class="section-head">
       <h2>Sinkron Supabase</h2>
       <div class="section-note">Cadangan &amp; pindah data lintas perangkat. Yang dikirim: transaksi, deposit/penarikan, dan kurs. Angka lain dihitung ulang otomatis.</div>
@@ -645,7 +685,7 @@ var ac=JSON.parse(localStorage.getItem('jurnalAccent')||'null'),a=ac&&ac[light?'
     <div class="section-note" id="syncNote" style="text-align:left;"></div>
   </section>
 
-  <section>
+  <section data-sgroup="data">
     <div class="section-head">
       <h2>Ekspor data</h2>
       <div class="section-note">Simpan salinan jurnal ini sebagai cadangan (backup) dari data yang sedang aktif di browser ini.</div>
@@ -673,7 +713,7 @@ var ac=JSON.parse(localStorage.getItem('jurnalAccent')||'null'),a=ac&&ac[light?'
     </div>
   </section>
 
-  <section>
+  <section data-sgroup="data">
     <div class="section-head">
       <h2>Impor data</h2>
       <div class="section-note">Muat file data (.json) baru — hasil ekspor dari dashboard ini atau format yang sama. Data tersimpan otomatis di penyimpanan lokal browser ini (localStorage), jadi tetap ada walau tab ditutup atau halaman dimuat ulang — tanpa perlu download file HTML baru tiap kali.</div>
@@ -695,7 +735,35 @@ var ac=JSON.parse(localStorage.getItem('jurnalAccent')||'null'),a=ac&&ac[light?'
     <div class="section-note" id="importNote" style="text-align:left;"></div>
   </section>
 
-  <section id="aboutSection">
+  <section id="storageSection" data-sgroup="data">
+    <div class="section-head">
+      <h2>Penyimpanan &amp; pengaturan</h2>
+      <div class="section-note">Data jurnal dan pengaturan tersimpan di penyimpanan lokal browser ini (localStorage).</div>
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc">
+        <strong>Ruang penyimpanan</strong>
+        <span id="storageText">Menghitung…</span>
+        <div class="storage-meter" aria-hidden="true"><i id="storageBar"></i></div>
+      </div>
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc">
+        <strong>Ekspor pengaturan (.json)</strong>
+        <span>Tema, skema, aksen, mata uang, zona waktu, format tanggal, batas harian, dan garis merah. Tanpa data transaksi dan tanpa kunci akun, jadi aman dibagikan ke perangkat lain.</span>
+      </div>
+      <button type="button" id="exportSettingsBtn" class="ledger-reset-btn has-ic"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M5 21h14"/></svg><span>Ekspor pengaturan</span></button>
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc">
+        <strong>Impor pengaturan</strong>
+        <span>Pilih berkas hasil Ekspor pengaturan. Dashboard memuat ulang dengan pengaturan itu; data transaksi tidak berubah.</span>
+      </div>
+      <input type="file" id="importSettingsInput" accept="application/json,.json">
+    </div>
+  </section>
+
+  <section id="aboutSection" data-sgroup="tentang">
     <div class="section-head">
       <h2>Tentang aplikasi</h2>
       <div class="section-note">Info versi dan daftar pembaruan yang sudah masuk ke aplikasi.</div>
