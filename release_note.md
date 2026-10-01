@@ -2,7 +2,7 @@
 
 Ringkasan perubahan untuk pengguna, terbaru di atas. Isinya sama dengan **Setelan → Tentang aplikasi → Lihat riwayat** di aplikasi (data `USER_CHANGELOG` di `app.js`). Rincian teknis per versi ada di `CHANGELOG.md`; rencana ke depan di `roadmap.md`.
 
-**Versi saat ini: 1.1.149** (1 Okt 2026)
+**Versi saat ini: 1.1.158** (1 Okt 2026)
 
 ## Sorotan
 - Ringkasan: kurva ekuitas yang jelas (modal, puncak berjalan, drawdown, tooltip), pilihan **Ekuitas / PNL kumulatif**, PNL Minggu/Bulan Ini, lencana DD saat ini.
@@ -12,8 +12,15 @@ Ringkasan perubahan untuk pengguna, terbaru di atas. Isinya sama dengan **Setela
 - **Data aman:** sinkron cloud (Supabase), status dan pengingat cadangan, ekspor HTML mandiri/JSON, ekspor-impor pengaturan.
 - **Aplikasi terpasang (PWA)** di Android dan iOS, terbuka cepat dan bisa offline.
 
-## 1 Okt 2026 (v1.1.145 – v1.1.149)
+## 1 Okt 2026 (v1.1.145 – v1.1.158)
 **Baru**
+- **Indikator sinkron cloud** di header (tersinkron, ada perubahan belum dikirim, atau belum disinkronkan) untuk yang sudah masuk; ketuk untuk ke Setelan → Akun.
+- Aturan trading: kolom **Tambah aturan baru** di bawah daftar, tanpa perlu membuka Edit; centang yang sudah ada tidak hilang.
+- Tampilan lebih seragam: kotak centang bergaya aplikasi (Aturan trading dan mode Pilih) dan tombol **Pilih file** di Setelan → Data tidak lagi memakai tampilan bawaan browser.
+- Ringkasan: kartu **Aturan trading** pribadi (satu per baris, maksimal 12) dengan centang harian yang direset otomatis; kutipan acak tetap tampil di bawahnya. Ikut ekspor pengaturan.
+- Laporan: **Periode & filter** bisa dilipat/dibuka; saat dilipat, ringkasan periode dan filter aktif tetap terlihat, dan pilihannya diingat.
+- **Laporan** kini punya sub-tab (Tren, Ringkasan, Psikologi, Bandingkan, Lanjutan) bergaya sama dengan Setelan; periode dan filter tetap di bawah tab, cetak/PDF tetap memuat semuanya.
+- Setelan → Akun lebih ringkas: cukup tombol **Masuk** yang membuka halaman login (form email/password di Setelan dihapus).
 - Ringkasan: kartu **Transaksi terakhir** (5 transaksi terbaru dengan hasil, emosi, dan trigger); ketuk baris untuk detail, **Lihat semua** ke tab Transaksi.
 - Setelan → **Tentang aplikasi**: **tanggal build**, tombol **Periksa pembaruan** (mengunduh versi baru bila ada, lalu menawarkan Muat ulang), dan status **Aplikasi terpasang** dengan tombol **Instal aplikasi** di browser yang mendukungnya (iPhone/iPad: Bagikan → Tambah ke Layar Utama).
 - **Halaman login** saat aplikasi dibuka: Masuk atau Daftar dengan email dan password (ada tombol Lihat), Lupa password lewat email, dan **Lanjut tanpa masuk** bila belum mau sinkron. Pilihan itu diingat sampai Anda menekan Keluar di Setelan → Akun.
@@ -21,6 +28,7 @@ Ringkasan perubahan untuk pengguna, terbaru di atas. Isinya sama dengan **Setela
 - Setelan → Preferensi → **Angka PNL saat dibuka**: pilih Tersembunyi agar angka PNL di Ringkasan selalu disamarkan saat aplikasi dibuka. Tombol mata tetap bisa menampilkannya sementara.
 
 **Perbaikan**
+- Daftar di tab Transaksi langsung muncul saat aplikasi dibuka (sebelumnya kosong sampai filter atau urutan diubah).
 - Tombol **Keluar** di Setelan → Akun kini bekerja (tidak tertutup tombol + dan tetap keluar saat jaringan buruk); halaman login muncul lagi sesudahnya.
 - Menu Setelan lebih modern: tab dengan ikon dan garis penanda, bisa dengan tombol panah.
 - Banner "Versi baru siap" tidak lagi terjepit jadi tiga baris di layar sempit.

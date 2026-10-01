@@ -1685,10 +1685,33 @@ function renderLapCmp(){
   if(rA.running || rB.running) notes.push('Periode berjalan (sampai hari ini) belum penuh: jumlah transaksi dan laba bersih tidak sebanding langsung, lebih adil dibaca lewat win rate, PF, dan expectancy.');
   if(noteEl) noteEl.textContent = notes.join(' ');
 }
+// ---------- Laporan: Periode & filter bisa dilipat (v1.1.153) ----------
+(function(){
+  const btn = document.getElementById('lapFilterToggle'), body = document.getElementById('lapFilterBody'), sec = document.getElementById('lapFilterSec'), sum = document.getElementById('lapFilterSum');
+  if(!btn || !body || !sec) return;
+  const KEY = 'jurnalLapFilterOpen';
+  function setOpen(open, save){
+    sec.classList.toggle('lf-closed', !open);
+    btn.setAttribute('aria-expanded', String(open));
+    if(save){ try{ localStorage.setItem(KEY, open ? '1' : '0'); }catch(e){} }
+  }
+  // Ringkasan satu baris saat dilipat: periode + filter aktif
+  window.updateLapFilterSum = function(rangeLabel){
+    if(!sum) return;
+    const g = LAP2_GRANS.find(x=>x.key===lap2Gran);
+    const parts = [g ? g.label : '', rangeLabel || '', lap2Arah!=='semua' ? lap2Arah : ''].filter(Boolean);
+    const extra = lap2ExtraLabel().split(' \u00b7 ').filter(Boolean).map(x=>x.replace(/^(Sesi|Emosi|Trigger|Jenis): /,''));
+    sum.textContent = parts.concat(extra).join(' \u00b7 ');
+  };
+  btn.addEventListener('click', () => setOpen(sec.classList.contains('lf-closed'), true));
+  let open = true; try{ open = localStorage.getItem(KEY) !== '0'; }catch(e){}
+  setOpen(open, false);
+})();
 function renderLap2(){
   const range = lap2GetRange(lap2Gran, lap2Offset);
   const rangeLbl = document.getElementById('lapRangeLabel');
   if(rangeLbl) rangeLbl.textContent = range.label;
+  if(window.updateLapFilterSum) window.updateLapFilterSum(range.label);
   const metaEl = document.getElementById('printMeta');
   if(metaEl){ const gl = LAP2_GRANS.find(g=>g.key===lap2Gran); metaEl.dataset.base = `Periode ${gl?gl.label:''}: ${range.label} · Arah: ${lap2Arah==='semua'?'Semua':lap2Arah}${lap2ExtraLabel()}`; metaEl.textContent = metaEl.dataset.base; }
   const nextBtn = document.getElementById('lapNavNext');
@@ -2849,6 +2872,52 @@ function calcParams(){
   }
 })();
 
+// ---------- Ringkasan: Aturan trading pribadi (v1.1.153) ----------
+// Berdampingan dengan kutipan acak (kutipan tetap tampil di bawah daftar). localStorage: jurnalRules (daftar teks, ikut ekspor pengaturan),
+// jurnalRulesDone ({d: tanggal GMT+8, i: indeks tercentang}; direset tiap hari dan saat daftar berubah, tidak ikut ekspor).
+(function(){
+  const card = document.getElementById('rulesCard'); if(!card) return;
+  const list = document.getElementById('rulesList'), prog = document.getElementById('rulesProg'), editBtn = document.getElementById('rulesEditBtn'),
+        addForm = document.getElementById('rulesAdd'), addInput = document.getElementById('rulesAddInput'), edit = document.getElementById('rulesEdit'), txt = document.getElementById('rulesText'), quote = document.getElementById('quoteBox');
+  const RK = 'jurnalRules', DK = 'jurnalRulesDone';
+  const load = () => { try{ const a = JSON.parse(localStorage.getItem(RK) || '[]'); return Array.isArray(a) ? a.filter(x => typeof x==='string' && x).slice(0,12) : []; }catch(e){ return []; } };
+  const loadDone = n => { try{ const o = JSON.parse(localStorage.getItem(DK) || 'null'); if(o && o.d === GMT8_TODAY_KEY && o.n === n && Array.isArray(o.i)) return new Set(o.i); }catch(e){} return new Set(); };
+  const saveDone = (set, n) => { try{ localStorage.setItem(DK, JSON.stringify({ d: GMT8_TODAY_KEY, n, i: [...set] })); }catch(e){} };
+  function render(){
+    const rules = load(), done = loadDone(rules.length);
+    list.innerHTML = rules.map((r,i) => `<li><label class="rules-item${done.has(i)?' done':''}"><input type="checkbox" data-i="${i}"${done.has(i)?' checked':''}><span>${escapeHtml(r)}</span></label></li>`).join('');
+    list.hidden = !rules.length;
+    prog.textContent = rules.length ? `${done.size}/${rules.length} hari ini` : '';
+    editBtn.textContent = rules.length ? 'Edit' : 'Tambah aturan';
+    addForm.hidden = !edit.hidden || rules.length === 0 || rules.length >= 12;
+    quote.hidden = !edit.hidden;   // kutipan selalu tampil (kecuali saat editor terbuka)
+  }
+  // Tambah cepat satu aturan tanpa membuka editor (centang yang sudah ada tetap: jumlah aturan berubah → reset hari ini hanya bila n berbeda)
+  addForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const v = addInput.value.trim().slice(0,120), rules = load(); if(!v || rules.length >= 12) return;
+    const set = loadDone(rules.length); rules.push(v);
+    try{ localStorage.setItem(RK, JSON.stringify(rules)); }catch(err){}
+    saveDone(set, rules.length); addInput.value = ''; render(); addInput.focus();
+  });
+  list.addEventListener('change', e => {
+    const cb = e.target.closest('input[data-i]'); if(!cb) return;
+    const n = load().length, set = loadDone(n); if(cb.checked) set.add(+cb.dataset.i); else set.delete(+cb.dataset.i);
+    saveDone(set, n); render();
+  });
+  function openEdit(){ txt.value = load().join('\n'); edit.hidden = false; editBtn.hidden = true; quote.hidden = true; addForm.hidden = true; txt.focus(); }
+  function closeEdit(){ edit.hidden = true; editBtn.hidden = false; render(); }
+  editBtn.addEventListener('click', openEdit);
+  document.getElementById('rulesCancel').addEventListener('click', closeEdit);
+  document.getElementById('rulesSave').addEventListener('click', () => {
+    const rules = txt.value.split('\n').map(x => x.trim().slice(0,120)).filter(Boolean).slice(0,12);
+    try{ if(rules.length) localStorage.setItem(RK, JSON.stringify(rules)); else localStorage.removeItem(RK); localStorage.removeItem(DK); }catch(e){}
+    closeEdit();
+  });
+  txt.addEventListener('keydown', e => { if(e.key === 'Escape'){ e.stopPropagation(); closeEdit(); editBtn.focus(); } });
+  render();
+})();
+
 // ---------- Log deposit ----------
 const DEP_SORT_GETTERS = {
   tanggal: e => baseToUtcMs(e.tanggal),
@@ -3655,7 +3724,8 @@ const SETTINGS_VALIDATORS = {
   jurnalDayLimits: v => { try{ const o = JSON.parse(v); return !!o && typeof o==='object' && ['maxLoss','maxTrades'].every(k => o[k]===null || o[k]===undefined || (typeof o[k]==='number' && isFinite(o[k]) && o[k]>=0)); }catch(e){ return false; } },
   jurnalBigLossPct: v => v==='off' || (isFinite(+v) && +v>=1 && +v<=50),
   jurnalSidebar: v => v==='collapsed' || v==='expanded',
-  jurnalHideNum: v => v==='0' || v==='1'
+  jurnalHideNum: v => v==='0' || v==='1',
+  jurnalRules: v => { try{ const a = JSON.parse(v); return Array.isArray(a) && a.length<=12 && a.every(x => typeof x==='string' && x.length>0 && x.length<=120); }catch(e){ return false; } }
 };
 function refreshStorageInfo(){
   const t = document.getElementById('storageText'), bar = document.getElementById('storageBar');
@@ -3676,6 +3746,8 @@ document.getElementById('exportSettingsBtn').addEventListener('click', ()=>{
   downloadTextFile(`jurnal-xauusd-pengaturan-${dateStampNow()}.json`, JSON.stringify({ app:'jurnal-xauusd', type:'settings', version:APP_VERSION, settings }, null, 2), 'application/json;charset=utf-8;');
   showNotifyModal(Object.keys(settings).length ? `Pengaturan berhasil didownload (${Object.keys(settings).length} butir).` : 'Belum ada pengaturan yang diubah dari bawaan, jadi berkas berisi pengaturan kosong.', 'success');
 });
+// Tombol "Pilih file" kustom: input berkas bawaan disembunyikan, tombol hanya memicu pemilih berkas yang sama.
+[['importJsonBtn','importJsonInput'],['importSettingsBtn','importSettingsInput']].forEach(([b,i]) => { const bt = document.getElementById(b), inp = document.getElementById(i); if(bt && inp) bt.addEventListener('click', () => inp.click()); });
 document.getElementById('importSettingsInput').addEventListener('change', async e=>{
   const file = e.target.files[0]; e.target.value = '';
   if(!file) return;
@@ -3724,6 +3796,40 @@ window.showSetelanGroup = showSetelanGroup;
     e.preventDefault(); showSetelanGroup(keys[n]); const t = nav.querySelector(`[data-key="${keys[n]}"]`); if(t) t.focus();
   });
   showSetelanGroup(g);
+})();
+
+// ---------- Sub-navigasi Laporan (v1.1.152): Tren · Ringkasan · Psikologi · Bandingkan · Lanjutan ----------
+// Periode & filter (bagian atas) selalu tampil; tiap <section data-lgroup> hanya tampil bila kelompoknya aktif. Cetak/PDF menampilkan semuanya.
+const LAPORAN_GROUPS = [{key:'tren',label:'Tren'},{key:'ringkasan',label:'Ringkasan'},{key:'psikologi',label:'Psikologi'},{key:'bandingkan',label:'Bandingkan'},{key:'lanjutan',label:'Lanjutan'}];
+const LAPORAN_ICONS = {
+  tren:'<path d="M3 17l5-6 4 3 8-9"/><path d="M3 21h18"/>',
+  ringkasan:'<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8"/><path d="M8 13h8"/><path d="M8 17h5"/>',
+  psikologi:'<path d="M12 21c-4-3-8-6-8-11a5 5 0 0 1 8-3 5 5 0 0 1 8 3c0 5-4 8-8 11z"/>',
+  bandingkan:'<path d="M7 4v16"/><path d="M17 4v16"/><path d="M3 8l4-4 4 4"/><path d="M13 16l4 4 4-4"/>',
+  lanjutan:'<path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/>'
+};
+function showLaporanGroup(g){
+  if(!LAPORAN_GROUPS.some(x=>x.key===g)) g = 'tren';
+  document.querySelectorAll('#tabpanel-laporan [data-lgroup]').forEach(sec => sec.classList.toggle('sg-off', sec.dataset.lgroup !== g));
+  const nav = document.getElementById('laporanSubnav');
+  if(nav) nav.querySelectorAll('.sg-tab').forEach(b => { const on = b.dataset.key===g; b.classList.toggle('active', on); b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1; });
+  try{ sessionStorage.setItem('jurnalLaporanGroup', g); }catch(e){}
+}
+window.showLaporanGroup = showLaporanGroup;
+(function(){
+  const nav = document.getElementById('laporanSubnav'); if(!nav) return;
+  let g = 'tren'; try{ g = sessionStorage.getItem('jurnalLaporanGroup') || g; }catch(e){}
+  nav.innerHTML = LAPORAN_GROUPS.map(x => `<button type="button" class="sg-tab" role="tab" aria-selected="false" data-key="${x.key}"><svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${LAPORAN_ICONS[x.key]}</svg><span>${x.label}</span></button>`).join('');
+  nav.addEventListener('click', e => { const b = e.target.closest('.sg-tab'); if(b) showLaporanGroup(b.dataset.key); });
+  nav.addEventListener('keydown', e => {
+    const keys = LAPORAN_GROUPS.map(x => x.key), cur = keys.indexOf(sessionStorage.getItem('jurnalLaporanGroup') || g);
+    let n = -1;
+    if(e.key === 'ArrowRight') n = (cur + 1) % keys.length; else if(e.key === 'ArrowLeft') n = (cur - 1 + keys.length) % keys.length;
+    else if(e.key === 'Home') n = 0; else if(e.key === 'End') n = keys.length - 1;
+    if(n < 0) return;
+    e.preventDefault(); showLaporanGroup(keys[n]); const t = nav.querySelector(`[data-key="${keys[n]}"]`); if(t) t.focus();
+  });
+  showLaporanGroup(g);
 })();
 
 const IMPORT_REQUIRED_KEYS = ['summary','periods','equity','months','weeks','trades','deposit','period_ranges'];
@@ -4636,6 +4742,7 @@ function renderPsyPrompt(){
 // Pemicu render awal dipindah ke sini (paling akhir skrip) supaya modul CS/DTP
 // (dipakai filter tab Transaksi) sudah selesai dibangun sebelum renderTrades() pertama jalan.
 selectPeriodKey('all'); // default Ringkasan: All (v1.1.111, chip sejak v1.1.134)
+renderTrades();   // v1.1.151: render awal buku transaksi (sebelumnya baru muncul setelah filter/sortir diubah)
 renderPsyPrompt();
 // ---------- Pilih & isi massal catatan psikologi (v1.1.126) ----------
 (function(){
@@ -4781,6 +4888,28 @@ function renderBackupStatus(){
   renderBackupStatus();
 })();
 
+// ---------- Indikator sinkron cloud di header (v1.1.158) ----------
+// Hanya tampil bila ada sesi Supabase tersimpan (pengguna offline-first tidak diganggu). Status dari localStorage:
+// jurnalSyncInfo.push (kirim terakhir) dibanding jurnalLastChange (perubahan lokal terakhir).
+(function(){
+  const pill = document.getElementById('syncPill'), txt = document.getElementById('syncPillText'); if(!pill || !txt) return;
+  const hasSession = () => { try{ return Object.keys(localStorage).some(k => /^sb-.*-auth-token$/.test(k)); }catch(e){ return false; } };
+  const ago = t => { const m = Math.floor((Date.now()-t)/60000); if(m < 1) return 'baru saja'; if(m < 60) return m+' mnt lalu'; const h = Math.floor(m/60); if(h < 24) return h+' jam lalu'; return Math.floor(h/24)+' hari lalu'; };
+  function render(){
+    if(!hasSession()){ pill.hidden = true; return; }
+    const info = readJsonLS('jurnalSyncInfo'), push = Date.parse(info.push), chg = Date.parse(localStorage.getItem('jurnalLastChange'));
+    let state, msg;
+    if(!isFinite(push)){ state = 'warn'; msg = 'Cloud: belum disinkronkan'; }
+    else if(isFinite(chg) && chg - push > 1000){ state = 'warn'; msg = 'Cloud: ada perubahan belum dikirim'; }
+    else { state = 'ok'; msg = 'Cloud: tersinkron ' + ago(push); }
+    pill.hidden = false; pill.dataset.state = state; txt.textContent = msg;
+  }
+  pill.addEventListener('click', () => { const gear = document.getElementById('settingsGearBtn'); if(gear) gear.click(); if(window.showSetelanGroup) window.showSetelanGroup('akun'); });
+  ['jurnalBackupChanged','jurnalAuthChanged','storage'].forEach(ev => window.addEventListener(ev, render));
+  setInterval(render, 60000);
+  render();
+})();
+
 // ---------- Setelan → Kurs (Rp per USD) (v1.1.135) ----------
 (function setupKurs(){
   const inp = document.getElementById('kursInput'), btn = document.getElementById('kursSaveBtn'), note = document.getElementById('kursNote');
@@ -4877,7 +5006,7 @@ function renderBackupStatus(){
   sync();
 })();
 
-const APP_VERSION = '1.1.149';
+const APP_VERSION = '1.1.158';
 const APP_BUILD_DATE = '2026-10-01';   // ikut diganti tiap rilis (ISO), tampil di Setelan → Tentang
 const USER_CHANGELOG = [
   { date:'2026-10-01', items:[
@@ -4887,6 +5016,14 @@ const USER_CHANGELOG = [
 
     'Setelan → Trading → <strong>Kalkulator lot</strong>: atur sendiri <strong>nilai pip per lot</strong> akun Anda serta angka bawaan <strong>risiko (%)</strong>, <strong>stop loss</strong>, dan <strong>rasio risk:reward</strong>. Kalkulator lot di tab Transaksi langsung memakainya, dan tombol reset di kalkulator kembali ke angka ini. Ikut tersimpan di ekspor JSON.',
     'Setelan → Preferensi → <strong>Angka PNL saat dibuka</strong>: pilih <strong>Tersembunyi</strong> agar angka PNL di Ringkasan selalu disamarkan setiap aplikasi dibuka (cocok bila sering membuka di tempat umum). Tombol mata tetap bisa menampilkannya sementara.',
+    'Header kini punya <strong>indikator sinkron cloud</strong> untuk Anda yang sudah masuk: <em>tersinkron (berapa lama lalu)</em>, <em>ada perubahan belum dikirim</em>, atau <em>belum disinkronkan</em>. Ketuk untuk membuka Setelan → Akun. Tanpa login, indikator tidak tampil.',
+    'Aturan trading: setelah ada aturan, kini tersedia kolom <strong>Tambah aturan baru</strong> di bawah daftar (ketik lalu Enter atau tekan Tambah) tanpa perlu membuka Edit; centang yang sudah ada tidak hilang. Tombol Edit tetap untuk mengubah atau menghapus.',
+    'Tampilan lebih seragam: kotak centang (Aturan trading dan mode Pilih di Transaksi) kini bergaya sendiri dengan warna aksen, dan tombol <strong>Pilih file</strong> di Setelan → Data (Impor JSON dan Impor pengaturan) memakai tombol aplikasi, bukan tombol bawaan browser.',
+    'Ringkasan: kartu <strong>Aturan trading</strong> di atas kutipan acak. Tulis aturan pribadi Anda sendiri (satu per baris, maksimal 12), lalu centang satu per satu sebelum trading; centang direset otomatis tiap hari. Kutipan acak tetap tampil di bawahnya. Aturan ikut tersimpan di ekspor pengaturan.',
+    'Laporan: blok <strong>Periode &amp; filter</strong> kini bisa dilipat atau dibuka dengan sekali ketuk. Saat dilipat, satu baris ringkasan tetap menunjukkan periode dan filter yang aktif; pilihan buka/lipat diingat.',
+    'Tab <strong>Laporan</strong> kini punya sub-tab bergaya sama dengan Setelan: <strong>Tren</strong>, <strong>Ringkasan</strong>, <strong>Psikologi</strong>, <strong>Bandingkan</strong>, dan <strong>Lanjutan</strong>, jadi tidak perlu menggulir panjang. Periode dan filter tetap di bawah tab dan berlaku untuk semuanya; cetak/PDF tetap memuat seluruh bagian.',
+    'Perbaikan: daftar di tab <strong>Transaksi</strong> kini langsung muncul saat aplikasi dibuka (sebelumnya kosong sampai filter atau urutan diubah).',
+    'Setelan → Akun lebih ringkas: form email dan password di sana dihapus. Bila belum masuk, cukup tekan <strong>Masuk</strong> untuk membuka halaman login (Masuk, Daftar, dan Lupa password ada di halaman itu).',
     'Ringkasan: kartu baru <strong>Transaksi terakhir</strong> menampilkan 5 transaksi terbaru lengkap dengan hasil, emosi, dan trigger. Ketuk satu baris untuk membuka detailnya, atau <strong>Lihat semua</strong> untuk ke tab Transaksi. Angkanya ikut tersamar bila tombol mata aktif.',
     'Perbaikan: tombol <strong>Keluar</strong> di Setelan → Akun kini benar-benar bekerja (sebelumnya bisa tertutup tombol + dan sesi tidak terhapus bila jaringan bermasalah); setelah keluar, halaman login muncul lagi. Menu Setelan juga tampil lebih modern: tab dengan ikon dan garis penanda, bukan tombol chip, dan bisa digeser dengan tombol panah.',
     'Perbaikan: pada data baru, rasio risk:reward di kalkulator lot kini mulai dari 1,5, bukan 0. Banner <strong>Versi baru siap</strong> juga tidak lagi terjepit jadi tiga baris di layar sempit.'

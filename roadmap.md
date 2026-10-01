@@ -2,15 +2,15 @@
 
 Satu-satunya daftar rencana dan todo proyek (dulu ada di `SUMMARY.md`). Prioritas: **P1** tinggi, **P2** sedang, **P3** rendah. Tidak ada tanggal tetap. Setiap butir yang mengubah kode mengikuti **Alur rilis** di `README.md`; saat selesai, hapus dari sini (centang bila perlu satu rilis), pindahkan tema barunya ke tabel "Sudah selesai", dan catat di `release_note.md` dan `CHANGELOG.md`. Jebakan bug tiap area ada di `SUMMARY.md`.
 
-## Sudah selesai (v1.1.149)
+## Sudah selesai (v1.1.158)
 | Tema | Isi |
 |---|---|
-| Fondasi | Ringkasan (+ 5 transaksi terakhir), Performa, Deposit, Transaksi, input manual (+), data di localStorage, tanpa build tool |
+| Fondasi | Ringkasan (+ 5 transaksi terakhir, aturan trading pribadi, indikator sinkron cloud), Performa, Deposit, Transaksi, input manual (+), data di localStorage, tanpa build tool |
 | Analisis | Analisis PNL; Laporan L1–L18 (tren, psikologi, heatmap, sesi pasar, drawdown, distribusi PNL/Pips, bandingkan dua periode); cetak PDF A4 |
 | Transaksi | Catatan psikologi dan bebas, filter lengkap, isi massal, impor/ekspor CSV, batalkan hapus, kartu HP |
 | Tampilan | Gelap/Terang/Otomatis, 8 skema warna, aksen custom, mode buta warna, mata uang USD/USC/Rp, zona waktu, format tanggal |
 | Data & akun | Halaman login (Masuk/Daftar/Lupa password/Lanjut tanpa masuk), sinkron Supabase manual, ganti password, status dan pengingat cadangan, ekspor HTML mandiri/JSON, ekspor-impor pengaturan, ringkasan penyimpanan |
-| Setelan | Sub-navigasi 5 tab (ikon + garis bawah, keyboard), Kurs, batas harian, Kalkulator lot, angka PNL tersembunyi, Tentang (tanggal build, Periksa pembaruan, status dan Instal aplikasi) |
+| Setelan | Sub-navigasi Setelan dan Laporan (5 tab, ikon + garis bawah, keyboard), Kurs, batas harian, Kalkulator lot, angka PNL tersembunyi, Tentang (tanggal build, Periksa pembaruan, status dan Instal aplikasi) |
 | Performa & PWA | Service worker cache-dulu, supabase-js dimuat malas, banner versi baru, instal di Android/iOS |
 
 ## 1. Verifikasi dulu (P1)
@@ -40,8 +40,6 @@ Hampir semua fitur baru hanya diuji di Chromium dengan data sintetis dan Supabas
 - [ ] Notifikasi pengingat isi catatan psikologi atau batas harian (izin Notification; PWA saja).
 
 **Ringkasan**
-- [ ] Indikator sinkron Supabase (terakhir dikirim/diambil; ada perubahan lokal belum dikirim).
-- [ ] Ganti kutipan acak dengan checklist/aturan trading pribadi yang bisa diedit (atau hapus kartunya).
 
 **Optimalisasi**
 - [ ] Host sendiri font (Fraunces, IBM Plex Mono) sebagai `woff2` subset Latin + tambah ke `SHELL` di `sw.js` (offline penuh tanpa dependensi luar).
