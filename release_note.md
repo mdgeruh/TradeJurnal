@@ -2,7 +2,7 @@
 
 Ringkasan perubahan untuk pengguna, terbaru di atas. Isinya sama dengan **Setelan → Tentang aplikasi → Lihat riwayat** di aplikasi (data `USER_CHANGELOG` di `app.js`). Rincian teknis per versi ada di `CHANGELOG.md`; rencana ke depan di `roadmap.md`.
 
-**Versi saat ini: 1.1.146** (1 Okt 2026)
+**Versi saat ini: 1.1.148** (1 Okt 2026)
 
 ## Sorotan
 - Ringkasan: kurva ekuitas yang jelas (modal, puncak berjalan, drawdown, tooltip), pilihan **Ekuitas / PNL kumulatif**, PNL Minggu/Bulan Ini, lencana DD saat ini.
@@ -12,13 +12,17 @@ Ringkasan perubahan untuk pengguna, terbaru di atas. Isinya sama dengan **Setela
 - **Data aman:** sinkron cloud (Supabase), status dan pengingat cadangan, ekspor HTML mandiri/JSON, ekspor-impor pengaturan.
 - **Aplikasi terpasang (PWA)** di Android dan iOS, terbuka cepat dan bisa offline.
 
-## 1 Okt 2026 (v1.1.145 – v1.1.146)
+## 1 Okt 2026 (v1.1.145 – v1.1.148)
 **Baru**
+- Setelan → **Tentang aplikasi**: **tanggal build**, tombol **Periksa pembaruan** (mengunduh versi baru bila ada, lalu menawarkan Muat ulang), dan status **Aplikasi terpasang** dengan tombol **Instal aplikasi** di browser yang mendukungnya (iPhone/iPad: Bagikan → Tambah ke Layar Utama).
 - **Halaman login** saat aplikasi dibuka: Masuk atau Daftar dengan email dan password (ada tombol Lihat), Lupa password lewat email, dan **Lanjut tanpa masuk** bila belum mau sinkron. Pilihan itu diingat sampai Anda menekan Keluar di Setelan → Akun.
 - Setelan → Trading → **Kalkulator lot**: atur nilai pip per lot akun serta angka bawaan risiko (%), stop loss, dan rasio risk:reward. Kalkulator di tab Transaksi langsung memakainya, dan tombol reset kembali ke angka ini. Ikut tersimpan di ekspor JSON.
 - Setelan → Preferensi → **Angka PNL saat dibuka**: pilih Tersembunyi agar angka PNL di Ringkasan selalu disamarkan saat aplikasi dibuka. Tombol mata tetap bisa menampilkannya sementara.
 
 **Perbaikan**
+- Tombol **Keluar** di Setelan → Akun kini bekerja (tidak tertutup tombol + dan tetap keluar saat jaringan buruk); halaman login muncul lagi sesudahnya.
+- Menu Setelan lebih modern: tab dengan ikon dan garis penanda, bisa dengan tombol panah.
+- Banner "Versi baru siap" tidak lagi terjepit jadi tiga baris di layar sempit.
 - Pada data baru, rasio risk:reward di kalkulator lot mulai dari 1,5, bukan 0.
 
 ## 30 Sep 2026 (v1.1.135 – v1.1.144)

@@ -3673,18 +3673,35 @@ document.getElementById('importSettingsInput').addEventListener('change', async 
 // ---------- Sub-navigasi Setelan (v1.1.144): Tampilan · Trading · Data · Akun · Tentang ----------
 // Tiap <section data-sgroup="..."> di #tabpanel-setelan hanya tampil bila kelompoknya aktif; section tanpa data-sgroup tampil di semua kelompok.
 const SETELAN_GROUPS = [{key:'tampilan',label:'Tampilan'},{key:'trading',label:'Trading'},{key:'data',label:'Data'},{key:'akun',label:'Akun'},{key:'tentang',label:'Tentang'}];
+const SETELAN_ICONS = {
+  tampilan:'<circle cx="12" cy="12" r="9"/><path d="M12 3v18"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/>',
+  trading:'<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+  data:'<ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/>',
+  akun:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  tentang:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 7.5v.01"/>'
+};
 function showSetelanGroup(g){
   if(!SETELAN_GROUPS.some(x=>x.key===g)) g = 'tampilan';
   document.querySelectorAll('#tabpanel-setelan [data-sgroup]').forEach(sec => sec.classList.toggle('sg-off', sec.dataset.sgroup !== g));
   const nav = document.getElementById('setelanSubnav');
-  if(nav) nav.querySelectorAll('.lap-gran-btn').forEach(b => { const on = b.dataset.key===g; b.classList.toggle('active', on); b.setAttribute('aria-selected', String(on)); });
+  if(nav) nav.querySelectorAll('.sg-tab').forEach(b => { const on = b.dataset.key===g; b.classList.toggle('active', on); b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1; });
   try{ sessionStorage.setItem('jurnalSetelanGroup', g); }catch(e){}
 }
 window.showSetelanGroup = showSetelanGroup;
 (function(){
   const nav = document.getElementById('setelanSubnav'); if(!nav) return;
   let g = 'tampilan'; try{ g = sessionStorage.getItem('jurnalSetelanGroup') || g; }catch(e){}
-  buildPeriodChips(nav, { items: SETELAN_GROUPS, active: g, onSelect: showSetelanGroup });
+  nav.innerHTML = SETELAN_GROUPS.map(x => `<button type="button" class="sg-tab" role="tab" aria-selected="false" data-key="${x.key}"><svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SETELAN_ICONS[x.key]}</svg><span>${x.label}</span></button>`).join('');
+  nav.addEventListener('click', e => { const b = e.target.closest('.sg-tab'); if(b) showSetelanGroup(b.dataset.key); });
+  // Panah kiri/kanan, Home, End berpindah antar tab (pola WAI-ARIA tabs)
+  nav.addEventListener('keydown', e => {
+    const keys = SETELAN_GROUPS.map(x => x.key), cur = keys.indexOf(sessionStorage.getItem('jurnalSetelanGroup') || g);
+    let n = -1;
+    if(e.key === 'ArrowRight') n = (cur + 1) % keys.length; else if(e.key === 'ArrowLeft') n = (cur - 1 + keys.length) % keys.length;
+    else if(e.key === 'Home') n = 0; else if(e.key === 'End') n = keys.length - 1;
+    if(n < 0) return;
+    e.preventDefault(); showSetelanGroup(keys[n]); const t = nav.querySelector(`[data-key="${keys[n]}"]`); if(t) t.focus();
+  });
   showSetelanGroup(g);
 })();
 
@@ -4839,15 +4856,18 @@ function renderBackupStatus(){
   sync();
 })();
 
-const APP_VERSION = '1.1.146';
+const APP_VERSION = '1.1.148';
+const APP_BUILD_DATE = '2026-10-01';   // ikut diganti tiap rilis (ISO), tampil di Setelan → Tentang
 const USER_CHANGELOG = [
   { date:'2026-10-01', items:[
+    'Setelan → <strong>Tentang aplikasi</strong>: kini ada <strong>tanggal build</strong>, tombol <strong>Periksa pembaruan</strong> (mengunduh versi baru bila ada, lalu menawarkan Muat ulang), dan status <strong>Aplikasi terpasang</strong> dengan tombol <strong>Instal aplikasi</strong> di browser yang mendukungnya (di iPhone/iPad: Bagikan → Tambah ke Layar Utama).',
     'Ada <strong>halaman login</strong> saat aplikasi dibuka: <strong>Masuk</strong> atau <strong>Daftar</strong> dengan email dan password, tombol <strong>Lihat</strong> untuk memeriksa password, dan <strong>Lupa password</strong> (tautan reset lewat email). Setelah masuk, jurnal langsung terbuka dan bisa disinkronkan ke cloud dari Setelan → Akun.',
     'Belum mau masuk? Pilih <strong>Lanjut tanpa masuk</strong>: jurnal tetap berjalan seperti biasa dan tersimpan di perangkat ini. Pilihan itu diingat, jadi halaman login tidak muncul lagi sampai Anda menekan <strong>Keluar</strong> di Setelan → Akun.',
 
     'Setelan → Trading → <strong>Kalkulator lot</strong>: atur sendiri <strong>nilai pip per lot</strong> akun Anda serta angka bawaan <strong>risiko (%)</strong>, <strong>stop loss</strong>, dan <strong>rasio risk:reward</strong>. Kalkulator lot di tab Transaksi langsung memakainya, dan tombol reset di kalkulator kembali ke angka ini. Ikut tersimpan di ekspor JSON.',
     'Setelan → Preferensi → <strong>Angka PNL saat dibuka</strong>: pilih <strong>Tersembunyi</strong> agar angka PNL di Ringkasan selalu disamarkan setiap aplikasi dibuka (cocok bila sering membuka di tempat umum). Tombol mata tetap bisa menampilkannya sementara.',
-    'Perbaikan: pada data baru, rasio risk:reward di kalkulator lot kini mulai dari 1,5, bukan 0.'
+    'Perbaikan: tombol <strong>Keluar</strong> di Setelan → Akun kini benar-benar bekerja (sebelumnya bisa tertutup tombol + dan sesi tidak terhapus bila jaringan bermasalah); setelah keluar, halaman login muncul lagi. Menu Setelan juga tampil lebih modern: tab dengan ikon dan garis penanda, bukan tombol chip, dan bisa digeser dengan tombol panah.',
+    'Perbaikan: pada data baru, rasio risk:reward di kalkulator lot kini mulai dari 1,5, bukan 0. Banner <strong>Versi baru siap</strong> juga tidak lagi terjepit jadi tiga baris di layar sempit.'
   ]},
   { date:'2026-09-30', items:[
     'Setelan kini dikelompokkan dengan menu di bagian atas: <strong>Tampilan</strong>, <strong>Trading</strong> (kurs, batas harian, garis merah), <strong>Data</strong> (ekspor, impor, penyimpanan), <strong>Akun</strong> (sinkron), dan <strong>Tentang</strong>, sehingga halamannya tidak lagi panjang.',
@@ -4932,6 +4952,8 @@ const USER_CHANGELOG = [
   const listEl = document.getElementById('changelogList');
   const verEl = document.getElementById('appVersionVal');
   if(verEl) verEl.textContent = 'v' + APP_VERSION;
+  const buildEl = document.getElementById('appBuildVal');
+  if(buildEl) buildEl.textContent = (()=>{ const [y,m,d] = APP_BUILD_DATE.split('-').map(Number); return `${d} ${monthNames[m-1]} ${y}`; })();
   function fmtDate(iso){ const [y,m,d] = iso.split('-').map(Number); return `${d} ${monthNames[m-1]} ${y}`; }
   function render(){
     const rows = USER_CHANGELOG.slice().sort((a,b) => a.date < b.date ? 1 : a.date > b.date ? -1 : 0);
@@ -4958,4 +4980,40 @@ const USER_CHANGELOG = [
   document.getElementById('calcModalCloseBtn').addEventListener('click', close);
   overlay.addEventListener('click', e => { if(e.target === overlay) close(); });
   document.addEventListener('keydown', e => { if(e.key === 'Escape' && overlay.classList.contains('show')) close(); });
+})();
+
+// ---------- Setelan → Tentang: periksa pembaruan, status pemasangan (v1.1.147) ----------
+(function(){
+  const btn = document.getElementById('updCheckBtn'), hint = document.getElementById('updHint');
+  const stEl = document.getElementById('pwaStatus'), inst = document.getElementById('pwaInstallBtn');
+  if(!btn || !hint || !stEl || !inst) return;
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const standalone = () => { try{ return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true; }catch(e){ return false; } };
+  function renderPwa(){
+    const has = !!window.__installPrompt;
+    inst.hidden = !has;
+    if(standalone()) stEl.textContent = 'Dibuka sebagai aplikasi terpasang. Data aplikasi terpasang terpisah dari browser; gunakan Pulihkan dari cloud bila perlu.';
+    else if(has) stEl.textContent = 'Sedang dibuka di browser. Pasang ke layar utama agar terbuka seperti aplikasi dan tetap bisa dipakai offline.';
+    else if(isIos) stEl.textContent = 'Sedang dibuka di browser. Untuk memasang: Safari → Bagikan → Tambah ke Layar Utama.';
+    else if(!/^https?:$/.test(location.protocol)) stEl.textContent = 'Pemasangan butuh aplikasi dibuka lewat alamat web (https).';
+    else stEl.textContent = 'Sedang dibuka di browser. Bila browser mendukung, pilih Instal aplikasi di menu browser.';
+  }
+  window.addEventListener('jurnalInstallReady', renderPwa);
+  document.getElementById('settingsGearBtn').addEventListener('click', renderPwa);
+  renderPwa();
+  inst.addEventListener('click', async () => {
+    const ev = window.__installPrompt; if(!ev) return;
+    inst.disabled = true;
+    try{ ev.prompt(); await ev.userChoice; }catch(e){}
+    window.__installPrompt = null; inst.disabled = false; renderPwa();
+  });
+  btn.addEventListener('click', async () => {
+    btn.disabled = true; hint.textContent = 'Memeriksa…';
+    const r = window.jurnalCheckUpdate ? await window.jurnalCheckUpdate() : 'unsupported';
+    btn.disabled = false;
+    hint.textContent = r === 'latest' ? 'Aplikasi sudah versi terbaru (v' + APP_VERSION + ').'
+      : r === 'downloaded' ? 'Versi baru sudah diunduh. Tekan Muat ulang pada banner di atas, atau buka ulang aplikasi.'
+      : r === 'unsupported' ? 'Pembaruan otomatis hanya jalan bila aplikasi dibuka lewat alamat web (https).'
+      : 'Gagal memeriksa. Cek koneksi internet lalu coba lagi.';
+  });
 })();
