@@ -983,8 +983,12 @@
     .tab-panel.active[data-panel="grafik"] > section,
     .tab-panel.active[data-panel="statistik"] > section,
     .tab-panel.active[data-panel="setelan"] > section{margin-bottom:0;min-width:0;}
-    /* Ringkasan: kartu saldo di kiri, kurva ekuitas di kanan; sisanya selebar penuh */
-    .tab-panel.active[data-panel="grafik"] > section:nth-child(n+3){grid-column:1 / -1;}
+    /* Ringkasan (v1.1.161): kartu saldo di kiri, kurva ekuitas di kanan; sisanya selebar penuh.
+       Berbasis kelas (bukan urutan anak) supaya kartu pengingat yang tersembunyi tidak menggeser tata letak. */
+    .tab-panel.active[data-panel="grafik"] > *{grid-column:1 / -1;}
+    .tab-panel.active[data-panel="grafik"] > .hero{grid-column:1;}
+    .tab-panel.active[data-panel="grafik"] > section:not([class]){grid-column:2;}
+    .tab-panel.active[data-panel="setelan"] > .sg-tabs{grid-column:1 / -1;}
     .fab-wrap{right:max(24px,calc((100vw - 1240px)/2 + 8px));}
   }
 
@@ -1265,3 +1269,19 @@ html.gate-on body{overflow:hidden;}
 .sync-dot{width:8px;height:8px;border-radius:50%;background:var(--gain);flex:none;}
 .sync-pill[data-state="warn"] .sync-dot{background:var(--loss);}
 @media print{.sync-pill{display:none !important;}}
+
+/* Ukuran tampilan (v1.1.159): data-fs pada <html> */
+html[data-fs="kecil"] body{zoom:.9;}
+html[data-fs="besar"] body{zoom:1.12;}
+@media print{html[data-fs] body{zoom:1 !important;}}
+
+/* Ekspor JSON per periode (v1.1.162) */
+.exp-per-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;}
+.exp-per-dates{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px;}
+.exp-per-note{display:block;margin-top:8px;min-height:1.4em;}
+.exp-per-note.warn{color:var(--loss);}
+.exp-per-row .settings-desc{flex:1 1 320px;min-width:0;}
+.exp-per-row #exportPeriodBtn[disabled]{opacity:.5;cursor:default;}
+.exp-per-dates .dt-picker{flex:1 1 170px;min-width:0;width:auto;}
+.exp-per-row{flex-wrap:wrap;}
+.exp-per-row #exportPeriodBtn{margin-top:4px;}

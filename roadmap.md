@@ -2,15 +2,15 @@
 
 Satu-satunya daftar rencana dan todo proyek (dulu ada di `SUMMARY.md`). Prioritas: **P1** tinggi, **P2** sedang, **P3** rendah. Tidak ada tanggal tetap. Setiap butir yang mengubah kode mengikuti **Alur rilis** di `README.md`; saat selesai, hapus dari sini (centang bila perlu satu rilis), pindahkan tema barunya ke tabel "Sudah selesai", dan catat di `release_note.md` dan `CHANGELOG.md`. Jebakan bug tiap area ada di `SUMMARY.md`.
 
-## Sudah selesai (v1.1.158)
+## Sudah selesai (v1.1.163)
 | Tema | Isi |
 |---|---|
-| Fondasi | Ringkasan (+ 5 transaksi terakhir, aturan trading pribadi, indikator sinkron cloud), Performa, Deposit, Transaksi, input manual (+), data di localStorage, tanpa build tool |
+| Fondasi | Ringkasan (+ 5 transaksi terakhir, aturan trading pribadi, indikator sinkron cloud, Esc global), Performa, Deposit, Transaksi, input manual (+), data di localStorage, tanpa build tool |
 | Analisis | Analisis PNL; Laporan L1–L18 (tren, psikologi, heatmap, sesi pasar, drawdown, distribusi PNL/Pips, bandingkan dua periode); cetak PDF A4 |
 | Transaksi | Catatan psikologi dan bebas, filter lengkap, isi massal, impor/ekspor CSV, batalkan hapus, kartu HP |
 | Tampilan | Gelap/Terang/Otomatis, 8 skema warna, aksen custom, mode buta warna, mata uang USD/USC/Rp, zona waktu, format tanggal |
-| Data & akun | Halaman login (Masuk/Daftar/Lupa password/Lanjut tanpa masuk), sinkron Supabase manual, ganti password, status dan pengingat cadangan, ekspor HTML mandiri/JSON, ekspor-impor pengaturan, ringkasan penyimpanan |
-| Setelan | Sub-navigasi Setelan dan Laporan (5 tab, ikon + garis bawah, keyboard), Kurs, batas harian, Kalkulator lot, angka PNL tersembunyi, Tentang (tanggal build, Periksa pembaruan, status dan Instal aplikasi) |
+| Data & akun | Ekspor JSON per periode (v1.1.162), halaman login (Masuk/Daftar/Lupa password/Lanjut tanpa masuk), sinkron Supabase manual, ganti password, status dan pengingat cadangan, ekspor HTML mandiri/JSON, ekspor-impor pengaturan, ringkasan penyimpanan |
+| Setelan | Ukuran tampilan, sub-navigasi Setelan dan Laporan (5 tab, ikon + garis bawah, keyboard), Kurs, batas harian, Kalkulator lot, angka PNL tersembunyi, Tentang (tanggal build, Periksa pembaruan, status dan Instal aplikasi) |
 | Performa & PWA | Service worker cache-dulu, supabase-js dimuat malas, banner versi baru, instal di Android/iOS |
 
 ## 1. Verifikasi dulu (P1)
@@ -23,7 +23,7 @@ Hampir semua fitur baru hanya diuji di Chromium dengan data sintetis dan Supabas
 
 ## 2. Berikutnya (P2)
 **Data & akun**
-- [ ] **Ekspor lalu hapus riwayat lama.** Perlu rancangan: menghapus transaksi mengubah kurva ekuitas, saldo, Max DD, dan Laporan (opsi: diganti satu baris saldo awal).
+- [ ] **Ekspor lalu hapus riwayat lama.** (Ekspor JSON per periode sudah ada sejak v1.1.162; tinggal langkah hapus.) Perlu rancangan: menghapus transaksi mengubah kurva ekuitas, saldo, Max DD, dan Laporan (opsi: diganti satu baris saldo awal).
 - [ ] **Sinkron pengaturan ke Supabase:** parameter kalkulator dan pengaturan lain ke tabel `pengaturan` (kini hanya `kurs`; perlu kolom baru + migrasi).
 
 **Optimalisasi** (audit v1.1.131; gzip: `app.js` ±79 KB, `style.css` ±14 KB, `index.html` ±13 KB; muat ±175 ms dengan 439 transaksi)
@@ -33,10 +33,20 @@ Hampir semua fitur baru hanya diuji di Chromium dengan data sintetis dan Supabas
 - [ ] Render bertahap buku transaksi (kini `innerHTML` dibangun ulang tiap `renderTrades()`); tinjau bila data > ±2.000 transaksi.
 - [ ] Pisah `app.js` per tab (ES module/beberapa berkas) bila `app.js` > ±400 KB (kini ±300 KB); minify hanya di build produksi terpisah, sumber tetap terbaca.
 
+**Analisis & disiplin** (usulan 3 Okt 2026, urutan prioritas; belum dikerjakan)
+- [ ] **Tag setup/strategi per transaksi** (mis. CRT H4, RSI divergence, tanpa setup) dengan centang konfirmasi; Laporan menampilkan win rate, expectancy, dan PNL per setup. Perlu bidang baru pada transaksi, filter, impor/ekspor, dan sinkron (kolom Supabase + migrasi).
+- [ ] **Pelanggaran Aturan trading per transaksi:** centang aturan yang dilanggar saat mencatat; Laporan menghitung "biaya melanggar aturan" (PNL melanggar vs patuh). Menyambung kartu Aturan trading; perlu ID aturan yang stabil (kini hanya teks).
+- [ ] **Ringkasan mingguan otomatis:** PNL minggu ini vs lalu, emosi dan trigger paling merugikan, kepatuhan batas harian, plus 2-3 pertanyaan refleksi dengan kolom catatan.
+- Saran urutan: selesaikan **P1 (Supabase asli)** dulu, lalu paket tag setup + pelanggaran aturan.
+
 ## 3. Nanti (P3)
+**Transaksi**
+- [ ] **Lampiran gambar chart per transaksi** (usulan 3 Okt): foto setup disimpan lokal (IndexedDB) dan dikompres; tidak ikut sinkron cloud/ekspor JSON agar data tetap kecil; tampil di detail transaksi.
+- [ ] **Impor laporan broker dengan pratinjau** (baru/duplikat/error sebelum disimpan); lihat juga Ide lanjutan: Impor CSV.
+
 **Setelan**
 - [ ] Tentang: tautan panduan/README (menunggu alamat dokumentasi publik; tanggal build, Periksa pembaruan, dan Instal aplikasi selesai v1.1.147).
-- [ ] Bahasa dan format angka (Indonesia/Inggris), ukuran font (kecil/normal/besar).
+- [ ] Bahasa dan format angka (Indonesia/Inggris). (Ukuran tampilan selesai v1.1.159.)
 - [ ] Notifikasi pengingat isi catatan psikologi atau batas harian (izin Notification; PWA saja).
 
 **Ringkasan**
@@ -45,7 +55,6 @@ Hampir semua fitur baru hanya diuji di Chromium dengan data sintetis dan Supabas
 - [ ] Host sendiri font (Fraunces, IBM Plex Mono) sebagai `woff2` subset Latin + tambah ke `SHELL` di `sw.js` (offline penuh tanpa dependensi luar).
 - [ ] Render tab Laporan secara malas: `renderLap2` hanya ±12 ms dari muat ±175 ms, risikonya (lebar 0 saat tersembunyi, urutan `CS`/`DTP`, Drawdown L7) lebih besar dari manfaat; kerjakan bila ukur ulang menunjukkan Laporan dominan atau data > ±2.000 transaksi.
 - [ ] Ubah `journal-data` (fallback kosong sejak v1.1.15) jadi berkas kecil atau hapus; kini dipakai `buildFullHtmlString()` untuk menaruh data pada salinan HTML mandiri, jadi ekspor perlu mekanisme lain.
-- [ ] Satu handler global `keydown` Escape yang menutup modal teratas (kini per modal di banyak IIFE).
 - [ ] Lighthouse (mobile, throttling 4G) sebelum/sesudah; catat LCP/TBT di sini.
 
 ## 4. Ide lanjutan (belum dijadwalkan)

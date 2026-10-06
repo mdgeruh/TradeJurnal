@@ -13,6 +13,7 @@ var light=mode==='light'||(mode==='auto'&&window.matchMedia&&matchMedia('(prefer
 if(sc!=='emas')d.setAttribute('data-scheme',sc);if(light)d.setAttribute('data-theme','light');
 var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',light?LC[sc]:C[sc]);
 if(localStorage.getItem('jurnalCB')==='1')d.setAttribute('data-cb','1');
+var fs=localStorage.getItem('jurnalFontSize');if(fs==='kecil'||fs==='besar')d.setAttribute('data-fs',fs);
 var ac=JSON.parse(localStorage.getItem('jurnalAccent')||'null'),a=ac&&ac[light?'l':'d'];if(a&&a.length===2){d.style.setProperty('--gold',a[0]);d.style.setProperty('--gold-dim',a[1]);}}catch(e){}})();
 </script>
 <script>
@@ -205,7 +206,7 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
   <section>
     <div class="section-head">
       <h2>Performa bulanan</h2>
-      <div class="section-note">Laba/rugi, win rate, dan % thd saldo sebelum bulan berjalan.</div>
+      <div class="section-note">Laba/rugi, win rate, dan % thd saldo sebelum bulan berjalan. Penilaian: Sangat Baik = untung dan win rate ≥ 50%; Waspada = untung atau win rate ≥ 50%; selain itu Perlu Evaluasi.</div>
     </div>
     <div class="month-grid" id="monthGrid"></div>
   </section>
@@ -610,6 +611,10 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
       <div class="settings-desc"><strong>Angka PNL saat dibuka</strong><span>Pilih Tersembunyi agar angka PNL (Hari Ini, 7H, 30H, dst.) di kartu Ringkasan langsung disamarkan setiap aplikasi dibuka, sama seperti tombol mata. Tombol mata tetap bisa menampilkannya sementara.</span></div>
       <div class="theme-modes" id="prefHide" role="group" aria-label="Angka PNL saat dibuka"></div>
     </div>
+    <div class="settings-row">
+      <div class="settings-desc"><strong>Ukuran tampilan</strong><span>Perkecil atau perbesar seluruh aplikasi (teks, tombol, grafik). Berlaku langsung dan tersimpan di browser ini.</span></div>
+      <div class="theme-modes" id="prefFont" role="group" aria-label="Ukuran tampilan"></div>
+    </div>
   </section>
 
   <section data-sgroup="trading">
@@ -756,6 +761,26 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
         <span>Hanya data transaksi &amp; ringkasannya, untuk dianalisis di tempat lain atau diedit lalu diimpor kembali.</span>
       </div>
       <button type="button" id="exportJsonBtn" class="ledger-reset-btn has-ic"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M5 21h14"/></svg><span>Download JSON</span></button>
+    </div>
+    <div class="settings-row exp-per-row">
+      <div class="settings-desc">
+        <strong>Data mentah per periode (.json)</strong>
+        <span>Ekspor hanya transaksi dan deposit/penarikan dalam rentang tanggal (GMT+8), untuk dianalisis atau diarsipkan. Ringkasan dihitung ulang untuk rentang itu dan <em>saldo awal</em> sebelum periode dicatat di berkas. Bukan cadangan penuh: bila diimpor, data aktif diganti isi berkas ini.</span>
+        <div class="exp-per-chips" id="expPerChips" role="group" aria-label="Pilih rentang cepat">
+          <button type="button" class="quick-chip" data-r="bulan-ini">Bulan ini</button>
+          <button type="button" class="quick-chip" data-r="bulan-lalu">Bulan lalu</button>
+          <button type="button" class="quick-chip" data-r="3b">3 bulan</button>
+          <button type="button" class="quick-chip" data-r="tahun-ini">Tahun ini</button>
+          <button type="button" class="quick-chip" data-r="tahun-lalu">Tahun lalu</button>
+        </div>
+        <div class="exp-per-dates">
+          <div class="dt-picker" id="dtp_expFrom" aria-label="Dari tanggal"></div>
+          <span class="ledger-range-sep">–</span>
+          <div class="dt-picker" id="dtp_expTo" aria-label="Sampai tanggal"></div>
+        </div>
+        <span class="exp-per-note" id="expPerNote" aria-live="polite"></span>
+      </div>
+      <button type="button" id="exportPeriodBtn" class="ledger-reset-btn has-ic" disabled><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M5 21h14"/></svg><span>Download JSON</span></button>
     </div>
   </section>
 
