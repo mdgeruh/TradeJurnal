@@ -2,7 +2,7 @@
 
 Ringkasan perubahan untuk pengguna, terbaru di atas. Isinya sama dengan **Setelan → Tentang aplikasi → Lihat riwayat** di aplikasi (data `USER_CHANGELOG` di `app.js`). Rincian teknis per versi ada di `CHANGELOG.md`; rencana ke depan di `roadmap.md`.
 
-**Versi saat ini: 1.1.158** (1 Okt 2026)
+**Versi saat ini: 1.1.163** (6 Okt 2026)
 
 ## Sorotan
 - Ringkasan: kurva ekuitas yang jelas (modal, puncak berjalan, drawdown, tooltip), pilihan **Ekuitas / PNL kumulatif**, PNL Minggu/Bulan Ini, lencana DD saat ini.
@@ -12,8 +12,13 @@ Ringkasan perubahan untuk pengguna, terbaru di atas. Isinya sama dengan **Setela
 - **Data aman:** sinkron cloud (Supabase), status dan pengingat cadangan, ekspor HTML mandiri/JSON, ekspor-impor pengaturan.
 - **Aplikasi terpasang (PWA)** di Android dan iOS, terbuka cepat dan bisa offline.
 
-## 1 Okt 2026 (v1.1.145 – v1.1.158)
+## 1 Okt 2026 (v1.1.145 – v1.1.163)
 **Baru**
+- Tab **Performa** selalu dihitung dari transaksi Anda (bulanan dan mingguan), ada penjelasan penilaian, dan bulan terbaru di atas.
+- Setelan → Data: **Data mentah per periode (.json)** dengan rentang cepat atau tanggal sendiri.
+- Tata letak Ringkasan dan Setelan di layar lebar dirapikan (kartu saldo kiri, kurva kanan; sub-tab Setelan selebar penuh).
+- Tombol **Esc** menutup jendela teratas (detail transaksi, tambah transaksi, kalkulator, konfirmasi).
+- Setelan → Preferensi: **Ukuran tampilan** (Kecil, Normal, Besar) untuk seluruh aplikasi; langsung berlaku dan ikut ekspor pengaturan.
 - **Indikator sinkron cloud** di header (tersinkron, ada perubahan belum dikirim, atau belum disinkronkan) untuk yang sudah masuk; ketuk untuk ke Setelan → Akun.
 - Aturan trading: kolom **Tambah aturan baru** di bawah daftar, tanpa perlu membuka Edit; centang yang sudah ada tidak hilang.
 - Tampilan lebih seragam: kotak centang bergaya aplikasi (Aturan trading dan mode Pilih) dan tombol **Pilih file** di Setelan → Data tidak lagi memakai tampilan bawaan browser.

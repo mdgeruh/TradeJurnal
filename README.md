@@ -23,7 +23,7 @@ Navigasi: ≥ 1100px sidebar kiri yang bisa diciutkan; 721–1099px tab horizont
 
 1. **Ringkasan:** indikator sinkron cloud di header (hanya bila sudah masuk), hero (saldo; PNL Hari Ini/7H/30H/Minggu Ini/Bulan Ini; status batas harian; tombol 👁 menyamarkan angka PNL), chip periode 7H · 1B · 3B · 1T · All · Sesuaikan (bawaan All, berdiri sendiri per tab), kurva **Ekuitas / PNL kumulatif** (garis modal dan puncak berjalan, pita drawdown, lencana **DD saat ini**, tooltip, legenda yang bisa diketuk), stat strip 9 kartu (Transaksi, Win Rate, Laba/Rugi, PF, Max DD, Expectancy, Streak, Rata² menang/rugi + RR), kartu ajakan mengisi catatan psikologi, kartu **Transaksi terakhir** (5 transaksi terbaru: hasil, emosi, trigger; ketuk untuk detail), dan kartu **Aturan trading** (checklist pribadi, tambah cepat atau Edit, maks. 12, centang direset tiap hari) di atas kutipan acak.
 2. **Analisis PNL:** statistik rentang bergulir dan kalender PNL harian (ketuk tanggal untuk detail).
-3. **Performa:** bulanan dan mingguan, rekor menang/rugi, donut Split arah Beli vs Jual.
+3. **Performa:** bulanan (terbaru dulu, penilaian Sangat Baik/Waspada/Perlu Evaluasi) dan mingguan ISO, dihitung dari transaksi (`computePerf()`), rekor menang/rugi, donut Split arah Beli vs Jual.
 4. **Laporan:** lihat bagian di bawah.
 5. **Transaksi:** buku transaksi dengan pencarian (ID posisi, catatan), filter (Arah, Hasil, Catatan psikologi, Emosi, Trigger, Jenis entry, Sesi, tanggal, lot), chip cepat, kolom Waktu buka dan Durasi, ringkasan hasil filter, isi massal lewat tombol **Pilih**, **Batalkan hapus** (30 menit), ekspor dan **impor CSV** (hanya menambah; ID yang ada dilewati; ada konfirmasi). Ketuk baris untuk detail (lihat, edit, hapus, ‹ ›). Di < 720px tampil sebagai kartu dengan menu Urutkan. Tiap transaksi punya **catatan psikologi** (trigger, emosi, jenis entry; antrean "Simpan & lanjut") dan **catatan bebas** (ikon ✎). Tombol **Kalkulator lot** membuka modal risiko %, stop loss, R:R → lot dan target sesuai saldo.
 6. **Deposit:** log deposit, penarikan, kompensasi margin call; ringkasan modal bersih.
@@ -32,7 +32,7 @@ Navigasi: ≥ 1100px sidebar kiri yang bisa diciutkan; 721–1099px tab horizont
 Dikelompokkan dengan sub-navigasi di atas:
 - **Tampilan:** mode Gelap / Terang / Otomatis; 8 skema warna (Emas Klasik, Blue Ocean, Teal Green, Grafit Netral, Kontras Tinggi, Midnight Biru, Ungu Senja, Kertas Putih); warna aksen per mode (ditolak bila kontras rendah atau mirip warna untung/rugi); untung biru / rugi oranye (ramah buta warna); **Atur ulang tampilan**. **Preferensi:** mata uang, zona waktu, format tanggal (tabel transaksi dan deposit), **Angka PNL saat dibuka** (Tampil / Tersembunyi).
 - **Trading:** **Kurs** (Rp per USD); **Batas harian** (maks rugi dan maks transaksi); **Buku transaksi** (ambang garis merah "rugi besar", 1–50%); **Kalkulator lot** (nilai pip per lot, bawaan 10¢; risiko 1%, stop loss 150 pips, R:R 1,5).
-- **Data:** ekspor HTML mandiri atau JSON (status cadangan di sini), impor JSON (konfirmasi sebelum menimpa), **Penyimpanan & pengaturan** (ringkasan ruang localStorage, ekspor/impor pengaturan), **Hapus semua data di perangkat ini** (auto-backup JSON dulu).
+- **Data:** ekspor HTML mandiri atau JSON (status cadangan di sini), **Data mentah per periode (.json)** (rentang cepat atau tanggal GMT+8; ringkasan dihitung ulang untuk rentang itu, ada `periode_ekspor` dengan saldo awal; bukan cadangan penuh), impor JSON (konfirmasi sebelum menimpa), **Penyimpanan & pengaturan** (ringkasan ruang localStorage, ekspor/impor pengaturan), **Hapus semua data di perangkat ini** (auto-backup JSON dulu).
 - **Akun:** Sinkron Supabase (tombol Masuk membuka halaman login; Ganti password, Sinkronkan ke cloud, Pulihkan dari cloud, Keluar).
 - **Tentang:** versi aplikasi (satu-satunya tempat versi tampil), tanggal build, **Periksa pembaruan**, status **Aplikasi terpasang** dengan tombol **Instal aplikasi** (browser yang mendukung), dan **Lihat riwayat** (riwayat perubahan berbahasa pengguna, terbaru di atas).
 
@@ -51,7 +51,7 @@ Dikelompokkan dengan sub-navigasi di atas:
 | `jurnalXauusdData_v1` | localStorage | Data aktif (transaksi, deposit, agregat, kurs, parameter kalkulator) |
 | `jurnalTheme`, `jurnalScheme`, `jurnalAccent`, `jurnalCB` | localStorage | Mode (`dark`/`light`/`auto`), skema, aksen per mode `{d:[gold,dim], l:[gold,dim]}`, buta warna (`1`) |
 | `jurnalHeroCurrency`, `jurnalTzOffset`, `jurnalDateFmt` | localStorage | Mata uang, zona waktu, format tanggal (`teks`/`angka`) |
-| `jurnalEqMode`, `jurnalHideNum`, `jurnalSidebar`, `jurnalLapFilterOpen` | localStorage | Kurva Ringkasan (`equity`/`pnl`), angka PNL tersembunyi (`1`), filter Laporan dilipat (`0`), sidebar (`collapsed`/`expanded`) |
+| `jurnalEqMode`, `jurnalHideNum`, `jurnalFontSize`, `jurnalSidebar`, `jurnalLapFilterOpen` | localStorage | Kurva Ringkasan (`equity`/`pnl`), angka PNL tersembunyi (`1`), ukuran tampilan (`kecil`/`besar`; normal = tanpa kunci), filter Laporan dilipat (`0`), sidebar (`collapsed`/`expanded`) |
 | `jurnalDayLimits`, `jurnalBigLossPct` | localStorage | Batas harian; ambang garis merah rugi besar (%) |
 | `jurnalRules`, `jurnalRulesDone` | localStorage | Aturan trading pribadi (ikut Ekspor pengaturan); centang harian `{d,n,i}` (tidak ikut ekspor) |
 | `jurnalGateSkip` | localStorage | `1` = memilih "Lanjut tanpa masuk"; dihapus saat Keluar |
@@ -59,7 +59,7 @@ Dikelompokkan dengan sub-navigasi di atas:
 | `jurnalUndoDelete` | localStorage | Transaksi yang baru dihapus untuk "Batalkan hapus" (30 menit) |
 | `jurnalPendingTab`, `jurnalSetelanGroup`, `jurnalLaporanGroup`, `jurnalFillOpen`, `jurnalFillQueue`, `jurnalLedgerState`, `jurnalBackupNudgeHide`, `jurnalNotifyPending` | sessionStorage | Tab tujuan setelah muat ulang, kelompok Setelan, antrean "Simpan & lanjut", filter/urutan/gulir buku transaksi, "Nanti" pengingat cadangan, notifikasi setelah reload |
 
-Hanya `jurnalXauusdData_v1` yang ikut ekspor JSON dan sinkron; kunci pengaturan lain ikut **Ekspor pengaturan** (tema, skema, aksen, mata uang, zona waktu, format tanggal, kurva, angka PNL, batas harian, garis merah, sidebar, aturan trading).
+Hanya `jurnalXauusdData_v1` yang ikut ekspor JSON dan sinkron; kunci pengaturan lain ikut **Ekspor pengaturan** (tema, skema, aksen, mata uang, zona waktu, format tanggal, kurva, angka PNL, ukuran tampilan, batas harian, garis merah, sidebar, aturan trading).
 
 ## Sinkron Supabase
 1. Jalankan `schema.sql` sekali di Supabase → SQL Editor; aktifkan Auth email (Authentication → Providers). Bila proyek dibuat sebelum v1.1.129, jalankan juga `migrasi-catatan.sql` (kolom `catatan`).
