@@ -2,7 +2,7 @@
 
 Ringkasan perubahan untuk pengguna, terbaru di atas. Isinya sama dengan **Setelan → Tentang aplikasi → Lihat riwayat** di aplikasi (data `USER_CHANGELOG` di `app.js`). Rincian teknis per versi ada di `CHANGELOG.md`; rencana ke depan di `roadmap.md`.
 
-**Versi saat ini: 1.1.163** (6 Okt 2026)
+**Versi saat ini: 1.1.169** (6 Okt 2026)
 
 ## Sorotan
 - Ringkasan: kurva ekuitas yang jelas (modal, puncak berjalan, drawdown, tooltip), pilihan **Ekuitas / PNL kumulatif**, PNL Minggu/Bulan Ini, lencana DD saat ini.
@@ -12,8 +12,15 @@ Ringkasan perubahan untuk pengguna, terbaru di atas. Isinya sama dengan **Setela
 - **Data aman:** sinkron cloud (Supabase), status dan pengingat cadangan, ekspor HTML mandiri/JSON, ekspor-impor pengaturan.
 - **Aplikasi terpasang (PWA)** di Android dan iOS, terbuka cepat dan bisa offline.
 
-## 1 Okt 2026 (v1.1.145 – v1.1.163)
+## 1 Okt 2026 (v1.1.145 – v1.1.169)
 **Baru**
+- Kalender terhubung ke jurnal: kartu rilis berikutnya di Ringkasan, peringatan jendela berita di Kalkulator lot dan form Transaksi, baris "Dekat rilis" di detail transaksi, dan Laporan → Lanjutan "Saat rilis berita".
+- Kalender memperingatkan bila jadwal hampir habis.
+- Kalender: Prakiraan dan Sebelumnya terisi bawaan untuk event yang angkanya sudah ada (klaim 8 Okt, CPI September); bisa diubah atau dikosongkan.
+- Tab **Kalender**: jadwal rilis data ekonomi AS dan keputusan Fed untuk XAUUSD, hitung mundur ke event berdampak tinggi berikutnya, filter, zona waktu, isian prakiraan/aktual, dan event buatan sendiri.
+- Setelan → Target performa: atur ambang win rate penilaian dan target PNL bulanan; tiap bulan menunjukkan target tercapai atau belum.
+- Performa: metrik tambahan per bulan (profit factor, rata-rata, drawdown, hari terbaik/terburuk, selisih vs bulan lalu, Terbaik/Terburuk), daftar mingguan, dan ketuk untuk melihat transaksi periode.
+- Keterangan "Akun Cent (1 USD = 100¢)" tidak lagi ganda di header dan footer.
 - Tab **Performa** selalu dihitung dari transaksi Anda (bulanan dan mingguan), ada penjelasan penilaian, dan bulan terbaru di atas.
 - Setelan → Data: **Data mentah per periode (.json)** dengan rentang cepat atau tanggal sendiri.
 - Tata letak Ringkasan dan Setelan di layar lebar dirapikan (kartu saldo kiri, kurva kanan; sub-tab Setelan selebar penuh).

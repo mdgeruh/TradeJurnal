@@ -2,11 +2,11 @@
 
 Satu-satunya daftar rencana dan todo proyek (dulu ada di `SUMMARY.md`). Prioritas: **P1** tinggi, **P2** sedang, **P3** rendah. Tidak ada tanggal tetap. Setiap butir yang mengubah kode mengikuti **Alur rilis** di `README.md`; saat selesai, hapus dari sini (centang bila perlu satu rilis), pindahkan tema barunya ke tabel "Sudah selesai", dan catat di `release_note.md` dan `CHANGELOG.md`. Jebakan bug tiap area ada di `SUMMARY.md`.
 
-## Sudah selesai (v1.1.163)
+## Sudah selesai (v1.1.169)
 | Tema | Isi |
 |---|---|
 | Fondasi | Ringkasan (+ 5 transaksi terakhir, aturan trading pribadi, indikator sinkron cloud, Esc global), Performa, Deposit, Transaksi, input manual (+), data di localStorage, tanpa build tool |
-| Analisis | Analisis PNL; Laporan L1–L18 (tren, psikologi, heatmap, sesi pasar, drawdown, distribusi PNL/Pips, bandingkan dua periode); cetak PDF A4 |
+| Analisis | Performa (metrik per bulan, daftar mingguan, ketuk untuk transaksi); Analisis PNL; Laporan L1–L18 (tren, psikologi, heatmap, sesi pasar, drawdown, distribusi PNL/Pips, bandingkan dua periode); cetak PDF A4 |
 | Transaksi | Catatan psikologi dan bebas, filter lengkap, isi massal, impor/ekspor CSV, batalkan hapus, kartu HP |
 | Tampilan | Gelap/Terang/Otomatis, 8 skema warna, aksen custom, mode buta warna, mata uang USD/USC/Rp, zona waktu, format tanggal |
 | Data & akun | Ekspor JSON per periode (v1.1.162), halaman login (Masuk/Daftar/Lupa password/Lanjut tanpa masuk), sinkron Supabase manual, ganti password, status dan pengingat cadangan, ekspor HTML mandiri/JSON, ekspor-impor pengaturan, ringkasan penyimpanan |
@@ -40,6 +40,20 @@ Hampir semua fitur baru hanya diuji di Chromium dengan data sintetis dan Supabas
 - Saran urutan: selesaikan **P1 (Supabase asli)** dulu, lalu paket tag setup + pelanggaran aturan.
 
 ## 3. Nanti (P3)
+**Kalender ekonomi** (tab baru v1.1.167; kartu Ringkasan, peringatan jendela berita, Laporan Saat rilis, banner jadwal habis selesai v1.1.169)
+- [ ] **Isi `f`/`p` di `EVENTS`** untuk event lain begitu konsensus terbit (kini baru klaim 8 Okt dan CPI); sumber sering beda angka, cek ulang.
+- [ ] **Perbarui `EVENTS`** tiap bulan (kini 2 Okt – 6 Nov 2026, hanya USD); cek ulang tanggal ke BLS/BEA/Fed. Berikutnya: event non-USD (ECB, BoE, BoJ), data China/Eropa yang menggerakkan emas.
+- [ ] **Kunci `kal-manual`/`kal-notes`/`kal-prefs` ikut ekspor pengaturan** (kini hanya di browser) dan, bila perlu, sinkron cloud.
+- [ ] **Hubungkan ke jurnal (lanjutan):** filter Laporan/Transaksi "dekat rilis"; jendela ±30/±15 menit bisa diatur di Setelan; ikut dinilai juga event dampak Sedang.
+- [ ] **Impor/ekspor `EVENTS`** (JSON/CSV) supaya jadwal tidak perlu mengedit `kalender.js`.
+- [ ] **Tampilan kalender mingguan** (grid Senin–Jumat dengan titik berwarna).
+- [ ] **Aktual vs Prakiraan:** tanda panah lebih tinggi/rendah dan catatan arah reaksi emas; catatan reaksi harga per event.
+- [ ] **Penanda "Perlu dicek"** untuk event berstatus Perkiraan yang tanggalnya sudah dekat.
+- [ ] **Peringatan** (PWA) 15 menit sebelum event dampak tinggi.
+
+**Performa**
+- [ ] **Performa lanjutan** (saran 5–9, 6 Okt): (saran 5+6 selesai v1.1.166; sisa: garis target pada batang bulanan) heatmap kalender tahunan; sumbu/nilai/rata-rata pada batang mingguan dan pilihan rentang 12/26 minggu; filter Arah/Sesi di Performa.
+
 **Transaksi**
 - [ ] **Lampiran gambar chart per transaksi** (usulan 3 Okt): foto setup disimpan lokal (IndexedDB) dan dikompres; tidak ikut sinkron cloud/ekspor JSON agar data tetap kecil; tampil di detail transaksi.
 - [ ] **Impor laporan broker dengan pratinjau** (baru/duplikat/error sebelum disimpan); lihat juga Ide lanjutan: Impor CSV.
