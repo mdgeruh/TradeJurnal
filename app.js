@@ -983,6 +983,30 @@ function renderLapDD(){
   if(noteEl) noteEl.textContent = 'Berdasarkan ekuitas akun (tidak terpengaruh filter Arah); deposit/penarikan menggeser puncak, bukan dihitung sebagai untung/rugi. Durasi = dari puncak sampai ekuitas kembali ke puncak itu; waktu pulih = dari titik terendah sampai puncak baru.';
   drawLapDD();
 }
+// ---------- Kalender ekonomi x jurnal (v1.1.169) ----------
+// Transaksi "dekat rilis" = dibuka (waktu_buka; bila kosong waktu tutup) dalam ±NEWS_WIN menit dari event dampak tinggi di kalender.
+// Hanya transaksi dalam rentang jadwal bawaan kalender (KAL.cover) yang dinilai; selebihnya tidak diketahui, bukan "di luar rilis".
+const NEWS_WIN = 30;
+function tradeNewsEvent(t){
+  if(!window.KAL) return null;
+  const ms = parseGmt8(t.waktu_buka || t.tanggal_gmt8);
+  if(isNaN(ms)) return null;
+  return window.KAL.near(ms, NEWS_WIN, NEWS_WIN);
+}
+function renderLapNews(matched){
+  const el = document.getElementById('lapNews'), note = document.getElementById('lapNewsNote');
+  if(!el) return;
+  if(!window.KAL){ el.innerHTML = ''; if(note) note.textContent = ''; return; }
+  const cov = window.KAL.cover, near = [], far = [];
+  for(const t of matched){
+    const ms = parseGmt8(t.waktu_buka || t.tanggal_gmt8);
+    if(isNaN(ms) || ms < cov.from - NEWS_WIN*60000 || ms > cov.to + NEWS_WIN*60000) continue;
+    (tradeNewsEvent(t) ? near : far).push(t);
+  }
+  renderPsyGroup('lapNews', [psyRow('Dekat rilis', near), psyRow('Di luar rilis', far)].filter(r=>r.count), null, true, 'Belum ada transaksi periode ini yang berada dalam rentang jadwal kalender.');
+  if(note) note.textContent = `${near.length + far.length} dari ${matched.length} transaksi berada dalam rentang jadwal kalender (${fmtDateKey(cov.from)} sampai ${fmtDateKey(cov.to)}); sisanya tidak dinilai. Jendela ±${NEWS_WIN} menit dari event berdampak Tinggi, memakai waktu buka.`;
+}
+function fmtDateKey(ms){ const d = new Date(ms + 8*3600000); return d.getUTCDate() + ' ' + ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][d.getUTCMonth()] + ' ' + d.getUTCFullYear(); }
 function renderLapLanjut(matched, range){
   const pairs = matched.map(t=>({t, tt:parseGmt8(t.tanggal_gmt8)})).sort((a,b)=>a.tt-b.tt);
   const arr = pairs.map(x=>x.t);
@@ -1024,6 +1048,7 @@ function renderLapLanjut(matched, range){
   renderPsyGroup('lapSession', LAP_SESSIONS.map((s,i)=>psyRow(lapSessionName(i), sessList[i])).filter(r=>r.count), matched.length, true, 'Belum ada transaksi dengan waktu buka pada periode ini.');
   const sessNote = document.getElementById('lapSessionNote');
   if(sessNote) sessNote.textContent = 'Batas jam tetap (GMT+8, tanpa penyesuaian DST): Asia 06\u201315, London 15\u201320, New York 20\u201306 (termasuk tumpang tindih London\u2013New York). Perkiraan kasar; jam buka riil tiap sesi bergeser mengikuti DST. Ketuk baris untuk melihat transaksinya.';
+  renderLapNews(matched);
   // B3: durasi posisi vs hasil
   const bins = [['< 5 menit',5],['5–30 menit',30],['30 mnt – 2 jam',120],['2 – 12 jam',720],['> 12 jam',Infinity]];
   const binList = bins.map(()=>[]);
@@ -2586,28 +2611,65 @@ window.renderEquityChart = renderEquityChart;
 
 // ---------- Months ----------
 const monthGrid = document.getElementById('monthGrid');
-const maxAbsPl = Math.max(1, ...DATA.months.map(m=>Math.abs(m.pl)));
-if(!DATA.months.length) monthGrid.innerHTML = '<div class="section-note" style="text-align:left;">Belum ada transaksi.</div>';
 const evalClass = ev => ev==='Sangat Baik' ? 'good' : (ev==='Waspada' ? 'warn' : 'bad');
-DATA.months.forEach(m=>{
-  const row = document.createElement('div');
-  row.className = 'month-row';
-  const barPct = Math.min(100, Math.abs(m.pl)/maxAbsPl*100);
-  const pos = m.pl>=0;
-  const pctTxt = (m.pct===null || m.pct===undefined) ? '\u2013' : `${m.pct>=0?'+':''}${fmtPct(m.pct)}`;
-  row.innerHTML = `
-    <div class="m-top">
-      <span class="m-name">${m.bulan}</span>
-      <span class="m-pl-wrap"><span class="m-pl ${pos?'up':'down'}">${pos?'+':''}${fmtMoney(m.pl)}</span><span class="m-pct">(${pctTxt} thd saldo sebelum)</span></span>
-    </div>
-    <div class="m-bar-track"><div class="m-bar ${pos?'pos':'neg'}" style="width:${barPct}%"></div></div>
-    <div class="m-meta">
-      <span>${m.trans}\u00d7 transaksi \u2022 <span class="m-wr">WR ${fmtPct(m.winrate)}</span></span>
-      <span class="m-eval-badge ${evalClass(m.eval)}">${m.eval}</span>
-    </div>
-  `;
-  monthGrid.appendChild(row);
-});
+const perfFmtPf = v => v === null ? '\u2013' : v.toFixed(2).replace('.', ',');
+const perfDay = (d, lbl) => d ? `${lbl} ${d.k.slice(8,10)}/${d.k.slice(5,7)} <span class="${d.pl>=0?'up':'down'}">${d.pl>=0?'+':''}${fmtMoney(d.pl)}</span>` : '';
+const perfTrades = p => DATA.trades.filter(t => { const k = String(t.tanggal_gmt8 || '').slice(0,10); return k >= p.from && k <= p.to; });
+function perfOpen(p, title){ if(window.openListModal) window.openListModal(title, perfTrades(p)); }
+function perfGradeText(){
+  const c = getPerfCfg(), w = c.minWr.toLocaleString('id-ID');
+  return `Laba/rugi, win rate, dan % thd saldo sebelum bulan berjalan. Penilaian: Sangat Baik = untung dan win rate \u2265 ${w}%; Waspada = untung atau win rate \u2265 ${w}%; selain itu Perlu Evaluasi.` + (c.target ? ` Target bulanan ${c.target.toLocaleString('id-ID')}%.` : '') + ' Atur di Setelan \u2192 Target performa.';
+}
+function renderMonths(){
+  const gn = document.getElementById('perfGradeNote'); if(gn) gn.textContent = perfGradeText();
+  monthGrid.innerHTML = '';
+  const maxAbsPl = Math.max(1, ...DATA.months.map(m=>Math.abs(m.pl)));
+  if(!DATA.months.length){ monthGrid.innerHTML = '<div class="section-note" style="text-align:left;">Belum ada transaksi.</div>'; return; }
+  const ms2 = DATA.months;
+  const best = ms2.length >= 3 ? ms2.reduce((a,b) => b.pl > a.pl ? b : a) : null;
+  const worst = ms2.length >= 3 ? ms2.reduce((a,b) => b.pl < a.pl ? b : a) : null;
+  ms2.forEach((m, idx) => {
+    const row = document.createElement('div');
+    row.className = 'month-row perf-click';
+    row.tabIndex = 0; row.setAttribute('role', 'button'); row.setAttribute('aria-label', `Lihat transaksi ${m.bulan}`);
+    const barPct = Math.min(100, Math.abs(m.pl)/maxAbsPl*100);
+    const pos = m.pl>=0;
+    const pctTxt = (m.pct===null || m.pct===undefined) ? '\u2013' : `${m.pct>=0?'+':''}${fmtPct(m.pct)}`;
+    const prev = ms2[idx+1];   // bulan sebelumnya (daftar terbaru dulu)
+    const dPl = prev ? m.pl - prev.pl : null;
+    let tgtHtml = '';
+    if(m.target && m.pct !== null && m.pct !== undefined){
+      const tp = m.target / 100, ok = m.pct >= tp, prog = Math.max(0, Math.min(999, Math.round(m.pct / tp * 100)));
+      tgtHtml = `<span class="perf-target ${ok?'ok':'miss'}">${ok?'\u2713 Target':'Target'} ${fmtPct(tp)}: ${ok?'tercapai':prog+'% tercapai'}</span>`;
+    }
+    const tag = m === best && m !== worst ? '<span class="perf-tag good">Terbaik</span>' : (m === worst && m !== best ? '<span class="perf-tag bad">Terburuk</span>' : '');
+    row.innerHTML = `
+      <div class="m-top">
+        <span class="m-name">${m.bulan}${tag}</span>
+        <span class="m-pl-wrap"><span class="m-pl ${pos?'up':'down'}">${pos?'+':''}${fmtMoney(m.pl)}</span><span class="m-pct">(${pctTxt} thd saldo sebelum)</span></span>
+      </div>
+      <div class="m-bar-track"><div class="m-bar ${pos?'pos':'neg'}" style="width:${barPct}%"></div></div>
+      <div class="m-meta">
+        <span>${m.trans}\u00d7 transaksi \u2022 <span class="m-wr">WR ${fmtPct(m.winrate)}</span>${dPl===null?'':` \u2022 <span class="${dPl>=0?'up':'down'}">${dPl>=0?'\u25b2':'\u25bc'} ${fmtMoney(Math.abs(dPl))} vs bln lalu</span>`}</span>
+        <span class="m-eval-badge ${evalClass(m.eval)}">${m.eval}</span>
+      </div>
+      <div class="m-meta2">
+        <span>PF <b>${perfFmtPf(m.pf)}</b></span>
+        <span>Rata\u00b2 <span class="up">${m.avgWin===null?'\u2013':'+'+fmtMoney(m.avgWin)}</span> / <span class="down">${m.avgLoss===null?'\u2013':fmtMoney(m.avgLoss)}</span></span>
+        <span>DD <span class="down">${m.dd>0?'-'+fmtMoney(m.dd):'\u2013'}</span></span>
+        <span>${perfDay(m.bestDay, 'Hari terbaik')}</span>
+        <span>${perfDay(m.worstDay, 'Terburuk')}</span>
+        ${tgtHtml}
+      </div>
+    `;
+    const open = () => perfOpen(m, m.bulan);
+    row.addEventListener('click', open);
+    row.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); open(); } });
+    monthGrid.appendChild(row);
+  });
+}
+renderMonths();
+window.renderMonths = renderMonths;
 
 // ---------- Weeks ----------
 const weeks = DATA.weeks;
@@ -2644,12 +2706,43 @@ weeks.forEach(w=>{
     weekTooltip.innerHTML = `<span class="t-date">Minggu ${w.minggu} \u00b7 ${w.periode}</span>${pos?'+':''}${fmtMoney(w.pl)} <span style="color:var(--paper-dim)">(${pctTxt})</span><br><span style="color:var(--paper-faint)">WR ${fmtPct(w.winrate)} \u2022 ${w.trans} transaksi</span>`;
   });
   wrap.addEventListener('mouseleave', ()=>{ weekTooltip.style.opacity = 0; });
+  wrap.classList.add('perf-click'); wrap.setAttribute('role','button'); wrap.tabIndex = 0;
+  wrap.setAttribute('aria-label', `Minggu ${w.minggu}, ${w.periode}: lihat transaksi`);
+  const openW = () => perfOpen(w, `Minggu ${w.minggu} \u00b7 ${w.periode}`);
+  wrap.addEventListener('click', openW);
+  wrap.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); openW(); } });
   stripEl.appendChild(wrap);
   const lbl = document.createElement('span');
   lbl.textContent = 'W'+w.minggu;
   labelsEl.appendChild(lbl);
 });
 document.querySelector('.week-strip-scroll').scrollLeft = 999999;
+
+// Daftar ringkas per minggu (terbaru dulu), terbaca di ponsel tanpa hover; ketuk baris untuk melihat transaksinya.
+(function(){
+  const box = document.getElementById('weekList'); if(!box) return;
+  if(!weeks.length){ box.innerHTML = ''; return; }
+  const rows = weeks.slice().reverse();
+  let all = false;
+  function draw(){
+    const show = all ? rows : rows.slice(0, 8);
+    box.innerHTML = show.map((w,i) => {
+      const pctTxt = (w.pct===null || w.pct===undefined) ? '\u2013' : `${w.pct>=0?'+':''}${fmtPct(w.pct)}`;
+      return `<div class="wk-row perf-click" role="button" tabindex="0" data-i="${i}">
+        <span class="wk-name">W${w.minggu}<small>${w.periode}</small></span>
+        <span class="wk-pl ${w.pl>=0?'up':'down'}">${w.pl>=0?'+':''}${fmtMoney(w.pl)}<small>${pctTxt}</small></span>
+        <span class="wk-meta">WR ${fmtPct(w.winrate)}<small>${w.trans}\u00d7 \u2022 PF ${perfFmtPf(w.pf)}</small></span>
+      </div>`;
+    }).join('') + (rows.length > 8 ? `<button type="button" class="ledger-reset-btn wk-more">${all ? 'Tampilkan lebih sedikit' : 'Tampilkan semua ' + rows.length + ' minggu'}</button>` : '');
+  }
+  const openAt = el => { const w = rows[+el.dataset.i]; if(w) perfOpen(w, `Minggu ${w.minggu} \u00b7 ${w.periode}`); };
+  box.addEventListener('click', e => {
+    if(e.target.closest('.wk-more')){ all = !all; draw(); return; }
+    const r = e.target.closest('.wk-row'); if(r) openAt(r);
+  });
+  box.addEventListener('keydown', e => { const r = e.target.closest('.wk-row'); if(r && (e.key === 'Enter' || e.key === ' ')){ e.preventDefault(); openAt(r); } });
+  draw();
+})();
 
 // ---------- Records ----------
 document.getElementById('maxddNote').textContent = convCentText(DATA.maxdd_note);
@@ -3435,6 +3528,20 @@ document.getElementById('ledgerMoreBtn').addEventListener('click', ()=>{ ledgerL
   });
 })();
 window.renderTrades = renderTrades;
+// Setelan Target performa (v1.1.166)
+(function(){
+  const wrEl = document.getElementById('perfMinWr'), tgEl = document.getElementById('perfTarget'); if(!wrEl || !tgEl) return;
+  const c0 = getPerfCfg(); wrEl.value = c0.minWr !== 50 ? c0.minWr : ''; tgEl.value = c0.target || '';
+  const apply = () => {
+    const w = wrEl.value.trim().replace(',', '.'), t = tgEl.value.trim().replace(',', '.');
+    const wn = w === '' ? 50 : parseFloat(w), tn = t === '' ? null : parseFloat(t);
+    if(!(wn >= 0 && wn <= 100) || (tn !== null && !(tn > 0 && tn <= 1000))) return;
+    try{ localStorage.setItem('jurnalPerfCfg', JSON.stringify({ minWr: wn, target: tn })); }catch(e){}
+    recomputeAll(); if(window.renderMonths) window.renderMonths();
+    const note = document.getElementById('perfGradeNote'); if(note) note.textContent = perfGradeText();
+  };
+  wrEl.addEventListener('input', apply); tgEl.addEventListener('input', apply);
+})();
 
 // ---------- Toggle jenis kurva: Ekuitas / PNL kumulatif ----------
 (function(){
@@ -3724,6 +3831,7 @@ const SETTINGS_VALIDATORS = {
   jurnalEqMode: v => v==='equity' || v==='pnl',
   jurnalDayLimits: v => { try{ const o = JSON.parse(v); return !!o && typeof o==='object' && ['maxLoss','maxTrades'].every(k => o[k]===null || o[k]===undefined || (typeof o[k]==='number' && isFinite(o[k]) && o[k]>=0)); }catch(e){ return false; } },
   jurnalBigLossPct: v => v==='off' || (isFinite(+v) && +v>=1 && +v<=50),
+  jurnalPerfCfg: v => { try{ const o = JSON.parse(v); return !!o && typeof o==='object' && !Array.isArray(o) && (o.minWr===undefined || (typeof o.minWr==='number' && o.minWr>=0 && o.minWr<=100)) && (o.target===null || o.target===undefined || (typeof o.target==='number' && o.target>0 && o.target<=1000)); }catch(e){ return false; } },
   jurnalSidebar: v => v==='collapsed' || v==='expanded',
   jurnalHideNum: v => v==='0' || v==='1',
   jurnalFontSize: v => v==='kecil' || v==='besar',
@@ -3950,7 +4058,16 @@ function rebuildEquitySeries(){
 
 // Performa bulanan & mingguan dihitung dari DATA.trades + DATA.equity (v1.1.163). Sebelumnya DATA.months/weeks hanya
 // salinan statis dari data awal/impor sehingga transaksi manual atau berkas baru tidak muncul di tab Performa.
+// Pengaturan penilaian Performa (v1.1.166): ambang win rate (%) dan target PNL bulanan (% thd saldo sebelum bulan).
+function getPerfCfg(){
+  let c = {};
+  try{ c = JSON.parse(localStorage.getItem('jurnalPerfCfg') || '{}') || {}; }catch(e){ c = {}; }
+  const wr = (typeof c.minWr === 'number' && c.minWr >= 0 && c.minWr <= 100) ? c.minWr : 50;
+  const tg = (typeof c.target === 'number' && c.target > 0 && c.target <= 1000) ? c.target : null;
+  return { minWr: wr, target: tg };
+}
 function computePerf(){
+  const CFG = getPerfCfg();
   const BLN = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
   const DAY = 86400000;
   const eq = DATA.equity || [];
@@ -3959,33 +4076,52 @@ function computePerf(){
     for(let i = 0; i < eq.length; i++){ if(String(eq[i][0]).slice(0,10) < startKey) b = eq[i][1]; else break; }
     return b;
   };
-  const key = (y,m,d) => new Date(Date.UTC(y,m,d)).toISOString().slice(0,10);
-  const grade = (pl, wr) => (pl > 0 && wr >= 0.5) ? 'Sangat Baik' : ((pl > 0 || (pl === 0 && wr >= 0.5) || wr >= 0.5) ? 'Waspada' : 'Perlu Evaluasi');
+  const grade = (pl, wr) => (pl > 0 && wr >= CFG.minWr / 100) ? 'Sangat Baik' : ((pl > 0 || wr >= CFG.minWr / 100) ? 'Waspada' : 'Perlu Evaluasi');
   const mm = new Map(), ww = new Map();
-  for(const t of DATA.trades){
-    const dk = String(t.tanggal_gmt8 || '').slice(0,10);
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(dk)) continue;
+  const sorted = DATA.trades.filter(t => /^\d{4}-\d{2}-\d{2}/.test(String(t.tanggal_gmt8 || ''))).slice().sort((a,b) => a.tanggal_gmt8 < b.tanggal_gmt8 ? -1 : a.tanggal_gmt8 > b.tanggal_gmt8 ? 1 : 0);
+  for(const t of sorted){
+    const dk = String(t.tanggal_gmt8).slice(0,10);
     const y = +dk.slice(0,4), m = +dk.slice(5,7) - 1, d = +dk.slice(8,10);
     const mk = dk.slice(0,7);
-    let a = mm.get(mk); if(!a){ a = { y, m, start: mk + '-01', pl: 0, trans: 0, win: 0 }; mm.set(mk, a); }
-    a.pl += t.laba; a.trans++; if(t.laba > 0) a.win++;
+    let a = mm.get(mk); if(!a){ a = { y, m, start: mk + '-01', list: [] }; mm.set(mk, a); }
+    a.list.push(t);
     const dt = Date.UTC(y,m,d), wd = (new Date(dt).getUTCDay() + 6) % 7, mon = dt - wd * DAY;
     const wk = new Date(mon).toISOString().slice(0,10);
-    let b = ww.get(wk); if(!b){ b = { mon, start: wk, pl: 0, trans: 0, win: 0 }; ww.set(wk, b); }
-    b.pl += t.laba; b.trans++; if(t.laba > 0) b.win++;
+    let b = ww.get(wk); if(!b){ b = { mon, start: wk, list: [] }; ww.set(wk, b); }
+    b.list.push(t);
   }
+  // Metrik per kumpulan transaksi (terurut waktu): laba, WR, profit factor, rata-rata, drawdown trading, hari terbaik/terburuk.
+  const stats = (list) => {
+    let pl = 0, win = 0, sw = 0, sl = 0, nl = 0, cum = 0, peak = 0, dd = 0;
+    const days = new Map();
+    for(const t of list){
+      pl += t.laba; cum += t.laba;
+      if(t.laba > 0){ win++; sw += t.laba; } else if(t.laba < 0){ sl += t.laba; nl++; }
+      if(cum > peak) peak = cum; if(peak - cum > dd) dd = peak - cum;
+      const k = String(t.tanggal_gmt8).slice(0,10); days.set(k, (days.get(k) || 0) + t.laba);
+    }
+    let best = null, worst = null;
+    days.forEach((v,k) => { if(!best || v > best.pl) best = { k, pl: round2(v) }; if(!worst || v < worst.pl) worst = { k, pl: round2(v) }; });
+    const n = list.length, wr = n ? win / n : 0;
+    return { pl: round2(pl), trans: n, winrate: wr,
+      pf: sl < 0 ? sw / Math.abs(sl) : null,
+      avgWin: win ? round2(sw / win) : null, avgLoss: nl ? round2(sl / nl) : null,
+      dd: round2(dd), bestDay: best, worstDay: worst };
+  };
   const pctOf = (pl, base) => base > 0 ? pl / base : null;
   const months = [...mm.values()].sort((a,b) => a.start < b.start ? 1 : -1).map(a => {
-    const wr = a.trans ? a.win / a.trans : 0, pl = round2(a.pl);
-    return { bulan: BLN[a.m] + ' ' + a.y, pl, pct: pctOf(pl, balBefore(a.start)), trans: a.trans, winrate: wr, eval: grade(pl, wr) };
+    const st = stats(a.list);
+    const last = new Date(Date.UTC(a.y, a.m + 1, 0)).toISOString().slice(0,10);
+    return Object.assign(st, { bulan: BLN[a.m] + ' ' + a.y, from: a.start, to: last, pct: pctOf(st.pl, balBefore(a.start)), eval: grade(st.pl, st.winrate), target: CFG.target });
   });
   const weeks = [...ww.values()].sort((a,b) => a.mon - b.mon).map(b => {
+    const st = stats(b.list);
     const th = new Date(b.mon + 3 * DAY), ty = th.getUTCFullYear();
     const j4 = Date.UTC(ty,0,4), j4m = j4 - ((new Date(j4).getUTCDay() + 6) % 7) * DAY;
     const sun = new Date(b.mon + 6 * DAY), mo = new Date(b.mon);
-    const wr = b.trans ? b.win / b.trans : 0, pl = round2(b.pl);
-    return { minggu: 1 + Math.round((b.mon - j4m) / (7 * DAY)), periode: mo.getUTCDate() + ' ' + BLN[mo.getUTCMonth()] + ' \u2013 ' + sun.getUTCDate() + ' ' + BLN[sun.getUTCMonth()],
-      pl, pct: pctOf(pl, balBefore(b.start)), trans: b.trans, winrate: wr };
+    return Object.assign(st, { minggu: 1 + Math.round((b.mon - j4m) / (7 * DAY)),
+      periode: mo.getUTCDate() + ' ' + BLN[mo.getUTCMonth()] + ' \u2013 ' + sun.getUTCDate() + ' ' + BLN[sun.getUTCMonth()],
+      from: b.start, to: sun.toISOString().slice(0,10), pct: pctOf(st.pl, balBefore(b.start)) });
   });
   return { months, weeks };
 }
@@ -4490,6 +4626,7 @@ syncLedgerAllChip(); // default: chip All aktif (tanpa batas tanggal); dipanggil
     formTrade.style.display = (m==='trade') ? 'flex' : 'none';
     formDeposit.style.display = (m==='trade') ? 'none' : 'flex';
     titleEl.textContent = m==='trade' ? 'Tambah Transaksi' : (m==='deposit' ? 'Tambah Deposit' : 'Tambah Penarikan');
+    if(window.updateKalWarn) window.updateKalWarn(m==='trade');
     jumlahLabel.textContent = m==='penarikan' ? 'Jumlah Penarikan (USD)' : 'Jumlah Deposit (USD)';
     if(m==='trade'){
       document.getElementById('entryIdPosisi').value = '';
@@ -4622,6 +4759,7 @@ function gmt8ToServerIso(val){
     document.getElementById('dvLaba').textContent = (t.laba>=0?'+':'')+fmtMoney(t.laba);
     document.getElementById('dvWaktu').textContent = fmtDateTime(t.tanggal);
     document.getElementById('dvWaktuBuka').textContent = t.waktu_buka ? fmtDateTimeGmt8(t.waktu_buka) : '-';
+    { const ne = tradeNewsEvent(t), nr = document.getElementById('dvNewsRow'); if(nr){ nr.hidden = !ne; if(ne) document.getElementById('dvNews').textContent = ne.name + ' (' + window.KAL.hm(ne.ts) + ')'; } }
     document.getElementById('dvTrigger').textContent = t.trigger || '-';
     document.getElementById('dvTriggerExit').textContent = t.trigger_exit || '-';
     document.getElementById('dvEmosi').textContent = t.emosi || '-';
@@ -5066,10 +5204,16 @@ function renderBackupStatus(){
   sync();
 })();
 
-const APP_VERSION = '1.1.163';
+const APP_VERSION = '1.1.169';
 const APP_BUILD_DATE = '2026-10-01';   // ikut diganti tiap rilis (ISO), tampil di Setelan → Tentang
 const USER_CHANGELOG = [
   { date:'2026-10-06', items:[
+    'Kalender kini terhubung ke jurnal: kartu <strong>Rilis berdampak tinggi berikutnya</strong> di Ringkasan; peringatan <strong>Jendela berita</strong> di Kalkulator lot dan form Transaksi baru bila rilis dampak tinggi dalam \u00b115 menit; baris <strong>Dekat rilis</strong> di detail transaksi; dan bagian <strong>Saat rilis berita</strong> di Laporan \u2192 Lanjutan yang membandingkan hasil transaksi dekat rilis (\u00b130 menit) dengan di luar rilis. Kalender juga memberi peringatan bila jadwal bawaan hampir habis.',
+    'Kalender: kolom <strong>Prakiraan</strong> dan <strong>Sebelumnya</strong> kini terisi bawaan untuk event yang angkanya sudah ada (Klaim Pengangguran 8 Okt, CPI September). Angka tetap bisa diubah atau dikosongkan sendiri; Aktual diisi manual.',
+    'Tab baru <strong>Kalender</strong>: jadwal rilis data ekonomi AS dan keputusan Fed yang menggerakkan XAUUSD, dengan hitung mundur ke event berdampak tinggi berikutnya, filter dampak dan rentang, pilihan zona waktu (WITA, WIB, WIT, waktu broker, UTC, New York), isian Prakiraan / Sebelumnya / Aktual, dan event buatan sendiri.',
+    'Setelan baru <strong>Target performa</strong>: atur ambang win rate untuk penilaian bulanan (bawaan 50%) dan target PNL bulanan (% terhadap saldo sebelum bulan). Tiap bulan di Performa menampilkan apakah target tercapai atau sudah berapa persen. Tersimpan di browser dan ikut ekspor/impor pengaturan.',
+    'Tab <strong>Performa</strong> lebih lengkap: tiap bulan menampilkan profit factor, rata-rata menang/rugi, drawdown, hari terbaik dan terburuk, selisih terhadap bulan lalu, serta penanda bulan Terbaik/Terburuk. Ada daftar mingguan yang mudah dibaca di ponsel, dan mengetuk bulan, minggu, atau batang mingguan membuka daftar transaksinya.',
+    'Teks "Akun Cent (1 USD = 100¢)" tidak lagi tampil dua kali: footer dipersingkat, keterangan akun tetap ada di header.',
     'Tab <strong>Performa</strong> kini selalu dihitung dari transaksi Anda: bulanan dan mingguan ikut transaksi manual, impor CSV, dan data dari cloud (sebelumnya bisa kosong atau tidak mutakhir). Bulan terbaru tampil paling atas, dan ada penjelasan penilaian Sangat Baik / Waspada / Perlu Evaluasi.',
     'Setelan → Data: ada <strong>Data mentah per periode (.json)</strong>. Pilih rentang cepat (Bulan ini, Bulan lalu, 3 bulan, Tahun ini, Tahun lalu) atau isi tanggal sendiri, lalu download hanya data pada rentang itu.',
   ] },
@@ -5199,7 +5343,7 @@ const USER_CHANGELOG = [
   const overlay = document.getElementById('calcModalOverlay');
   const openBtn = document.getElementById('openCalcBtn');
   if(!overlay || !openBtn) return;
-  function open(){ overlay.classList.add('show'); }
+  function open(){ overlay.classList.add('show'); if(window.updateKalWarn) window.updateKalWarn(); }
   function close(){ overlay.classList.remove('show'); openBtn.focus(); }
   openBtn.addEventListener('click', open);
   document.getElementById('calcModalCloseBtn').addEventListener('click', close);
@@ -5342,4 +5486,36 @@ const USER_CHANGELOG = [
     const btn = document.getElementById(CLOSERS[top.id] || '');
     if(btn){ e.preventDefault(); btn.click(); }
   }, true);
+})();
+
+// ---------- Kalender x jurnal: kartu Ringkasan + peringatan jendela berita (v1.1.169) ----------
+(function(){
+  const WARN_MIN = 15;
+  const mini = document.getElementById('kalMini');
+  function renderMini(){
+    if(!mini) return;
+    const nx = window.KAL ? window.KAL.nextHigh(Date.now()) : null;
+    mini.hidden = !nx;
+    if(!nx) return;
+    document.getElementById('kalMiniName').textContent = nx.name;
+    document.getElementById('kalMiniWhen').textContent = window.KAL.when(nx.ts) + ' \u2022 ' + window.KAL.countdown(nx.ts - Date.now()) + ' lagi';
+  }
+  // Peringatan di modal Transaksi baru dan Kalkulator lot: rilis dampak tinggi dalam +-WARN_MIN menit dari sekarang.
+  window.updateKalWarn = function(show){
+    const now = Date.now();
+    const ev = window.KAL ? window.KAL.near(now, WARN_MIN, WARN_MIN) : null;
+    document.querySelectorAll('.kal-warn-slot').forEach(el => {
+      const inEntry = !!el.closest('#entryModalOverlay');
+      if(!ev || (inEntry && show === false)){ el.hidden = true; el.textContent = ''; return; }
+      const diff = Math.round((ev.ts - now)/60000);
+      el.textContent = '\u26a0 Jendela berita: ' + ev.name + (diff >= 0 ? ' dirilis ' + diff + ' menit lagi' : ' baru dirilis ' + (-diff) + ' menit lalu') + ' (' + window.KAL.hm(ev.ts) + '). Spread bisa melebar dan harga bergerak liar.';
+      el.hidden = false;
+    });
+  };
+  const goBtn = document.getElementById('kalMiniGo');
+  if(goBtn) goBtn.addEventListener('click', () => { const b = document.querySelector('.main-tab-btn[data-tab="kalender"]'); if(b) b.click(); });
+  window.addEventListener('kalReady', () => { renderMini(); if(typeof renderLap2 === 'function') { try{ renderLap2(); }catch(e){} } });
+  window.addEventListener('kalChanged', renderMini);
+  setInterval(renderMini, 30000);
+  renderMini();
 })();
