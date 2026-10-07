@@ -2,7 +2,7 @@
 
 Ringkasan perubahan untuk pengguna, terbaru di atas. Isinya sama dengan **Setelan → Tentang aplikasi → Lihat riwayat** di aplikasi (data `USER_CHANGELOG` di `app.js`). Rincian teknis per versi ada di `CHANGELOG.md`; rencana ke depan di `roadmap.md`.
 
-**Versi saat ini: 1.1.173** (6 Okt 2026)
+**Versi saat ini: 1.1.174** (6 Okt 2026)
 
 ## Sorotan
 - Ringkasan: kurva ekuitas yang jelas (modal, puncak berjalan, drawdown, tooltip), pilihan **Ekuitas / PNL kumulatif**, PNL Minggu/Bulan Ini, lencana DD saat ini.
@@ -12,7 +12,7 @@ Ringkasan perubahan untuk pengguna, terbaru di atas. Isinya sama dengan **Setela
 - **Data aman:** sinkron cloud (Supabase), status dan pengingat cadangan, ekspor HTML mandiri/JSON, ekspor-impor pengaturan.
 - **Aplikasi terpasang (PWA)** di Android dan iOS, terbuka cepat dan bisa offline.
 
-## 1 Okt 2026 (v1.1.145 – v1.1.173)
+## 1 Okt 2026 (v1.1.145 – v1.1.174)
 **Baru**
 - Tiap halaman punya alamat sendiri (mis. `#kalender`, `#performa`, `#laporan-lanjutan`, `#setelan-akun`): tombol Kembali/Maju berfungsi antar tab, bisa di-bookmark atau dibagikan.
 - Perbaikan: setelah pembaruan, halaman tidak lagi bisa tampil setengah rusak (misalnya tab Kalender tanpa gaya) karena berkas lama dan baru tercampur di cache.

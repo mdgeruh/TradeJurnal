@@ -85,3 +85,6 @@ Tiap tab punya tautan hash: `#ringkasan`, `#analisis`, `#performa`, `#laporan`, 
 
 ## Chart XAUUSD (v1.1.173)
 Kartu **Chart XAUUSD** di tab Ringkasan memuat widget gratis TradingView (`OANDA:XAUUSD`, H4) dari `s3.tradingview.com` hanya saat tombol Tampilkan ditekan. Butuh internet; tidak di-cache service worker. Tema dan zona waktu mengikuti Setelan. Tidak tampil di pratinjau artifact karena CSP sandbox.
+
+## Impor JSON: Gabungkan atau Timpa (v1.1.174)
+Setelan → Data → Impor menawarkan **Gabungkan** (transaksi baru ditambahkan, ID sama diperbarui, data lain dipertahankan) atau **Timpa semua** (mengganti seluruh data aktif). Untuk file ekspor per periode gunakan Gabungkan.

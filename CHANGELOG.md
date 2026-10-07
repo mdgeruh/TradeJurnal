@@ -3,6 +3,11 @@
 Perubahan Jurnal XAUUSD, terbaru di atas. Semua rilis 22 Sep – 1 Okt 2026. Versi berbahasa pengguna akhir ada di aplikasi (Setelan → Tentang aplikasi). v1.1.144 ke atas dicatat per versi; sebelumnya diringkas per tema. Status dan jebakan bug: `SUMMARY.md`; rencana dan todo: `roadmap.md`.
 
 ## Rilis terbaru
+### 1.1.174 — 7 Okt
+- **Impor JSON: Gabungkan atau Timpa.** Sebelumnya impor selalu mengganti seluruh data aktif, sehingga file ekspor per periode (`periode_ekspor`) menghapus data di luar rentangnya. Kini dialog punya tiga pilihan: **Gabungkan** (baru ditambah, ID sama diperbarui, field yang tak ada di file seperti `catatan` dipertahankan, deposit/penarikan diduplikasi per isi, tidak ada yang dihapus), **Timpa semua** (perilaku lama), **Batal**. Fungsi `mergeImportedData()`; baris tidak valid diabaikan dan dihitung.
+- `showConfirmModal(message, opts)` mendukung label tombol dan tombol ketiga (`confirmModalAlt`); `.modal-message` memakai `white-space:pre-line`.
+- `APP_VERSION`, `V` (`sw.js`) dan `?v=` → 1.1.174.
+
 ### 1.1.173 — 7 Okt
 - **Chart XAUUSD (TradingView)** di Ringkasan: kartu `#chartCard` memuat widget Advanced Chart (`OANDA:XAUUSD`, interval H4) dari `s3.tradingview.com` hanya saat dibuka (lazy). Tema (`data-theme`) dan zona waktu (`jurnalTzOffset`) mengikuti Setelan dan dimuat ulang saat berubah. Status buka/tutup disimpan di `jurnalChartOpen`.
 - Pesan jelas bila offline, skrip diblokir, atau chart tak muncul dalam 10 detik. `sw.js` tidak men-cache skrip TradingView (lintas-origin).

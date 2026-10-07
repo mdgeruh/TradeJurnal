@@ -3698,25 +3698,34 @@ const NOTIFY_SESSION_KEY = 'jurnalNotifyPending';
 
 // Modal konfirmasi: menggantikan confirm() bawaan browser dengan dialog bergaya sama
 // seperti tampilan dashboard. Async — dipakai dengan await.
-function showConfirmModal(message){
+// opts (opsional): { yes, no, alt } = label tombol; bila alt diberi, tombol ketiga muncul dan hasilnya 'alt'.
+function showConfirmModal(message, opts){
+  opts = opts || {};
   return new Promise(resolve=>{
     const overlay = document.getElementById('confirmModalOverlay');
     document.getElementById('confirmModalMessage').textContent = message;
     const btnYes = document.getElementById('confirmModalYes');
     const btnNo = document.getElementById('confirmModalNo');
+    const btnAlt = document.getElementById('confirmModalAlt');
+    btnYes.textContent = opts.yes || 'Lanjutkan';
+    btnNo.textContent = opts.no || 'Batal';
+    if(btnAlt){ btnAlt.hidden = !opts.alt; btnAlt.textContent = opts.alt || ''; }
     overlay.classList.add('show');
     function cleanup(result){
       overlay.classList.remove('show');
       btnYes.removeEventListener('click', onYes);
       btnNo.removeEventListener('click', onNo);
+      if(btnAlt) btnAlt.removeEventListener('click', onAlt);
       overlay.removeEventListener('click', onOverlay);
       resolve(result);
     }
     function onYes(){ cleanup(true); }
     function onNo(){ cleanup(false); }
+    function onAlt(){ cleanup('alt'); }
     function onOverlay(e){ if(e.target === overlay) cleanup(false); }
     btnYes.addEventListener('click', onYes);
     btnNo.addEventListener('click', onNo);
+    if(btnAlt) btnAlt.addEventListener('click', onAlt);
     overlay.addEventListener('click', onOverlay);
   });
 }
@@ -3945,6 +3954,42 @@ window.showLaporanGroup = showLaporanGroup;
   showLaporanGroup(g);
 })();
 
+// Gabungkan data dari file JSON ke DATA aktif tanpa menghapus apa pun (v1.1.174).
+// Transaksi dikunci per ID: baru -> ditambah, ID sama dan isi beda -> field dari file menimpa field lama
+// (field yang tidak ada di file, mis. catatan, tetap dipertahankan). Deposit/penarikan diduplikasi per isi.
+function mergeImportedData(src){
+  if(!src || !Array.isArray(src.trades)) return { error:'Berkas tidak berisi daftar transaksi.' };
+  const GMT8_RE = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}$/;
+  const valid = t => t && typeof t === 'object' && t.id != null && String(t.id) !== '' && Number.isFinite(+t.laba) && Number.isFinite(+t.lot) && (t.arah === 'Beli' || t.arah === 'Jual') && typeof t.tanggal_gmt8 === 'string' && GMT8_RE.test(t.tanggal_gmt8);
+  const byId = new Map(DATA.trades.map((t,i)=>[String(t.id), i]));
+  let added = 0, updated = 0, same = 0, bad = 0;
+  for(const raw of src.trades){
+    if(!valid(raw)){ bad++; continue; }
+    const t = JSON.parse(JSON.stringify(raw));
+    const key = String(t.id);
+    if(byId.has(key)){
+      const i = byId.get(key), old = DATA.trades[i], mergedT = Object.assign({}, old, t);
+      if(JSON.stringify(mergedT) === JSON.stringify(old)) same++; else { DATA.trades[i] = mergedT; updated++; }
+    } else { DATA.trades.push(t); byId.set(key, DATA.trades.length - 1); added++; }
+  }
+  let dep = 0;
+  const srcLog = src.deposit && Array.isArray(src.deposit.log) ? src.deposit.log : [];
+  const dk = l => [l.tanggal, l.tipe, l.cent, l.jenis].join('|');
+  const have = new Set(DATA.deposit.log.map(dk));
+  for(const l of srcLog){
+    if(!l || typeof l.tanggal !== 'string' || !Number.isFinite(+l.cent) || !['Deposit','Penarikan'].includes(l.tipe)) { if(l) bad++; continue; }
+    if(have.has(dk(l))) continue;
+    DATA.deposit.log.push(JSON.parse(JSON.stringify(l))); have.add(dk(l)); dep++;
+  }
+  if(!added && !updated && !dep) return { added, updated, same, dep, bad };
+  DATA.trades.sort((x,y)=>parseGmt8(x.tanggal_gmt8) - parseGmt8(y.tanggal_gmt8));
+  DATA.deposit.log.sort((x,y)=> String(x.tanggal).localeCompare(String(y.tanggal)));
+  rebuildEquitySeries();
+  recomputeAll();
+  if(!saveActiveData(DATA)) return { error:'Gagal menyimpan ke penyimpanan lokal browser (mungkin penuh atau diblokir).' };
+  return { added, updated, same, dep, bad };
+}
+
 const IMPORT_REQUIRED_KEYS = ['summary','periods','equity','months','weeks','trades','deposit','period_ranges'];
 document.getElementById('importJsonInput').addEventListener('change', async (e)=>{
   const file = e.target.files[0];
@@ -3973,10 +4018,27 @@ document.getElementById('importJsonInput').addEventListener('change', async (e)=
       return;
     }
     const trCount = Array.isArray(parsed.trades) ? parsed.trades.length : 0;
-    const confirmed = await showConfirmModal(`Timpa data yang sedang aktif di dashboard ini dengan data dari file (${trCount} transaksi)? Tindakan ini tidak bisa dibatalkan — pastikan sudah download cadangan (backup) data saat ini jika masih diperlukan.`);
-    if(!confirmed){
+    const pe = parsed.periode_ekspor;
+    const rentang = pe && pe.dari && pe.sampai ? ` (rentang ${pe.dari} s/d ${pe.sampai}, bukan cadangan penuh)` : '';
+    const choice = await showConfirmModal(
+      `File berisi ${trCount} transaksi${rentang}.\n\nGabungkan: transaksi baru ditambahkan, yang ID-nya sama diperbarui, data lain di dashboard ini TIDAK dihapus.\n\nTimpa semua: seluruh data aktif diganti isi file (tidak bisa dibatalkan; download cadangan dulu).` + (pe ? '\n\nFile ini hanya sebagian data, disarankan Gabungkan.' : ''),
+      { yes:'Gabungkan', alt:'Timpa semua', no:'Batal' });
+    if(!choice){
       e.target.value = '';
       noteEl.textContent = '';
+      return;
+    }
+    if(choice === true){
+      const r = mergeImportedData(parsed);
+      e.target.value = '';
+      if(r.error){ noteEl.textContent = r.error; noteEl.style.color = 'var(--loss)'; showNotifyModal('Gabung gagal: ' + r.error, 'error'); return; }
+      const ringkas = `${r.added} transaksi ditambahkan, ${r.updated} diperbarui, ${r.same} sudah sama` + (r.dep ? `, ${r.dep} deposit/penarikan baru` : '') + (r.bad ? `, ${r.bad} baris tidak valid diabaikan` : '') + '.';
+      if(!r.added && !r.updated && !r.dep){ noteEl.textContent = 'Tidak ada perubahan: ' + ringkas; noteEl.style.color = ''; showNotifyModal('Tidak ada data baru untuk digabung. ' + ringkas, 'success'); return; }
+      noteEl.textContent = 'Digabung: ' + ringkas + ' Memuat ulang dashboard...';
+      noteEl.style.color = 'var(--gain)';
+      queueNotifyAfterReload('Data digabung. ' + ringkas, 'success');
+      try{ sessionStorage.setItem('jurnalPendingTab', 'setelan'); }catch(err){}
+      setTimeout(()=>{ location.reload(); }, 500);
       return;
     }
     delete parsed.periode_ekspor;
@@ -5207,10 +5269,11 @@ function renderBackupStatus(){
   sync();
 })();
 
-const APP_VERSION = '1.1.173';
+const APP_VERSION = '1.1.174';
 const APP_BUILD_DATE = '2026-10-07';   // ikut diganti tiap rilis (ISO), tampil di Setelan → Tentang
 const USER_CHANGELOG = [
   { date:'2026-10-07', items:[
+    'Impor JSON kini bisa Gabungkan: transaksi baru ditambahkan dan yang ID-nya sama diperbarui tanpa menghapus data lain (catatan lokal dipertahankan). Pilihan Timpa semua tetap ada. Cocok untuk file ekspor per periode, jadi data lama tidak hilang.',
     'Chart XAUUSD di Ringkasan: kartu baru memuat chart interaktif TradingView (OANDA:XAUUSD, H4). Tekan Tampilkan untuk memuat; tema dan zona waktu mengikuti Setelan. Butuh internet; entri/SL/TP jurnal belum tergambar di chart.',
     'Perbaikan tampilan: titik tingkat dampak di Kalender kini terlihat (warna sebelumnya tidak terdefinisi), dan teks label yang redup dibuat lebih kontras di tema gelap maupun terang.',
     'Alamat per halaman: tiap tab punya tautan sendiri (mis. <code>#kalender</code>, <code>#performa</code>, <code>#laporan-lanjutan</code>, <code>#setelan-akun</code>). Tombol Kembali/Maju browser berpindah antar tab, tautan bisa disimpan sebagai bookmark atau dibagikan, dan judul tab browser mengikuti halaman.',
