@@ -3,6 +3,12 @@
 Perubahan Jurnal XAUUSD, terbaru di atas. Semua rilis 22 Sep – 1 Okt 2026. Versi berbahasa pengguna akhir ada di aplikasi (Setelan → Tentang aplikasi). v1.1.144 ke atas dicatat per versi; sebelumnya diringkas per tema. Status dan jebakan bug: `SUMMARY.md`; rencana dan todo: `roadmap.md`.
 
 ## Rilis terbaru
+### 1.1.173 — 7 Okt
+- **Chart XAUUSD (TradingView)** di Ringkasan: kartu `#chartCard` memuat widget Advanced Chart (`OANDA:XAUUSD`, interval H4) dari `s3.tradingview.com` hanya saat dibuka (lazy). Tema (`data-theme`) dan zona waktu (`jurnalTzOffset`) mengikuti Setelan dan dimuat ulang saat berubah. Status buka/tutup disimpan di `jurnalChartOpen`.
+- Pesan jelas bila offline, skrip diblokir, atau chart tak muncul dalam 10 detik. `sw.js` tidak men-cache skrip TradingView (lintas-origin).
+- Keterbatasan: tidak tampil di pratinjau artifact (CSP); entri/SL/TP belum bisa digambar (opsi lanjutan: Lightweight Charts + sumber data).
+- `APP_VERSION`, `V` (`sw.js`) dan `?v=` → 1.1.173.
+
 ### 1.1.172 — 7 Okt
 - **Audit CSS:** titik dampak Kalender memakai variabel yang tidak ada (`--high/--mid/--low`) → diganti `--loss/--gold/--paper-faint`.
 - Kontras teks redup (`--paper-faint`) dinaikkan di tema gelap (#8D836F) dan terang (#6F654F).

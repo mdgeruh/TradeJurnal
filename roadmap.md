@@ -2,7 +2,7 @@
 
 Satu-satunya daftar rencana dan todo proyek (dulu ada di `SUMMARY.md`). Prioritas: **P1** tinggi, **P2** sedang, **P3** rendah. Tidak ada tanggal tetap. Setiap butir yang mengubah kode mengikuti **Alur rilis** di `README.md`; saat selesai, hapus dari sini (centang bila perlu satu rilis), pindahkan tema barunya ke tabel "Sudah selesai", dan catat di `release_note.md` dan `CHANGELOG.md`. Jebakan bug tiap area ada di `SUMMARY.md`.
 
-## Sudah selesai (v1.1.172)
+## Sudah selesai (v1.1.173)
 | Tema | Isi |
 |---|---|
 | Fondasi | Ringkasan (+ 5 transaksi terakhir, aturan trading pribadi, indikator sinkron cloud, Esc global), Performa, Deposit, Transaksi, input manual (+), data di localStorage, tanpa build tool |
@@ -24,6 +24,7 @@ Hampir semua fitur baru hanya diuji di Chromium dengan data sintetis dan Supabas
 ## 2. Berikutnya (P2)
 **Data & akun**
 - [ ] **Ekspor lalu hapus riwayat lama.** (Ekspor JSON per periode sudah ada sejak v1.1.162; tinggal langkah hapus.) Perlu rancangan: menghapus transaksi mengubah kurva ekuitas, saldo, Max DD, dan Laporan (opsi: diganti satu baris saldo awal).
+3b. **Chart XAUUSD** (v1.1.173): kartu di Ringkasan (`#chartCard`) memuat widget TradingView Advanced Chart (`OANDA:XAUUSD`, H4) saat ditekan Tampilkan; tema dan zona waktu mengikuti Setelan; butuh internet; kunci `jurnalChartOpen`. Belum menggambar entri/SL/TP jurnal (opsi: Lightweight Charts + sumber data harga).
 - [ ] **Sinkron pengaturan ke Supabase:** parameter kalkulator dan pengaturan lain ke tabel `pengaturan` (kini hanya `kurs`; perlu kolom baru + migrasi).
 
 **Optimalisasi** (audit v1.1.131; gzip: `app.js` ±79 KB, `style.css` ±14 KB, `index.html` ±13 KB; muat ±175 ms dengan 439 transaksi)

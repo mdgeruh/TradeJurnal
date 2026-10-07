@@ -82,3 +82,6 @@ Tiap tab punya tautan hash: `#ringkasan`, `#analisis`, `#performa`, `#laporan`, 
 3. Tambah entri teknis di `CHANGELOG.md` dan butir yang sama di `release_note.md` (ganti baris **Versi saat ini**).
 4. Perbarui `SUMMARY.md` (status, jebakan bug), `roadmap.md` (selesai/todo), dan `README.md` bila fitur berubah. Perubahan dokumen saja tidak menaikkan versi.
 5. Uji dengan Playwright + Chromium (390/768/1280px; data kosong dan data sintetis ±445 transaksi); interaksi kompleks hanya bila ada dugaan bug.
+
+## Chart XAUUSD (v1.1.173)
+Kartu **Chart XAUUSD** di tab Ringkasan memuat widget gratis TradingView (`OANDA:XAUUSD`, H4) dari `s3.tradingview.com` hanya saat tombol Tampilkan ditekan. Butuh internet; tidak di-cache service worker. Tema dan zona waktu mengikuti Setelan. Tidak tampil di pratinjau artifact karena CSP sandbox.
