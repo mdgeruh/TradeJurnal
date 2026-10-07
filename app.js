@@ -3650,6 +3650,7 @@ window.renderTrades = renderTrades;
     panels.forEach(p=>p.classList.toggle('active', p.dataset.panel===tab));
     window.scrollTo({top:0, behavior:'smooth'});
   }
+  window.goToTab = goToTab;
   btns.forEach(btn=>{
     btn.addEventListener('click', ()=>goToTab(btn.dataset.tab));
   });
@@ -3789,7 +3790,7 @@ async function buildFullHtmlString(){
   }
   for(const s of [...doc.querySelectorAll('script[src]')]){
     const src = s.getAttribute('src'); if(isRemote(src)) continue;
-    if(/(^|\/)pwa\.js$/.test(src)){ s.remove(); continue; }
+    if(/(^|\/)pwa\.js(\?|$)/.test(src)){ s.remove(); continue; }
     const n = doc.createElement('script');
     n.textContent = (await getText(new URL(src, pageUrl).href)).replace(/<\/script/gi, '<\\/script');
     s.replaceWith(n);
@@ -3889,6 +3890,7 @@ function showSetelanGroup(g){
   const nav = document.getElementById('setelanSubnav');
   if(nav) nav.querySelectorAll('.sg-tab').forEach(b => { const on = b.dataset.key===g; b.classList.toggle('active', on); b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1; });
   try{ sessionStorage.setItem('jurnalSetelanGroup', g); }catch(e){}
+  if(window.routeSync) window.routeSync();
 }
 window.showSetelanGroup = showSetelanGroup;
 (function(){
@@ -3924,6 +3926,7 @@ function showLaporanGroup(g){
   const nav = document.getElementById('laporanSubnav');
   if(nav) nav.querySelectorAll('.sg-tab').forEach(b => { const on = b.dataset.key===g; b.classList.toggle('active', on); b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1; });
   try{ sessionStorage.setItem('jurnalLaporanGroup', g); }catch(e){}
+  if(window.routeSync) window.routeSync();
 }
 window.showLaporanGroup = showLaporanGroup;
 (function(){
@@ -5204,10 +5207,15 @@ function renderBackupStatus(){
   sync();
 })();
 
-const APP_VERSION = '1.1.169';
-const APP_BUILD_DATE = '2026-10-01';   // ikut diganti tiap rilis (ISO), tampil di Setelan → Tentang
+const APP_VERSION = '1.1.172';
+const APP_BUILD_DATE = '2026-10-07';   // ikut diganti tiap rilis (ISO), tampil di Setelan → Tentang
 const USER_CHANGELOG = [
+  { date:'2026-10-07', items:[
+    'Perbaikan tampilan: titik tingkat dampak di Kalender kini terlihat (warna sebelumnya tidak terdefinisi), dan teks label yang redup dibuat lebih kontras di tema gelap maupun terang.',
+    'Alamat per halaman: tiap tab punya tautan sendiri (mis. <code>#kalender</code>, <code>#performa</code>, <code>#laporan-lanjutan</code>, <code>#setelan-akun</code>). Tombol Kembali/Maju browser berpindah antar tab, tautan bisa disimpan sebagai bookmark atau dibagikan, dan judul tab browser mengikuti halaman.',
+  ] },
   { date:'2026-10-06', items:[
+    'Perbaikan pembaruan: halaman bisa tampil setengah rusak (mis. tab Kalender tanpa gaya) bila berkas lama dan baru tercampur di cache. Kini berkas CSS/JS ditandai versi dan halaman diambil dari jaringan lebih dulu, jadi setelah deploy cukup buka ulang aplikasi (bila masih rusak: Setelan \u2192 Tentang \u2192 Periksa pembaruan).',
     'Kalender kini terhubung ke jurnal: kartu <strong>Rilis berdampak tinggi berikutnya</strong> di Ringkasan; peringatan <strong>Jendela berita</strong> di Kalkulator lot dan form Transaksi baru bila rilis dampak tinggi dalam \u00b115 menit; baris <strong>Dekat rilis</strong> di detail transaksi; dan bagian <strong>Saat rilis berita</strong> di Laporan \u2192 Lanjutan yang membandingkan hasil transaksi dekat rilis (\u00b130 menit) dengan di luar rilis. Kalender juga memberi peringatan bila jadwal bawaan hampir habis.',
     'Kalender: kolom <strong>Prakiraan</strong> dan <strong>Sebelumnya</strong> kini terisi bawaan untuk event yang angkanya sudah ada (Klaim Pengangguran 8 Okt, CPI September). Angka tetap bisa diubah atau dikosongkan sendiri; Aktual diisi manual.',
     'Tab baru <strong>Kalender</strong>: jadwal rilis data ekonomi AS dan keputusan Fed yang menggerakkan XAUUSD, dengan hitung mundur ke event berdampak tinggi berikutnya, filter dampak dan rentang, pilihan zona waktu (WITA, WIB, WIT, waktu broker, UTC, New York), isian Prakiraan / Sebelumnya / Aktual, dan event buatan sendiri.',
@@ -5518,4 +5526,48 @@ const USER_CHANGELOG = [
   window.addEventListener('kalChanged', renderMini);
   setInterval(renderMini, 30000);
   renderMini();
+})();
+
+// ---------- Rute halaman berbasis hash (v1.1.171) ----------
+// #ringkasan #analisis #performa #laporan #transaksi #deposit #kalender #setelan, plus sub-tab: #laporan-<kunci>, #setelan-<kunci>.
+// Hanya huruf/angka/tanda hubung (aman juga bila halaman dibuka di dalam iframe/artifact). Klik tab = riwayat baru, Kembali/Maju memulihkan.
+(function(){
+  const ROUTES = {ringkasan:'grafik', analisis:'analisis', performa:'statistik', laporan:'laporan', transaksi:'transaksi', deposit:'modal', kalender:'kalender', setelan:'setelan'};
+  const NAMES = {grafik:'Ringkasan', analisis:'Analisis PNL', statistik:'Performa', laporan:'Laporan', transaksi:'Transaksi', modal:'Deposit', kalender:'Kalender', setelan:'Setelan'};
+  const byTab = {}; Object.keys(ROUTES).forEach(k => { byTab[ROUTES[k]] = k; });
+  const SUBS = { laporan:{nav:'laporanSubnav', keys:()=>LAPORAN_GROUPS.map(x=>x.key), show:g=>window.showLaporanGroup && window.showLaporanGroup(g)},
+                 setelan:{nav:'setelanSubnav', keys:()=>SETELAN_GROUPS.map(x=>x.key), show:g=>window.showSetelanGroup && window.showSetelanGroup(g)} };
+  function activeTab(){ const b = document.querySelector('.main-tab-btn.active, #settingsGearBtn.active'); return b ? b.dataset.tab : 'grafik'; }
+  function tokenNow(){
+    const tab = activeTab(), name = byTab[tab] || 'ringkasan', sub = SUBS[name];
+    if(sub){ const s = document.querySelector('#' + sub.nav + ' .sg-tab.active'); if(s) return name + '-' + s.dataset.key; }
+    return name;
+  }
+  function parse(h){
+    const m = /^#\/?([a-z]+)(?:-([a-z]+))?$/.exec(h || ''); if(!m || !ROUTES[m[1]]) return null;
+    const sub = SUBS[m[1]], g = m[2];
+    return { name:m[1], tab:ROUTES[m[1]], group: (sub && g && sub.keys().includes(g)) ? g : null };
+  }
+  let applying = false;
+  function apply(r){
+    applying = true;
+    try{
+      if(window.goToTab) window.goToTab(r.tab);
+      if(r.group) SUBS[r.name].show(r.group);
+    }finally{ applying = false; }
+    syncTitle();
+  }
+  function syncTitle(){ document.title = (NAMES[activeTab()] || 'Jurnal') + ' \u00b7 Jurnal XAUUSD'; }
+  function setHash(push){
+    if(applying) return;
+    const t = '#' + tokenNow();
+    if(location.hash !== t){ try{ (push ? history.pushState : history.replaceState).call(history, null, '', t); }catch(e){} }
+    syncTitle();
+  }
+  document.querySelectorAll('.main-tab-btn, .bnav-btn, #settingsGearBtn').forEach(b => b.addEventListener('click', () => setTimeout(() => setHash(true), 0)));
+  ['laporanSubnav','setelanSubnav'].forEach(id => { const n = document.getElementById(id); if(n) n.addEventListener('click', () => setTimeout(() => setHash(false), 0)); });
+  window.addEventListener('hashchange', () => { const r = parse(location.hash); if(r && (r.tab !== activeTab() || (r.group && tokenNow() !== r.name + '-' + r.group))) apply(r); });
+  window.routeSync = () => setHash(false);
+  const first = parse(location.hash);
+  if(first) apply(first); else syncTitle();
 })();

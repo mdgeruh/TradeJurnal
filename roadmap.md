@@ -2,7 +2,7 @@
 
 Satu-satunya daftar rencana dan todo proyek (dulu ada di `SUMMARY.md`). Prioritas: **P1** tinggi, **P2** sedang, **P3** rendah. Tidak ada tanggal tetap. Setiap butir yang mengubah kode mengikuti **Alur rilis** di `README.md`; saat selesai, hapus dari sini (centang bila perlu satu rilis), pindahkan tema barunya ke tabel "Sudah selesai", dan catat di `release_note.md` dan `CHANGELOG.md`. Jebakan bug tiap area ada di `SUMMARY.md`.
 
-## Sudah selesai (v1.1.169)
+## Sudah selesai (v1.1.172)
 | Tema | Isi |
 |---|---|
 | Fondasi | Ringkasan (+ 5 transaksi terakhir, aturan trading pribadi, indikator sinkron cloud, Esc global), Performa, Deposit, Transaksi, input manual (+), data di localStorage, tanpa build tool |
@@ -40,6 +40,10 @@ Hampir semua fitur baru hanya diuji di Chromium dengan data sintetis dan Supabas
 - Saran urutan: selesaikan **P1 (Supabase asli)** dulu, lalu paket tag setup + pelanggaran aturan.
 
 ## 3. Nanti (P3)
+**Rute**
+- [ ] **Path bersih** (`/kalender`, `/laporan/lanjutan`) bila hosting tetap Vercel: `rewrites` ke `index.html` + `<base href="/">`, path aset mutlak, dan `sw.js` menyesuaikan; kini cukup rute hash.
+- [ ] **Deep link ke transaksi/periode** (mis. `#transaksi-123456`, `#laporan-tren?periode=...`) dan penyimpanan filter di URL.
+
 **Kalender ekonomi** (tab baru v1.1.167; kartu Ringkasan, peringatan jendela berita, Laporan Saat rilis, banner jadwal habis selesai v1.1.169)
 - [ ] **Isi `f`/`p` di `EVENTS`** untuk event lain begitu konsensus terbit (kini baru klaim 8 Okt dan CPI); sumber sering beda angka, cek ulang.
 - [ ] **Perbarui `EVENTS`** tiap bulan (kini 2 Okt – 6 Nov 2026, hanya USD); cek ulang tanggal ke BLS/BEA/Fed. Berikutnya: event non-USD (ECB, BoE, BoJ), data China/Eropa yang menggerakkan emas.

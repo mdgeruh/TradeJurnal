@@ -75,7 +75,7 @@
     var ic = $("kalImpChips"); ic.textContent = "";
     [3, 2, 1].forEach(function (n) {
       var b = h("button", "kal-chip"); b.type = "button";
-      var d = h("span", "kal-dot"); d.style.background = n === 3 ? "var(--high)" : n === 2 ? "var(--mid)" : "var(--low)";
+      var d = h("span", "kal-dot"); d.style.background = n === 3 ? "var(--loss)" : n === 2 ? "var(--gold)" : "var(--paper-faint)";
       b.appendChild(d); b.appendChild(document.createTextNode(IMPACT_LABEL[n]));
       b.setAttribute("aria-pressed", String(!!state.imp[n]));
       b.addEventListener("click", function () { state.imp[n] = !state.imp[n]; b.setAttribute("aria-pressed", String(!!state.imp[n])); persist(); render(); });
