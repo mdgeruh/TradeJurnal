@@ -37,7 +37,7 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="style.css?v=1.1.172">
+<link rel="stylesheet" href="style.css?v=1.1.173">
 </head>
 <body>
 <div class="login-gate" id="loginGate" role="dialog" aria-modal="true" aria-labelledby="lgTitle">
@@ -183,6 +183,17 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
   <section class="kal-mini" id="kalMini" hidden aria-label="Event ekonomi berdampak tinggi berikutnya">
     <div class="kal-mini-text"><span class="kal-lbl">Rilis berdampak tinggi berikutnya</span><strong id="kalMiniName"></strong><span id="kalMiniWhen"></span></div>
     <button type="button" class="recent-all" id="kalMiniGo">Kalender</button>
+  </section>
+
+  <section class="chart-card" id="chartCard" aria-labelledby="chartTitle">
+    <div class="chart-head">
+      <div class="chart-head-text"><h2 id="chartTitle">Chart XAUUSD</h2><span id="chartSub">TradingView · OANDA · H4</span></div>
+      <button type="button" class="recent-all" id="chartToggle" aria-expanded="false" aria-controls="tvBox">Tampilkan</button>
+    </div>
+    <div class="tv-box" id="tvBox" hidden>
+      <div class="chart-msg" id="chartMsg" role="status" hidden></div>
+      <div class="chart-host" id="chartHost"></div>
+    </div>
   </section>
 
   <section class="recent-card" id="recentCard" hidden aria-labelledby="recentTitle">
@@ -1217,10 +1228,10 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
 </div>
 
 <script id="journal-data" type="application/json">{"summary": {"total": 0, "win": 0, "loss": 0, "winrate": 0, "pl_cent": 0, "pl_rp": 0, "saldo_akhir": 0, "pct_pl": null}, "periods": [], "kurs": 0, "dashboard": {"update": "Update terakhir: -", "saldo": 0, "stats": {"total": 0, "winrate": 0, "pf": 0, "maxdd": 0, "expectancy": 0}, "top_win": [], "top_loss": [], "mm": {"equity": 0, "risk": 0.01, "sl": 150, "pipval": 10, "lot": 0, "tp_pips": 0, "tp_cent": 0}}, "maxdd_note": "", "equity": [], "months": [], "weeks": [], "trades": [], "deposit": {"total_deposit": 0, "total_penarikan": 0, "total_mc": 0, "modal_bersih": 0, "log": []}, "period_ranges": [], "modal_kumulatif": []}</script>
-<script src="config.js?v=1.1.172"></script>
-<script src="app.js?v=1.1.172"></script>
-<script src="kalender.js?v=1.1.172"></script>
-<script src="sync.js?v=1.1.172"></script>
-<script src="pwa.js?v=1.1.172"></script>
+<script src="config.js?v=1.1.173"></script>
+<script src="app.js?v=1.1.173"></script>
+<script src="kalender.js?v=1.1.173"></script>
+<script src="sync.js?v=1.1.173"></script>
+<script src="pwa.js?v=1.1.173"></script>
 </body>
 </html>

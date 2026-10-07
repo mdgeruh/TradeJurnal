@@ -5207,10 +5207,11 @@ function renderBackupStatus(){
   sync();
 })();
 
-const APP_VERSION = '1.1.172';
+const APP_VERSION = '1.1.173';
 const APP_BUILD_DATE = '2026-10-07';   // ikut diganti tiap rilis (ISO), tampil di Setelan → Tentang
 const USER_CHANGELOG = [
   { date:'2026-10-07', items:[
+    'Chart XAUUSD di Ringkasan: kartu baru memuat chart interaktif TradingView (OANDA:XAUUSD, H4). Tekan Tampilkan untuk memuat; tema dan zona waktu mengikuti Setelan. Butuh internet; entri/SL/TP jurnal belum tergambar di chart.',
     'Perbaikan tampilan: titik tingkat dampak di Kalender kini terlihat (warna sebelumnya tidak terdefinisi), dan teks label yang redup dibuat lebih kontras di tema gelap maupun terang.',
     'Alamat per halaman: tiap tab punya tautan sendiri (mis. <code>#kalender</code>, <code>#performa</code>, <code>#laporan-lanjutan</code>, <code>#setelan-akun</code>). Tombol Kembali/Maju browser berpindah antar tab, tautan bisa disimpan sebagai bookmark atau dibagikan, dan judul tab browser mengikuti halaman.',
   ] },
@@ -5570,4 +5571,43 @@ const USER_CHANGELOG = [
   window.routeSync = () => setHash(false);
   const first = parse(location.hash);
   if(first) apply(first); else syncTitle();
+})();
+
+// ---------- Chart XAUUSD (widget TradingView) di Ringkasan (v1.1.173) ----------
+(function(){
+  const card = document.getElementById('chartCard'); if(!card) return;
+  const btn = document.getElementById('chartToggle'), box = document.getElementById('tvBox'),
+        host = document.getElementById('chartHost'), msg = document.getElementById('chartMsg');
+  const TZ = {180:'Etc/GMT-3', 420:'Asia/Jakarta', 480:'Asia/Makassar', 540:'Asia/Jayapura'};
+  const KEY = 'jurnalChartOpen';
+  let loadedFor = '', timer = null;
+  const isLight = () => document.documentElement.getAttribute('data-theme') === 'light';
+  const tz = () => { let o; try{ o = +localStorage.getItem('jurnalTzOffset'); }catch(e){} return TZ[o] || 'Asia/Makassar'; };
+  function note(text){ msg.textContent = text || ''; msg.hidden = !text; }
+  function load(){
+    const sig = (isLight() ? 'l' : 'd') + '|' + tz();
+    if(sig === loadedFor && host.firstChild) return;
+    loadedFor = sig; clearTimeout(timer); host.textContent = ''; note('');
+    if(navigator.onLine === false){ loadedFor = ''; note('Sedang offline. Chart TradingView butuh koneksi internet.'); return; }
+    const wrap = document.createElement('div'); wrap.className = 'tradingview-widget-container';
+    const w = document.createElement('div'); w.className = 'tradingview-widget-container__widget'; wrap.appendChild(w);
+    const sc = document.createElement('script');
+    sc.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js'; sc.async = true;
+    sc.text = JSON.stringify({ autosize:true, symbol:'OANDA:XAUUSD', interval:'240', timezone:tz(), theme:isLight() ? 'light' : 'dark',
+      style:'1', locale:'id', allow_symbol_change:true, hide_side_toolbar:false, withdateranges:true, save_image:false, support_host:'https://www.tradingview.com' });
+    sc.onerror = () => { loadedFor = ''; note('Chart gagal dimuat. Periksa koneksi, atau skrip TradingView diblokir oleh jaringan/ekstensi pemblokir iklan.'); };
+    wrap.appendChild(sc); host.appendChild(wrap);
+    timer = setTimeout(() => { if(!host.querySelector('iframe')){ loadedFor = ''; note('Chart belum tampil. Mungkin offline atau skrip TradingView diblokir. Tekan Sembunyikan lalu Tampilkan untuk mencoba lagi.'); } }, 10000);
+  }
+  function set(open, persist){
+    box.hidden = !open; btn.textContent = open ? 'Sembunyikan' : 'Tampilkan'; btn.setAttribute('aria-expanded', String(open));
+    if(persist){ try{ localStorage.setItem(KEY, open ? '1' : '0'); }catch(e){} }
+    if(open) load(); else { clearTimeout(timer); host.textContent = ''; loadedFor = ''; note(''); }
+  }
+  btn.addEventListener('click', () => set(box.hidden, true));
+  // Tema/zona waktu berubah: muat ulang chart yang sedang tampil.
+  new MutationObserver(() => { if(!box.hidden) load(); }).observe(document.documentElement, { attributes:true, attributeFilter:['data-theme'] });
+  window.addEventListener('online', () => { if(!box.hidden && !host.firstChild) load(); });
+  let was = false; try{ was = localStorage.getItem(KEY) === '1'; }catch(e){}
+  if(was) set(true, false);
 })();
