@@ -608,7 +608,7 @@
   }
   .modal-box.success .modal-title{color:var(--gain);}
   .modal-box.error .modal-title{color:var(--loss);}
-  .modal-message{font-size:13px;color:var(--paper);line-height:1.5;margin:0 0 20px;}
+  .modal-message{font-size:13px;color:var(--paper);line-height:1.5;margin:0 0 20px;white-space:pre-line;}
   .modal-actions{display:flex;justify-content:flex-end;gap:10px;}
   .modal-actions .ledger-reset-btn{padding:8px 16px;}
   .modal-actions .modal-btn-primary{color:var(--gold);border-color:var(--gold);}

@@ -1,9 +1,9 @@
 // Service worker: cache-dulu (stale-while-revalidate) untuk berkas statis supaya aplikasi tampil instan; cache diperbarui di latar
 // dan versi baru dipakai pada pembukaan berikutnya (CACHE dinaikkan tiap rilis, cache lama dihapus saat aktif).
-// Anti campur-versi (v1.1.173): berkas CSS/JS dipanggil index.html dengan ?v=<versi> dan di-precache dengan nama bertanda itu;
+// Anti campur-versi (v1.1.174): berkas CSS/JS dipanggil index.html dengan ?v=<versi> dan di-precache dengan nama bertanda itu;
 // halaman (navigasi) diambil jaringan-dulu agar index.html selalu yang terbaru, baru jatuh ke cache bila offline.
 // Panggilan ke Supabase (domain lain) tidak pernah di-cache.
-const V = '1.1.173';
+const V = '1.1.174';
 const CACHE = 'jurnal-v' + V;
 const SHELL = ['./', 'index.html',
   ...['style.css', 'app.js', 'kalender.js', 'sync.js', 'config.js', 'pwa.js'].map(f => f + '?v=' + V),
