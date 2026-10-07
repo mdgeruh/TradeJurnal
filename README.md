@@ -73,8 +73,11 @@ Hanya `jurnalXauusdData_v1` yang ikut ekspor JSON dan sinkron; kunci pengaturan 
 ## Pasang sebagai aplikasi (PWA)
 Butuh https (Vercel sudah otomatis). Android: Chrome → ⋮ → **Instal aplikasi**. iOS: Safari → Bagikan → **Tambah ke Layar Utama**. Data aplikasi terpasang terpisah dari browser: masuk lalu **Pulihkan dari cloud**. Versi baru terbaca saat aplikasi dibuka lagi; banner **Versi baru siap** menawarkan Muat ulang.
 
+## Rute halaman
+Tiap tab punya tautan hash: `#ringkasan`, `#analisis`, `#performa`, `#laporan`, `#transaksi`, `#deposit`, `#kalender`, `#setelan`; sub-tab Laporan dan Setelan memakai `#laporan-<tren|ringkasan|psikologi|bandingkan|lanjutan>` dan `#setelan-<tampilan|trading|data|akun|tentang>`. Tombol Kembali/Maju browser berpindah antar tab, dan judul tab browser mengikuti halaman. Router ada di akhir `app.js` (bagian "Rute halaman").
+
 ## Alur rilis
-1. Naikkan `APP_VERSION` dan `APP_BUILD_DATE` (`app.js`) dan `CACHE` (`sw.js`) ke nomor yang sama.
+1. Naikkan `APP_VERSION` dan `APP_BUILD_DATE` (`app.js`), `V` (`sw.js`; `CACHE` mengikuti), dan semua `?v=` di `index.html` (css/js lokal) ke nomor yang sama. Ketiganya harus kembar: `?v=` menjaga halaman dan berkas tidak tercampur versi di cache service worker.
 2. Tambah butir di `USER_CHANGELOG` (`app.js`): tanggal ISO, bahasa pengguna tanpa istilah teknis atau nomor versi; tanggal yang sama digabung (tampilan diurutkan otomatis).
 3. Tambah entri teknis di `CHANGELOG.md` dan butir yang sama di `release_note.md` (ganti baris **Versi saat ini**).
 4. Perbarui `SUMMARY.md` (status, jebakan bug), `roadmap.md` (selesai/todo), dan `README.md` bila fitur berubah. Perubahan dokumen saja tidak menaikkan versi.
