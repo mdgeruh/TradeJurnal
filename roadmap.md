@@ -2,7 +2,7 @@
 
 Satu-satunya daftar rencana dan todo proyek (dulu ada di `SUMMARY.md`). Prioritas: **P1** tinggi, **P2** sedang, **P3** rendah. Tidak ada tanggal tetap. Setiap butir yang mengubah kode mengikuti **Alur rilis** di `README.md`; saat selesai, hapus dari sini (centang bila perlu satu rilis), pindahkan tema barunya ke tabel "Sudah selesai", dan catat di `release_note.md` dan `CHANGELOG.md`. Jebakan bug tiap area ada di `SUMMARY.md`.
 
-## Sudah selesai (v1.1.174)
+## Sudah selesai (v1.1.181)
 | Tema | Isi |
 |---|---|
 | Fondasi | Ringkasan (+ 5 transaksi terakhir, aturan trading pribadi, indikator sinkron cloud, Esc global), Performa, Deposit, Transaksi, input manual (+), data di localStorage, tanpa build tool |
@@ -22,6 +22,19 @@ Hampir semua fitur baru hanya diuji di Chromium dengan data sintetis dan Supabas
 - [ ] **Tindakan manual Supabase:** daftarkan alamat aplikasi di **Redirect URLs** dan **Site URL**; jalankan `migrasi-catatan.sql` sekali (tanpa itu catatan tidak ikut ke cloud).
 
 ## 2. Berikutnya (P2)
+**Rekonsiliasi dengan broker** (usulan 8 Okt 2026, setelah selisih saldo 23,05¢ karena 4 posisi ditutup bertahap dan beberapa jam meleset 5 jam; urutan prioritas)
+- [x] **P1 #1 Impor riwayat broker (XLSX/CSV MT5 "Trading activity")** langsung di Setelan: gabung penutupan bertahap per ID, lewati ID yang sudah ada, jam otomatis broker → GMT+8, pratinjau selisih sebelum disimpan. (v1.1.175)
+- [x] **P1 #2 Cek saldo terhadap broker:** isi saldo MT5, aplikasi menampilkan cocok/selisih dan kemungkinan penyebab. (v1.1.175)
+- [x] **P1 #3 Penutupan bertahap (partial close) di entri manual:** ID sama digabung (lot dijumlah, harga tutup rata-rata berbobot), ada penanda di detail. (v1.1.175)
+- [x] **P2 #4 Pemeriksaan data:** tanda jam tidak wajar (tutup sebelum buka, GMT+8 ≠ broker+5 jam, jam buka kosong), ID dobel, tanda laba tak sesuai arah/harga. (v1.1.175)
+- [x] **P2 #5 Cadangan otomatis sebelum Gabungkan/Timpa/impor + tombol Urungkan impor terakhir.** (v1.1.175)
+- [x] **P2 #6 Trigger FVG, opsi trigger/exit kustom di Setelan, dan "ABC" disamakan dengan "ABC (Asal Biru Close)" di laporan.** (v1.1.175)
+- [x] **P2 #7 Laporan per setup dan emosi:** expectancy per trigger/emosi dan perbandingan (mis. Ragu-ragu vs lainnya). (v1.1.175)
+- [ ] **P3 #8 Penanda entri/SL/TP di chart** (Lightweight Charts + sumber data harga sendiri; widget TradingView gratis tidak mendukung).
+- [ ] **P3 #9 Kalender lanjutan:** lihat daftar di bagian Kalender ekonomi (ekspor `kal-*`, mingguan, aktual vs prakiraan).
+- [x] **P3 #10 Rapikan tablet (±768 px):** angka kartu statistik dan teks "≈ Rp" terpotong; mode rapat baru aktif di bawah 720 px. (v1.1.175)
+- [ ] **P1 #11 Uji di perangkat dan Supabase sungguhan** (lihat bagian 1).
+
 **Data & akun**
 - [ ] **Ekspor lalu hapus riwayat lama.** (Ekspor JSON per periode sudah ada sejak v1.1.162; tinggal langkah hapus.) Perlu rancangan: menghapus transaksi mengubah kurva ekuitas, saldo, Max DD, dan Laporan (opsi: diganti satu baris saldo awal).
 3b. **Chart XAUUSD** (v1.1.173): kartu di Ringkasan (`#chartCard`) memuat widget TradingView Advanced Chart (`OANDA:XAUUSD`, H4) saat ditekan Tampilkan; tema dan zona waktu mengikuti Setelan; butuh internet; kunci `jurnalChartOpen`. Belum menggambar entri/SL/TP jurnal (opsi: Lightweight Charts + sumber data harga).
@@ -49,16 +62,16 @@ Hampir semua fitur baru hanya diuji di Chromium dengan data sintetis dan Supabas
 **Kalender ekonomi** (tab baru v1.1.167; kartu Ringkasan, peringatan jendela berita, Laporan Saat rilis, banner jadwal habis selesai v1.1.169)
 - [ ] **Isi `f`/`p` di `EVENTS`** untuk event lain begitu konsensus terbit (kini baru klaim 8 Okt dan CPI); sumber sering beda angka, cek ulang.
 - [ ] **Perbarui `EVENTS`** tiap bulan (kini 2 Okt – 6 Nov 2026, hanya USD); cek ulang tanggal ke BLS/BEA/Fed. Berikutnya: event non-USD (ECB, BoE, BoJ), data China/Eropa yang menggerakkan emas.
-- [ ] **Kunci `kal-manual`/`kal-notes`/`kal-prefs` ikut ekspor pengaturan** (kini hanya di browser) dan, bila perlu, sinkron cloud.
+- [x] **Kunci `kal-manual`/`kal-notes`/`kal-prefs` ikut ekspor pengaturan** (v1.1.177). Sisa: sinkron cloud bila perlu.
 - [ ] **Hubungkan ke jurnal (lanjutan):** filter Laporan/Transaksi "dekat rilis"; jendela ±30/±15 menit bisa diatur di Setelan; ikut dinilai juga event dampak Sedang.
-- [ ] **Impor/ekspor `EVENTS`** (JSON/CSV) supaya jadwal tidak perlu mengedit `kalender.js`.
+- [x] **Impor/ekspor jadwal** (JSON, v1.1.181). Sisa: format CSV dan memperluas cakupan Laporan "Saat rilis" (`KAL.cover`) ke event impor.
 - [ ] **Tampilan kalender mingguan** (grid Senin–Jumat dengan titik berwarna).
-- [ ] **Aktual vs Prakiraan:** tanda panah lebih tinggi/rendah dan catatan arah reaksi emas; catatan reaksi harga per event.
-- [ ] **Penanda "Perlu dicek"** untuk event berstatus Perkiraan yang tanggalnya sudah dekat.
+- [ ] **Aktual vs Prakiraan:** panah lebih tinggi/rendah sudah ada (v1.1.177); sisa catatan arah reaksi emas dan catatan reaksi harga per event.
+- [x] **Penanda "Perlu dicek"** (v1.1.177) untuk event berstatus Perkiraan yang tanggalnya sudah dekat.
 - [ ] **Peringatan** (PWA) 15 menit sebelum event dampak tinggi.
 
 **Performa**
-- [ ] **Performa lanjutan** (saran 5–9, 6 Okt): (saran 5+6 selesai v1.1.166; sisa: garis target pada batang bulanan) heatmap kalender tahunan; sumbu/nilai/rata-rata pada batang mingguan dan pilihan rentang 12/26 minggu; filter Arah/Sesi di Performa.
+- [ ] **Performa lanjutan** (saran 5–9, 6 Okt): (saran 5+6 selesai v1.1.166; sisa: garis target pada batang bulanan) heatmap kalender tahunan; rentang 12/26 minggu dan garis rata-rata batang mingguan sudah ada (v1.1.180), sisa sumbu dan nilai pada batang; filter Arah (v1.1.178) dan Sesi (v1.1.179) di Performa sudah ada.
 
 **Transaksi**
 - [ ] **Lampiran gambar chart per transaksi** (usulan 3 Okt): foto setup disimpan lokal (IndexedDB) dan dikompres; tidak ikut sinkron cloud/ekspor JSON agar data tetap kecil; tampil di detail transaksi.

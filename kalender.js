@@ -103,9 +103,22 @@
   // Isian angka: catatan pengguna (notes) menang atas nilai bawaan di EVENTS (f = prakiraan, p = sebelumnya); mengosongkan kolom berarti kosong.
   function byId(id) { return allEvents().filter(function (x) { return x.id === id; })[0] || {}; }
   function val(e, key) { var n = notes[e.id]; return n && n[key] !== undefined ? n[key] : (e[key] || ""); }
+  // Angka pertama dalam teks isian ("3,7% y/y", "200K", "-0,2%") sebagai angka; null bila tidak ada. K/M/B dikalikan.
+  function num(t) {
+    var m = /(-?\d+(?:[.,]\d+)?)\s*([KMBkmb])?/.exec(String(t || "").replace(/\s/g, ""));
+    if (!m) return null;
+    var v = parseFloat(m[1].replace(",", ".")), u = (m[2] || "").toUpperCase();
+    return v * (u === "K" ? 1e3 : u === "M" ? 1e6 : u === "B" ? 1e9 : 1);
+  }
+  // Aktual dibanding Prakiraan: panah dan kata. Hanya penanda arah angka, bukan penilaian pengaruh ke emas (itu tergantung jenis data).
+  function surprise(e) {
+    var a = num(val(e, "a")), f = num(val(e, "f"));
+    if (a === null || f === null) return "";
+    return a > f ? " \u25b2 di atas prakiraan" : a < f ? " \u25bc di bawah prakiraan" : " = sesuai prakiraan";
+  }
   function valsLine(id) {
     var parts = [], e = byId(id);
-    if (val(e, "a")) parts.push("Aktual " + val(e, "a"));
+    if (val(e, "a")) parts.push("Aktual " + val(e, "a") + surprise(e));
     if (val(e, "f")) parts.push("Prakiraan " + val(e, "f"));
     if (val(e, "p")) parts.push("Sebelumnya " + val(e, "p"));
     return parts.join("  ·  ");
@@ -115,10 +128,10 @@
     var now = Date.now(), tz = state.tz, list = $("kalList");
     list.textContent = "";
     // Peringatan jadwal hampir habis: event bawaan terakhir kurang dari 7 hari lagi (atau sudah lewat).
-    var st = $("kalStale"), lastTs = Math.max.apply(null, EVENTS.map(function (x) { return Date.parse(x.t); }));
+    var st = $("kalStale"), lastTs = Math.max.apply(null, allEvents().map(function (x) { return x.ts; }));
     if (st) {
       st.hidden = lastTs - now > 7 * 86400000;
-      if (!st.hidden) st.textContent = (lastTs < now ? "Jadwal bawaan sudah berakhir pada " : "Jadwal bawaan segera berakhir pada ") + fmt(lastTs, tz, { day: "numeric", month: "long", year: "numeric" }) + ". Perbarui array EVENTS di kalender.js (lihat README) atau tambah event sendiri di bawah.";
+      if (!st.hidden) st.textContent = (lastTs < now ? "Jadwal bawaan sudah berakhir pada " : "Jadwal bawaan segera berakhir pada ") + fmt(lastTs, tz, { day: "numeric", month: "long", year: "numeric" }) + ". Impor jadwal baru (JSON) atau tambah event sendiri di bawah, atau perbarui array EVENTS di kalender.js (lihat README).";
     }
     var evs = allEvents().filter(function (e) {
       if (!state.imp[e.impact]) return false;
@@ -159,6 +172,7 @@
     meta.appendChild(h("span", "kal-cur", e.cur));
     meta.appendChild(h("span", "", IMPACT_LABEL[e.impact]));
     meta.appendChild(h("span", "kal-badge" + (e.status === "est" ? " kal-est" : ""), e.status === "ok" ? "Terkonfirmasi" : e.status === "est" ? "Perkiraan" : "Manual"));
+    if (e.status === "est" && e.ts > now && e.ts - now < 7 * 86400000) meta.appendChild(h("span", "kal-badge kal-check", "Perlu dicek"));
     main.appendChild(meta);
     var vl = valsLine(e.id); if (vl) main.appendChild(h("div", "kal-vals", vl));
     var imp = h("div", "kal-imp l" + e.impact); imp.setAttribute("aria-hidden", "true");
@@ -214,6 +228,65 @@
     save("kal-manual", manual);
     $("kalName").value = ""; render(); tick();
   });
+
+  // Impor/ekspor jadwal (v1.1.181): JSON {app:'jurnal-xauusd', type:'kalender', events:[{id,t,cur,name,impact,status,f,p,a,gold}]}.
+  function ioNote(msg, bad) { var n = $("kalIoNote"); if (!n) return; n.hidden = !msg; n.textContent = msg || ""; n.style.color = bad ? "var(--loss)" : ""; }
+  function strOr(v, max) { return typeof v === "string" ? v.trim().slice(0, max) : ""; }
+  function normalizeEvent(x) {
+    if (!x || typeof x !== "object") return null;
+    var name = strOr(x.name, 120), ts = Date.parse(x.t);
+    if (!name || isNaN(ts)) return null;
+    var imp = +x.impact; if ([1, 2, 3].indexOf(imp) < 0) return null;
+    var cur = strOr(x.cur, 4).toUpperCase(); if (!/^[A-Z]{2,4}$/.test(cur)) cur = "USD";
+    var id = strOr(x.id, 60).replace(/[^\w.\-]/g, "") || "i-" + ts + "-" + Math.abs(hash(name));
+    var ev = { id: id, ts: ts, t: new Date(ts).toISOString(), cur: cur, name: name, impact: imp, status: x.status === "ok" ? "ok" : "est" };
+    ["f", "p", "a"].forEach(function (key) { var v = strOr(x[key], 60); if (v) ev[key] = v; });
+    var g = strOr(x.gold, 400); if (g) ev.gold = g;
+    return ev;
+  }
+  function hash(s) { var h = 0; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return h; }
+  function exportSchedule() {
+    var evs = allEvents().map(function (e) {
+      var o = { id: e.id, t: new Date(e.ts).toISOString(), cur: e.cur, name: e.name, impact: e.impact, status: e.status === "ok" ? "ok" : "est", gold: e.gold };
+      ["f", "p", "a"].forEach(function (key) { var v = val(e, key); if (v) o[key] = v; });
+      return o;
+    });
+    var d = new Date(), stamp = d.getFullYear() + String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0");
+    var body = JSON.stringify({ app: "jurnal-xauusd", type: "kalender", version: 1, events: evs }, null, 2);
+    if (typeof downloadTextFile === "function") downloadTextFile("jurnal-xauusd-kalender-" + stamp + ".json", body, "application/json;charset=utf-8;");
+    ioNote(evs.length + " event diekspor.");
+  }
+  function importSchedule(text) {
+    var obj; try { obj = JSON.parse(text); } catch (e) { ioNote("Berkas bukan JSON yang valid.", true); return; }
+    var list = Array.isArray(obj) ? obj : (obj && obj.type === "kalender" && Array.isArray(obj.events) ? obj.events : null);
+    if (!list) { ioNote("Ini bukan berkas jadwal kalender. Pakai hasil Ekspor jadwal, atau larik event.", true); return; }
+    if (list.length > 300) { ioNote("Terlalu banyak event (maksimal 300 per berkas).", true); return; }
+    var builtIn = {}; EVENTS.forEach(function (e) { builtIn[e.id] = 1; });
+    var added = 0, updated = 0, skipped = 0, bad = 0, byId = {};
+    manual.forEach(function (m) { byId[m.id] = m; });
+    list.forEach(function (x) {
+      var ev = normalizeEvent(x); if (!ev) { bad++; return; }
+      if (builtIn[ev.id]) { skipped++; return; }
+      if (byId[ev.id]) { var i = manual.indexOf(byId[ev.id]); manual[i] = ev; byId[ev.id] = ev; updated++; return; }
+      if (manual.length >= 200) { bad++; return; }
+      manual.push(ev); byId[ev.id] = ev; added++;
+    });
+    save("kal-manual", manual); render(); tick(); window.dispatchEvent(new Event("kalChanged"));
+    ioNote(added + " ditambah, " + updated + " diperbarui" + (skipped ? ", " + skipped + " event bawaan dilewati" : "") + (bad ? ", " + bad + " tidak valid diabaikan" : "") + ".", !added && !updated);
+  }
+  (function () {
+    var ex = $("kalExportBtn"), im = $("kalImportBtn"), inp = $("kalImportInput");
+    if (ex) ex.addEventListener("click", exportSchedule);
+    if (im && inp) {
+      im.addEventListener("click", function () { inp.click(); });
+      inp.addEventListener("change", function () {
+        var f = inp.files && inp.files[0]; inp.value = "";
+        if (!f) return;
+        if (f.size > 1024 * 1024) { ioNote("Berkas terlalu besar.", true); return; }
+        var r = new FileReader(); r.onload = function () { importSchedule(String(r.result)); }; r.onerror = function () { ioNote("Berkas tidak bisa dibaca.", true); }; r.readAsText(f);
+      });
+    }
+  })();
 
   // API untuk bagian jurnal lain (Ringkasan, Laporan, peringatan jendela berita).
   function countdownText(ms) {

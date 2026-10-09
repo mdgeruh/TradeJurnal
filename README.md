@@ -86,5 +86,38 @@ Tiap tab punya tautan hash: `#ringkasan`, `#analisis`, `#performa`, `#laporan`, 
 ## Chart XAUUSD (v1.1.173)
 Kartu **Chart XAUUSD** di tab Ringkasan memuat widget gratis TradingView (`OANDA:XAUUSD`, H4) dari `s3.tradingview.com` hanya saat tombol Tampilkan ditekan. Butuh internet; tidak di-cache service worker. Tema dan zona waktu mengikuti Setelan. Tidak tampil di pratinjau artifact karena CSP sandbox.
 
+## Kalender: impor dan ekspor jadwal (v1.1.181)
+Tab Kalender → **Impor dan ekspor jadwal**. Ekspor menyimpan semua event (bawaan dan buatan sendiri) dengan Prakiraan/Sebelumnya/Aktual ke `jurnal-xauusd-kalender-<tanggal>.json`. Impor menerima berkas yang sama formatnya, atau larik event:
+```json
+{ "app":"jurnal-xauusd", "type":"kalender", "events":[
+  { "id":"ecb-2026-10", "t":"2026-10-29T12:15:00Z", "cur":"EUR", "name":"Keputusan Suku Bunga ECB", "impact":3, "status":"ok", "f":"2,00%", "p":"2,00%" } ] }
+```
+`t` dalam UTC, `impact` 1–3, `status` `ok` atau `est`. ID baru ditambahkan, ID yang sudah ada (impor sebelumnya) diperbarui, ID event bawaan dilewati. Event impor tersimpan di browser (`kal-manual`) dan bisa dihapus dari detail event.
+
+## Performa mingguan: rentang dan rata-rata (v1.1.180)
+Di bagian Performa mingguan pilih **12 minggu / 26 minggu / Semua**. Batang menampilkan garis putus-putus rata-rata per minggu, dengan ringkasan rata-rata dan jumlah minggu untung. Daftar mingguan mengikuti rentang, dan semuanya mengikuti filter arah/sesi. Pilihan diingat dan ikut ekspor pengaturan.
+
+## Performa: filter sesi (v1.1.179)
+Baris kedua filter Performa: **Semua sesi / Asia / London / New York** (menurut waktu buka, GMT+8; batas sesi sama dengan Laporan). Bisa digabung dengan filter arah. Transaksi tanpa waktu buka tidak ikut saat sesi dipilih.
+
+## Performa: filter arah (v1.1.178)
+Di atas tab Performa, pilih **Semua arah / Beli / Jual**. Kartu bulanan dan daftar mingguan dihitung ulang untuk arah itu (WR, profit factor, drawdown, penilaian); % thd saldo tetap memakai saldo seluruh akun. Pilihan diingat dan ikut ekspor pengaturan.
+
+## Kalender: Perlu dicek, Aktual vs Prakiraan, ekspor pengaturan (v1.1.177)
+Event Perkiraan yang kurang dari 7 hari lagi diberi penanda **Perlu dicek**. Bila Prakiraan dan Aktual berupa angka, muncul panah ▲/▼/= (hanya arah angka). **Ekspor pengaturan** kini memuat event kalender buatan sendiri, isian angka, preferensi kalender, dan opsi trigger/exit kustom.
+
+## Performa: Beli vs Jual (v1.1.176)
+Kartu bulanan dan daftar mingguan di tab Performa memuat baris pecahan arah: jumlah transaksi, win rate, dan P/L untuk Beli dan Jual. Kartu "Split arah" untuk seluruh data tetap ada.
+
+## Rekonsiliasi dengan broker (v1.1.175)
+Setelan → Data → **Cocokkan dengan broker**.
+- **Impor riwayat:** pilih file *Trading activity* MT5 (.xlsx atau .csv, bukan .xls). Hanya XAUUSDc (akun cent). Aplikasi menggabungkan penutupan bertahap per ID, membandingkan dengan jurnal, lalu menampilkan pratinjau: **Terapkan semua** atau **Hanya yang baru**. Trade baru belum punya trigger/emosi.
+- **Cek saldo:** isi saldo MT5; hasilnya cocok atau selisih dengan kemungkinan penyebab.
+- **Periksa data:** ID dobel, tutup sebelum buka, GMT+8 tak sesuai, tanda laba janggal (ketuk ID untuk detail). Tidak bisa mendeteksi kesalahan jam yang konsisten di semua baris; itu hanya terlihat lewat impor broker.
+- **Urungkan impor terakhir:** cadangan otomatis sebelum impor broker/JSON/CSV (`jurnalUndoSnapshot`).
+- **Penutupan bertahap manual:** ID sama + arah sama → konfirmasi gabung; detail menampilkan "Bertahap (n bagian)".
+- **Opsi kustom:** Setelan → Trading → Opsi trigger dan exit; FVG tersedia; "ABC" disamakan dengan "ABC (Asal Biru Close)".
+- **Laporan:** kartu perbandingan emosi (Tenang/Percaya diri vs lainnya).
+
 ## Impor JSON: Gabungkan atau Timpa (v1.1.174)
 Setelan → Data → Impor menawarkan **Gabungkan** (transaksi baru ditambahkan, ID sama diperbarui, data lain dipertahankan) atau **Timpa semua** (mengganti seluruh data aktif). Untuk file ekspor per periode gunakan Gabungkan.
