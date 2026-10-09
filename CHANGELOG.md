@@ -3,6 +3,42 @@
 Perubahan Jurnal XAUUSD, terbaru di atas. Semua rilis 22 Sep – 1 Okt 2026. Versi berbahasa pengguna akhir ada di aplikasi (Setelan → Tentang aplikasi). v1.1.144 ke atas dicatat per versi; sebelumnya diringkas per tema. Status dan jebakan bug: `SUMMARY.md`; rencana dan todo: `roadmap.md`.
 
 ## Rilis terbaru
+### 1.1.181 — 9 Okt
+- **Kalender: impor/ekspor jadwal (JSON)** (`#kalExportBtn`, `#kalImportBtn`, `#kalImportInput`, catatan `#kalIoNote`). Format `{app:'jurnal-xauusd', type:'kalender', version:1, events:[{id,t,cur,name,impact,status,f,p,a,gold}]}`; impor juga menerima larik event polos. `normalizeEvent` memvalidasi (nama maks 120, `t` harus tanggal, dampak 1–3, mata uang 2–4 huruf kapital, `f/p/a` maks 60, `gold` maks 400; status hanya `ok`/`est`), maksimal 300 event per berkas dan 200 event impor total. Event diimpor disimpan di `kal-manual` (bisa dihapus dari detail, ikut ekspor pengaturan). ID yang sama diperbarui; ID event bawaan dilewati (tidak menimpa `EVENTS`).
+- Banner "jadwal habis" kini mempertimbangkan event impor. `KAL.cover` (rentang yang dinilai Laporan "Saat rilis") tetap hanya jadwal bawaan.
+- `APP_VERSION`, `V` (`sw.js`) dan `?v=` → 1.1.181.
+
+### 1.1.180 — 9 Okt
+- **Performa mingguan:** pilihan rentang 12 / 26 minggu / Semua (`#perfWeekRange`, `perfWkRange`, kunci `jurnalPerfWeeks`; validator ekspor pengaturan ditambah). `renderWeeks()` memotong `perfWeeksNow()` ke N minggu terakhir; daftar mingguan ikut. Garis putus-putus rata-rata per minggu (`.week-avg-line`, dihitung pada rentang terpilih) dan ringkasan `#weekSummary` (rata-rata, jumlah minggu untung). Tetap menghormati filter arah dan sesi.
+- `APP_VERSION`, `V` (`sw.js`) dan `?v=` → 1.1.180.
+
+### 1.1.179 — 9 Okt
+- **Performa: filter sesi pasar** (`#perfSesiTabs`: Semua sesi / Asia / London / New York) bersama filter arah. `computePerf(filt)` kini menerima fungsi penyaring (sebelumnya string arah); `perfPass(t)` menggabungkan arah dan sesi, `perfSesiOf(t)` memakai `LAP_SESSIONS` dan `waktu_buka` (GMT+8). Transaksi tanpa `waktu_buka` tidak lolos saat sesi dipilih (dicatat di keterangan). Disimpan di `jurnalPerfSesi` (validator ekspor pengaturan ditambah). Pecahan Beli/Jual (v1.1.176) ikut menghormati filter sesi.
+- `APP_VERSION`, `V` (`sw.js`) dan `?v=` → 1.1.179.
+
+### 1.1.178 — 9 Okt
+- **Performa: filter arah Semua / Beli / Jual** (`#perfArahTabs`, `#perfArahNote`). `computePerf(arah)` menerima arah opsional; `renderMonths()` dan `renderWeeks()` (blok mingguan dibungkus fungsi, listener daftar mingguan memakai `onclick`/`onkeydown` agar tidak menumpuk) memakai `perfMonthsNow()`/`perfWeeksNow()`. `perfTrades` (modal daftar) ikut disaring; `perfTradesAll` dipakai pecahan v1.1.176, yang disembunyikan saat satu arah dipilih. Pilihan di `jurnalPerfArah` (validator ekspor pengaturan ditambah). `% thd saldo` tetap memakai saldo seluruh akun; penilaian, WR, PF dan DD dari posisi arah itu saja.
+- `APP_VERSION`, `V` (`sw.js`) dan `?v=` → 1.1.178.
+
+### 1.1.177 — 9 Okt
+- **Kalender:** penanda `Perlu dicek` (`.kal-check`) untuk event berstatus Perkiraan yang kurang dari 7 hari lagi. Panah Aktual vs Prakiraan (`num()` mengambil angka pertama, mendukung K/M/B; `surprise()`): ▲ di atas, ▼ di bawah, = sesuai. Hanya arah angka, bukan penilaian pengaruh ke emas.
+- **Ekspor/impor pengaturan** kini memuat `kal-manual`, `kal-notes`, `kal-prefs` dan `jurnalCustomOpts` lewat `SETTINGS_VALIDATORS` (struktur dan panjang divalidasi; data sampah ditolak).
+- `APP_VERSION`, `V` (`sw.js`) dan `?v=` → 1.1.177.
+
+### 1.1.176 — 8 Okt
+- **Performa: pecahan Beli vs Jual per periode.** `perfSplit(p)` / `perfSplitHtml(p)` menghitung jumlah, win rate, dan P/L per arah dari `perfTrades(p)` (rentang `from`–`to` yang sama dengan modal daftar transaksi). Tampil sebagai baris `.m-split` di kartu bulanan dan di daftar mingguan (`.wk-split`, selebar baris). Dihitung dari transaksi, bukan field turunan.
+- `APP_VERSION`, `V` (`sw.js`) dan `?v=` → 1.1.176.
+
+### 1.1.175 — 8 Okt
+- **`broker.js` (berkas baru, ada di SHELL `sw.js`):** pembaca XLSX tanpa pustaka (ZIP via `DecompressionStream('deflate-raw')`, sharedStrings/inlineStr) dan CSV (pemisah otomatis). `groupBrokerRows` memfilter XAUUSDc, menggabungkan penutupan bertahap per ID (`combinePartialTrades`: lot dijumlah, tutup rata-rata berbobot, laba dijumlah, `bagian`), `compareWithJournal` (baru/beda/sama dengan toleransi), `buildApplyList`. Waktu broker = GMT+3, lot XLSX ×100, arah = kebalikan "Tindakan" baris tutup.
+- **Cek saldo** (`checkSaldo`), **Periksa data** (`checkDataIssues`: id-dobel, tutup-sebelum-buka, gmt8-tak-sesuai, laba-tanda; info: buka-kosong, laba-beda-rumus), **Urungkan** (`snapshot`/`restoreSnapshot`, kunci `jurnalUndoSnapshot`, dipanggil sebelum impor broker/JSON/CSV).
+- **Entri manual:** ID kembar dengan arah sama → konfirmasi gabung sebagai penutupan bertahap; arah beda → galat. `openDetail` menampilkan `#dvPartRow`.
+- **Opsi:** `TRIGGER_BASE` + FVG, `EXIT_ALIASES`/`canonExit` (dipakai `groupByField`), opsi kustom di `jurnalCustomOpts` (maks 20 per daftar). Konstanta dipindah ke atas app.js (hindari TDZ).
+- **Laporan:** `#laporanEmosiCmp` (Tenang/Percaya diri vs lainnya, tanda "n kecil").
+- **CSS:** blok tablet 721–900 px untuk `.stat-val` dan `.approx-rp`.
+- Keterbatasan: hanya .xlsx/.csv (bukan .xls), hanya akun cent; transaksi impor baru belum punya trigger/emosi.
+- `APP_VERSION`, `V` (`sw.js`) dan `?v=` (termasuk `broker.js`) → 1.1.175.
+
 ### 1.1.174 — 7 Okt
 - **Impor JSON: Gabungkan atau Timpa.** Sebelumnya impor selalu mengganti seluruh data aktif, sehingga file ekspor per periode (`periode_ekspor`) menghapus data di luar rentangnya. Kini dialog punya tiga pilihan: **Gabungkan** (baru ditambah, ID sama diperbarui, field yang tak ada di file seperti `catatan` dipertahankan, deposit/penarikan diduplikasi per isi, tidak ada yang dihapus), **Timpa semua** (perilaku lama), **Batal**. Fungsi `mergeImportedData()`; baris tidak valid diabaikan dan dihitung.
 - `showConfirmModal(message, opts)` mendukung label tombol dan tombol ketiga (`confirmModalAlt`); `.modal-message` memakai `white-space:pre-line`.

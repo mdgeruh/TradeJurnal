@@ -1,12 +1,12 @@
 // Service worker: cache-dulu (stale-while-revalidate) untuk berkas statis supaya aplikasi tampil instan; cache diperbarui di latar
 // dan versi baru dipakai pada pembukaan berikutnya (CACHE dinaikkan tiap rilis, cache lama dihapus saat aktif).
-// Anti campur-versi (v1.1.174): berkas CSS/JS dipanggil index.html dengan ?v=<versi> dan di-precache dengan nama bertanda itu;
+// Anti campur-versi (v1.1.181): berkas CSS/JS dipanggil index.html dengan ?v=<versi> dan di-precache dengan nama bertanda itu;
 // halaman (navigasi) diambil jaringan-dulu agar index.html selalu yang terbaru, baru jatuh ke cache bila offline.
 // Panggilan ke Supabase (domain lain) tidak pernah di-cache.
-const V = '1.1.174';
+const V = '1.1.181';
 const CACHE = 'jurnal-v' + V;
 const SHELL = ['./', 'index.html',
-  ...['style.css', 'app.js', 'kalender.js', 'sync.js', 'config.js', 'pwa.js'].map(f => f + '?v=' + V),
+  ...['style.css', 'app.js', 'kalender.js', 'broker.js', 'sync.js', 'config.js', 'pwa.js'].map(f => f + '?v=' + V),
   'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 const CDN = ['cdn.jsdelivr.net', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 

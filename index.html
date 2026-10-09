@@ -37,7 +37,7 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="style.css?v=1.1.174">
+<link rel="stylesheet" href="style.css?v=1.1.181">
 </head>
 <body>
 <div class="login-gate" id="loginGate" role="dialog" aria-modal="true" aria-labelledby="lgTitle">
@@ -220,6 +220,10 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
 
   <div class="tab-panel" data-panel="statistik" id="tabpanel-statistik" role="tabpanel" aria-labelledby="tabbtn-statistik">
 
+  <div class="lap-gran-tabs" id="perfArahTabs" role="tablist" aria-label="Filter arah posisi di Performa"></div>
+  <div class="lap-gran-tabs" id="perfSesiTabs" role="tablist" aria-label="Filter sesi pasar di Performa"></div>
+  <div class="section-note" id="perfArahNote" hidden></div>
+
   <section>
     <div class="section-head">
       <h2>Performa bulanan</h2>
@@ -233,6 +237,8 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
       <h2>Performa mingguan</h2>
       <div class="section-note">Laba/rugi per minggu ISO (Senin–Minggu) sejak minggu pertama tercatat, lengkap dengan win rate dan % thd saldo sebelum minggu itu.</div>
     </div>
+    <div class="lap-gran-tabs" id="perfWeekRange" role="tablist" aria-label="Rentang minggu"></div>
+    <div class="section-note" id="weekSummary"></div>
     <div class="week-strip-scroll">
       <div class="week-strip" id="weekStrip"></div>
       <div class="week-labels" id="weekLabels"></div>
@@ -454,6 +460,7 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
     <div class="psy-group">
       <h3>Kondisi emosi</h3>
       <div id="laporanEmosi"></div>
+      <div class="psy-cmp" id="laporanEmosiCmp" hidden></div>
     </div>
     <div class="psy-group">
       <h3>Jenis entry</h3>
@@ -617,6 +624,19 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
       </form>
     </section>
 
+    <section>
+      <div class="section-head">
+        <h2>Impor dan ekspor jadwal</h2>
+        <div class="section-note">Ekspor menyimpan semua event (bawaan dan buatan sendiri) beserta Prakiraan, Sebelumnya, dan Aktual ke berkas JSON. Impor menambah event dari berkas yang sama formatnya; ID yang sudah ada diperbarui, event bawaan tidak ditimpa. Jadwal baru bisa disiapkan tanpa mengubah kalender.js.</div>
+      </div>
+      <div class="bk-inline">
+        <button type="button" class="quick-chip" id="kalExportBtn">Ekspor jadwal (.json)</button>
+        <button type="button" class="quick-chip" id="kalImportBtn">Impor jadwal (.json)</button>
+        <input type="file" id="kalImportInput" accept=".json,application/json" hidden>
+      </div>
+      <div class="section-note" id="kalIoNote" style="text-align:left;" hidden></div>
+    </section>
+
     <p class="kal-foot">Jadwal USD diambil dari kalender publik (<a href="https://fedratecalc.com/us-economic-calendar/october-2026/" target="_blank" rel="noopener">fedratecalc.com</a>, <a href="https://www.financecalendar.com/" target="_blank" rel="noopener">financecalendar.com</a>). Label <b>Perkiraan</b> berarti tanggal mengikuti pola rilis biasa dan belum dikonfirmasi. Jam rilis AS memakai waktu Eastern (EDT sampai 1 November, lalu EST) dan sudah dikonversi. Angka prakiraan, sebelumnya, dan aktual tidak disertakan; isi sendiri. Cek ulang tanggal di situs resmi BLS, BEA, dan Federal Reserve sebelum trading.</p>
   </div>
 
@@ -755,6 +775,34 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
       </div>
       <input type="number" id="perfTarget" class="settings-input" min="0.1" max="1000" step="0.5" placeholder="mis. 5" aria-label="Target PNL bulanan dalam persen">
     </div>
+  </section>
+
+  <section id="optSection" data-sgroup="trading" aria-labelledby="optTitle">
+    <div class="section-head">
+      <h2 id="optTitle">Opsi trigger dan exit</h2>
+      <div class="section-note">Tambah setup atau exit sendiri (mis. Liquidity Sweep). Opsi muncul di form transaksi, filter, dan laporan. Menghapus opsi tidak mengubah transaksi lama. Halaman dimuat ulang setelah perubahan.</div>
+    </div>
+    <div class="settings-row opt-row">
+      <div class="settings-desc">
+        <strong>Trigger entry</strong>
+        <div class="opt-chips" id="optTriggerChips"></div>
+      </div>
+      <div class="bk-inline">
+        <input type="text" id="optTriggerIn" class="settings-input" maxlength="40" autocomplete="off" placeholder="mis. Liquidity Sweep" aria-label="Trigger entry baru">
+        <button type="button" id="optTriggerAdd" class="ledger-reset-btn"><span>Tambah</span></button>
+      </div>
+    </div>
+    <div class="settings-row opt-row">
+      <div class="settings-desc">
+        <strong>Trigger exit</strong>
+        <div class="opt-chips" id="optExitChips"></div>
+      </div>
+      <div class="bk-inline">
+        <input type="text" id="optExitIn" class="settings-input" maxlength="40" autocomplete="off" placeholder="mis. Trailing Stop" aria-label="Trigger exit baru">
+        <button type="button" id="optExitAdd" class="ledger-reset-btn"><span>Tambah</span></button>
+      </div>
+    </div>
+    <div class="section-note" id="optNote" style="text-align:left;" role="status"></div>
   </section>
 
   <section id="calcParamSection" data-sgroup="trading">
@@ -910,6 +958,48 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
       <button type="button" id="clearLocalDataBtn" class="ledger-reset-btn has-ic"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg><span>Hapus &amp; Reset</span></button>
     </div>
     <div class="section-note" id="importNote" style="text-align:left;"></div>
+  </section>
+
+  <section id="brokerSection" data-sgroup="data" aria-labelledby="brokerTitle">
+    <div class="section-head">
+      <h2 id="brokerTitle">Cocokkan dengan broker</h2>
+      <div class="section-note">Samakan jurnal dengan riwayat broker supaya saldo dan jam transaksi tidak meleset.</div>
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc">
+        <strong>Impor riwayat broker</strong>
+        <span>Pilih laporan MT5 "Trading activity" (.xlsx atau .csv). Posisi yang ditutup bertahap digabung otomatis, jam broker diubah ke GMT+8, dan Anda melihat pratinjau perubahan sebelum disimpan. Hanya akun cent (simbol berakhiran c).</span>
+      </div>
+      <input type="file" id="brokerFileInput" class="file-hidden" accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" tabindex="-1" aria-hidden="true">
+      <button type="button" id="brokerImportBtn" class="ledger-reset-btn has-ic"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3"/><path d="M7 7l5-5 5 5"/><path d="M5 21h14"/></svg><span>Pilih file</span></button>
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc">
+        <strong>Cek saldo terhadap broker</strong>
+        <span>Isi saldo dari MT5 (dalam &cent;). Aplikasi menunjukkan cocok atau selisihnya.</span>
+      </div>
+      <div class="bk-inline">
+        <input type="text" id="brokerSaldo" class="settings-input" inputmode="decimal" autocomplete="off" placeholder="mis. 6271,16" aria-label="Saldo broker dalam sen">
+        <button type="button" id="brokerSaldoBtn" class="ledger-reset-btn"><span>Cek</span></button>
+      </div>
+    </div>
+    <div class="bk-result" id="brokerSaldoResult" role="status" hidden></div>
+    <div class="settings-row">
+      <div class="settings-desc">
+        <strong>Periksa data</strong>
+        <span>Mencari jam tutup sebelum jam buka, jam GMT+8 tidak sama dengan jam broker + 5 jam, jam buka kosong, ID dobel, dan tanda laba yang tidak sesuai arah/harga.</span>
+      </div>
+      <button type="button" id="dataCheckBtn" class="ledger-reset-btn"><span>Periksa</span></button>
+    </div>
+    <div class="bk-result" id="dataCheckResult" role="status" hidden></div>
+    <div class="settings-row">
+      <div class="settings-desc">
+        <strong>Urungkan impor terakhir</strong>
+        <span id="undoInfo"></span>
+      </div>
+      <button type="button" id="undoImportBtn" class="ledger-reset-btn" disabled><span>Urungkan</span></button>
+    </div>
+    <div class="section-note" id="brokerNote" style="text-align:left;" role="status"></div>
   </section>
 
   <section id="storageSection" data-sgroup="data">
@@ -1105,6 +1195,7 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
       <div class="detail-row"><span class="detail-lbl">Waktu buka</span><span class="detail-val" id="dvWaktuBuka"></span></div>
       <div class="detail-row" id="dvNewsRow" hidden><span class="detail-lbl">Dekat rilis</span><span class="detail-val" id="dvNews"></span></div>
       <div class="detail-row"><span class="detail-lbl">Waktu tutup</span><span class="detail-val" id="dvWaktu"></span></div>
+      <div class="detail-row" id="dvPartRow" hidden><span class="detail-lbl">Penutupan</span><span class="detail-val" id="dvPart"></span></div>
       <div class="detail-row"><span class="detail-lbl">Trigger entry</span><span class="detail-val" id="dvTrigger"></span></div>
       <div class="detail-row"><span class="detail-lbl">Trigger exit</span><span class="detail-val" id="dvTriggerExit"></span></div>
       <div class="detail-row"><span class="detail-lbl">Kondisi emosi</span><span class="detail-val" id="dvEmosi"></span></div>
@@ -1229,10 +1320,11 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
 </div>
 
 <script id="journal-data" type="application/json">{"summary": {"total": 0, "win": 0, "loss": 0, "winrate": 0, "pl_cent": 0, "pl_rp": 0, "saldo_akhir": 0, "pct_pl": null}, "periods": [], "kurs": 0, "dashboard": {"update": "Update terakhir: -", "saldo": 0, "stats": {"total": 0, "winrate": 0, "pf": 0, "maxdd": 0, "expectancy": 0}, "top_win": [], "top_loss": [], "mm": {"equity": 0, "risk": 0.01, "sl": 150, "pipval": 10, "lot": 0, "tp_pips": 0, "tp_cent": 0}}, "maxdd_note": "", "equity": [], "months": [], "weeks": [], "trades": [], "deposit": {"total_deposit": 0, "total_penarikan": 0, "total_mc": 0, "modal_bersih": 0, "log": []}, "period_ranges": [], "modal_kumulatif": []}</script>
-<script src="config.js?v=1.1.174"></script>
-<script src="app.js?v=1.1.174"></script>
-<script src="kalender.js?v=1.1.174"></script>
-<script src="sync.js?v=1.1.174"></script>
-<script src="pwa.js?v=1.1.174"></script>
+<script src="config.js?v=1.1.181"></script>
+<script src="app.js?v=1.1.181"></script>
+<script src="kalender.js?v=1.1.181"></script>
+<script src="broker.js?v=1.1.181"></script>
+<script src="sync.js?v=1.1.181"></script>
+<script src="pwa.js?v=1.1.181"></script>
 </body>
 </html>
