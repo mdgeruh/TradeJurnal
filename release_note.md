@@ -2,7 +2,7 @@
 
 Ringkasan perubahan untuk pengguna, terbaru di atas. Isinya sama dengan **Setelan → Tentang aplikasi → Lihat riwayat** di aplikasi (data `USER_CHANGELOG` di `app.js`). Rincian teknis per versi ada di `CHANGELOG.md`; rencana ke depan di `roadmap.md`.
 
-**Versi saat ini: 1.1.181** (9 Okt 2026)
+**Versi saat ini: 1.1.190** (14 Okt 2026)
 
 ## Sorotan
 - Ringkasan: kurva ekuitas yang jelas (modal, puncak berjalan, drawdown, tooltip), pilihan **Ekuitas / PNL kumulatif**, PNL Minggu/Bulan Ini, lencana DD saat ini.
@@ -12,8 +12,17 @@ Ringkasan perubahan untuk pengguna, terbaru di atas. Isinya sama dengan **Setela
 - **Data aman:** sinkron cloud (Supabase), status dan pengingat cadangan, ekspor HTML mandiri/JSON, ekspor-impor pengaturan.
 - **Aplikasi terpasang (PWA)** di Android dan iOS, terbuka cepat dan bisa offline.
 
-## 1 Okt 2026 (v1.1.145 – v1.1.181)
+## 1 Okt 2026 (v1.1.145 – v1.1.190)
 **Baru**
+- Detail Transaksi: tombol tutup (X) pindah ke baris tombol bawah; tombol hapus tidak lagi melebar di HP.
+- Detail dan Edit Transaksi disamakan dengan form Tambah: dua kolom, pratinjau hasil, durasi, Enter/Ctrl+Enter, dan perubahan yang belum disimpan tidak hilang tanpa konfirmasi.
+- Tambah Transaksi lebih cepat: pratinjau hasil langsung, isian dari transaksi terakhir, Simpan & tambah lagi, Enter pindah isian, dan form tidak tertutup tanpa sengaja.
+- Setelan → Trading: event dampak sedang bisa ikut dihitung sebagai "dekat rilis".
+- Setelan → Trading: jendela rilis berita bisa dipilih ±15 / ±30 / ±60 menit.
+- Transaksi: filter **Berita** (dekat rilis ±30 menit / di luar rilis).
+- Performa: **heatmap harian setahun** (hijau untung, merah rugi, makin pekat makin besar); pilih tahun, ketuk kotak untuk transaksi hari itu. Mengikuti filter arah dan sesi.
+- Performa: batang bulanan punya **garis target** (bila target diatur di Setelan), dan ringkasan mingguan menyebut minggu terbaik dan terburuk.
+- Kalender: tampilan **Mingguan** (Senin sampai Jumat) dengan penanda warna dampak, navigasi minggu, dan rincian event.
 - Kalender: **impor dan ekspor jadwal** (JSON), jadi jadwal rilis baru dan angka Prakiraan/Aktual bisa dimasukkan tanpa mengubah kode.
 - Performa mingguan: pilih rentang **12 minggu, 26 minggu atau semua**; ada garis rata-rata per minggu dan ringkasan jumlah minggu untung.
 - Performa: filter **sesi pasar** (Asia, London, New York menurut waktu buka), bisa digabung dengan filter arah.

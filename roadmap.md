@@ -2,7 +2,10 @@
 
 Satu-satunya daftar rencana dan todo proyek (dulu ada di `SUMMARY.md`). Prioritas: **P1** tinggi, **P2** sedang, **P3** rendah. Tidak ada tanggal tetap. Setiap butir yang mengubah kode mengikuti **Alur rilis** di `README.md`; saat selesai, hapus dari sini (centang bila perlu satu rilis), pindahkan tema barunya ke tabel "Sudah selesai", dan catat di `release_note.md` dan `CHANGELOG.md`. Jebakan bug tiap area ada di `SUMMARY.md`.
 
-## Sudah selesai (v1.1.181)
+## Sudah selesai (v1.1.190)
+- Detail Transaksi: tombol X di baris aksi bawah (v1.1.190).
+- Detail dan Edit Transaksi disamakan dengan modal Tambah (v1.1.189): kisi dua kolom, pratinjau, durasi, pelindung isian.
+- Optimalisasi modal Tambah Transaksi (v1.1.188): grid dua kolom, pratinjau hasil, peringatan, isian terakhir, simpan & tambah lagi, pelindung isian.
 | Tema | Isi |
 |---|---|
 | Fondasi | Ringkasan (+ 5 transaksi terakhir, aturan trading pribadi, indikator sinkron cloud, Esc global), Performa, Deposit, Transaksi, input manual (+), data di localStorage, tanpa build tool |
@@ -63,15 +66,15 @@ Hampir semua fitur baru hanya diuji di Chromium dengan data sintetis dan Supabas
 - [ ] **Isi `f`/`p` di `EVENTS`** untuk event lain begitu konsensus terbit (kini baru klaim 8 Okt dan CPI); sumber sering beda angka, cek ulang.
 - [ ] **Perbarui `EVENTS`** tiap bulan (kini 2 Okt – 6 Nov 2026, hanya USD); cek ulang tanggal ke BLS/BEA/Fed. Berikutnya: event non-USD (ECB, BoE, BoJ), data China/Eropa yang menggerakkan emas.
 - [x] **Kunci `kal-manual`/`kal-notes`/`kal-prefs` ikut ekspor pengaturan** (v1.1.177). Sisa: sinkron cloud bila perlu.
-- [ ] **Hubungkan ke jurnal (lanjutan):** filter Laporan/Transaksi "dekat rilis"; jendela ±30/±15 menit bisa diatur di Setelan; ikut dinilai juga event dampak Sedang.
+- [ ] **Hubungkan ke jurnal (lanjutan):** filter Transaksi "dekat rilis" (selesai v1.1.185; Laporan sudah punya tampilan "Saat rilis"); jendela rilis bisa diatur 15/30/60 menit di Setelan (selesai v1.1.186); event dampak Sedang bisa ikut dinilai (selesai v1.1.187).
 - [x] **Impor/ekspor jadwal** (JSON, v1.1.181). Sisa: format CSV dan memperluas cakupan Laporan "Saat rilis" (`KAL.cover`) ke event impor.
-- [ ] **Tampilan kalender mingguan** (grid Senin–Jumat dengan titik berwarna).
+- [x] **Tampilan kalender mingguan** (v1.1.182).
 - [ ] **Aktual vs Prakiraan:** panah lebih tinggi/rendah sudah ada (v1.1.177); sisa catatan arah reaksi emas dan catatan reaksi harga per event.
 - [x] **Penanda "Perlu dicek"** (v1.1.177) untuk event berstatus Perkiraan yang tanggalnya sudah dekat.
 - [ ] **Peringatan** (PWA) 15 menit sebelum event dampak tinggi.
 
 **Performa**
-- [ ] **Performa lanjutan** (saran 5–9, 6 Okt): (saran 5+6 selesai v1.1.166; sisa: garis target pada batang bulanan) heatmap kalender tahunan; rentang 12/26 minggu dan garis rata-rata batang mingguan sudah ada (v1.1.180), sisa sumbu dan nilai pada batang; filter Arah (v1.1.178) dan Sesi (v1.1.179) di Performa sudah ada.
+- [ ] **Performa lanjutan** (saran 5–9, 6 Okt): (saran 5+6 selesai v1.1.166; garis target pada batang bulanan selesai v1.1.183) heatmap kalender tahunan selesai v1.1.184; rentang 12/26 minggu dan garis rata-rata batang mingguan sudah ada (v1.1.180), sisa sumbu dan nilai pada batang; filter Arah (v1.1.178) dan Sesi (v1.1.179) di Performa sudah ada.
 
 **Transaksi**
 - [ ] **Lampiran gambar chart per transaksi** (usulan 3 Okt): foto setup disimpan lokal (IndexedDB) dan dikompres; tidak ikut sinkron cloud/ekspor JSON agar data tetap kecil; tampil di detail transaksi.

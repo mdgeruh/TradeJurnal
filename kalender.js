@@ -29,13 +29,15 @@
   }
   var IMPACT_LABEL = { 3: "Tinggi", 2: "Sedang", 1: "Rendah" };
   var RANGES = [{ k: 7, l: "7 hari" }, { k: 30, l: "30 hari" }, { k: 0, l: "Semua" }];
-  var state = { tz: defaultTz(), imp: { 1: true, 2: true, 3: true }, range: 30, past: false };
+  var state = { tz: defaultTz(), imp: { 1: true, 2: true, 3: true }, range: 30, past: false, view: "daftar" };
+  var weekOff = 0, selEv = null;   // pergeseran minggu (0 = minggu ini) dan event terpilih di tampilan mingguan
   var manual = [], notes = {}, open = {};
 
   function load(key, fallback) { try { var v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; } }
   function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {} }
   var prefs = load("kal-prefs", null);
   if (prefs) { for (var k in prefs) if (k in state) state[k] = prefs[k]; }
+  if (state.view !== "daftar" && state.view !== "minggu") state.view = "daftar";
   if (!/^(Asia\/Makassar|Asia\/Jakarta|Asia\/Jayapura|Etc\/GMT-3|UTC|America\/New_York)$/.test(state.tz)) state.tz = defaultTz();
   manual = load("kal-manual", []);
   notes = load("kal-notes", {});
@@ -94,6 +96,20 @@
       rc.appendChild(b);
     });
 
+    var vc = $("kalViewChips");
+    if (vc) {
+      vc.textContent = "";
+      [["daftar", "Daftar"], ["minggu", "Mingguan"]].forEach(function (v) {
+        var b = h("button", "kal-chip", v[1]); b.type = "button"; b.dataset.v = v[0];
+        b.setAttribute("aria-pressed", String(state.view === v[0]));
+        b.addEventListener("click", function () {
+          state.view = v[0];
+          vc.querySelectorAll(".kal-chip").forEach(function (c) { c.setAttribute("aria-pressed", String(c.dataset.v === state.view)); });
+          persist(); render();
+        });
+        vc.appendChild(b);
+      });
+    }
     var pc = $("kalPastChip"); pc.setAttribute("aria-pressed", String(state.past));
     pc.addEventListener("click", function () { state.past = !state.past; pc.setAttribute("aria-pressed", String(state.past)); persist(); render(); });
 
@@ -127,12 +143,14 @@
   function render() {
     var now = Date.now(), tz = state.tz, list = $("kalList");
     list.textContent = "";
+    document.querySelectorAll(".kal-only-list").forEach(function (g) { g.hidden = state.view === "minggu"; });
     // Peringatan jadwal hampir habis: event bawaan terakhir kurang dari 7 hari lagi (atau sudah lewat).
     var st = $("kalStale"), lastTs = Math.max.apply(null, allEvents().map(function (x) { return x.ts; }));
     if (st) {
       st.hidden = lastTs - now > 7 * 86400000;
       if (!st.hidden) st.textContent = (lastTs < now ? "Jadwal bawaan sudah berakhir pada " : "Jadwal bawaan segera berakhir pada ") + fmt(lastTs, tz, { day: "numeric", month: "long", year: "numeric" }) + ". Impor jadwal baru (JSON) atau tambah event sendiri di bawah, atau perbarui array EVENTS di kalender.js (lihat README).";
     }
+    if (state.view === "minggu") { renderWeek(list, now, tz); return; }
     var evs = allEvents().filter(function (e) {
       if (!state.imp[e.impact]) return false;
       var isPast = e.ts < now;
@@ -158,6 +176,51 @@
       g.items.forEach(function (e) { day.appendChild(eventNode(e, now, tz)); });
       list.appendChild(day);
     });
+  }
+
+  // Tampilan mingguan (v1.1.182): grid Senin sampai Jumat menurut zona waktu terpilih; ketuk event untuk rincian di bawah grid.
+  function addDays(key, n) { var p = key.split("-").map(Number), d = new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)); return d.toISOString().slice(0, 10); }
+  function mondayOf(key) { var p = key.split("-").map(Number), wd = (new Date(Date.UTC(p[0], p[1] - 1, p[2])).getUTCDay() + 6) % 7; return addDays(key, -wd); }
+  function renderWeek(list, now, tz) {
+    var monday = addDays(mondayOf(dayKey(now, tz)), weekOff * 7), days = [0, 1, 2, 3, 4].map(function (i) { return addDays(monday, i); });
+    var today = dayKey(now, tz), all = allEvents().filter(function (e) { return state.imp[e.impact]; });
+    var byDay = {}; days.forEach(function (d) { byDay[d] = []; });
+    var weekend = 0;
+    all.forEach(function (e) { var k = dayKey(e.ts, tz); if (byDay[k]) byDay[k].push(e); else if (k > days[4] && k <= addDays(monday, 6)) weekend++; });
+    var head = h("div", "kalw-head");
+    var prev = h("button", "kal-chip", "\u25c0"); prev.type = "button"; prev.setAttribute("aria-label", "Minggu sebelumnya");
+    var next = h("button", "kal-chip", "\u25b6"); next.type = "button"; next.setAttribute("aria-label", "Minggu berikutnya");
+    var cur = h("button", "kal-chip", "Minggu ini"); cur.type = "button";
+    prev.addEventListener("click", function () { weekOff--; selEv = null; render(); });
+    next.addEventListener("click", function () { weekOff++; selEv = null; render(); });
+    cur.addEventListener("click", function () { weekOff = 0; selEv = null; render(); });
+    var lbl = h("div", "kalw-range", fmt(zonedToUtc(days[0], "12:00", tz), tz, { day: "numeric", month: "short" }) + " \u2013 " + fmt(zonedToUtc(days[4], "12:00", tz), tz, { day: "numeric", month: "short", year: "numeric" }));
+    head.appendChild(prev); head.appendChild(lbl); head.appendChild(next); head.appendChild(cur);
+    list.appendChild(head);
+    var grid = h("div", "kalw-grid");
+    days.forEach(function (d) {
+      var col = h("div", "kalw-col" + (d === today ? " kalw-today" : ""));
+      var ts = zonedToUtc(d, "12:00", tz);
+      var hd = h("div", "kalw-dh"); hd.appendChild(h("span", "kalw-dn", fmt(ts, tz, { weekday: "short" })));
+      hd.appendChild(h("span", "kalw-dd", fmt(ts, tz, { day: "numeric", month: "short" })));
+      col.appendChild(hd);
+      var evs = byDay[d];
+      if (!evs.length) col.appendChild(h("div", "kalw-none", "\u2013"));
+      evs.forEach(function (e) {
+        var b = h("button", "kalw-ev l" + e.impact + (e.ts < now ? " kalw-past" : "") + (selEv === e.id ? " kalw-sel" : ""));
+        b.type = "button"; b.title = e.name;
+        b.appendChild(h("span", "kalw-t", hhmm(e.ts, tz)));
+        b.appendChild(h("span", "kalw-n", e.cur + " " + e.name));
+        b.addEventListener("click", function () { selEv = selEv === e.id ? null : e.id; if (selEv) open[e.id] = true; render(); });
+        col.appendChild(b);
+      });
+      grid.appendChild(col);
+    });
+    list.appendChild(grid);
+    if (weekend) list.appendChild(h("div", "section-note", weekend + " event jatuh di akhir pekan dan hanya tampil di Daftar."));
+    var sel = selEv && all.filter(function (e) { return e.id === selEv; })[0];
+    if (sel) { var box = h("div", "kalw-detail"); box.appendChild(eventNode(sel, now, tz)); list.appendChild(box); }
+    else if (!all.some(function (e) { return byDay[dayKey(e.ts, tz)]; })) list.appendChild(h("div", "kal-empty", "Tidak ada event pada minggu ini untuk filter dampak yang dipilih."));
   }
 
   function eventNode(e, now, tz) {
@@ -302,8 +365,9 @@
     cover: { from: Math.min.apply(null, builtIn), to: Math.max.apply(null, builtIn) },
     nextHigh: function (now) { return allEvents().filter(function (e) { return e.impact === 3 && e.ts > now; })[0] || null; },
     // Event dampak tinggi yang waktunya berada dalam [ms - beforeMin, ms + afterMin] (rilis sebelum/sesudah titik waktu).
-    near: function (ms, beforeMin, afterMin) {
-      return allEvents().filter(function (e) { return e.impact === 3 && e.ts - ms <= beforeMin * 60000 && ms - e.ts <= afterMin * 60000; })[0] || null;
+    near: function (ms, beforeMin, afterMin, minImpact) {
+      var mi = minImpact === 2 ? 2 : 3;
+      return allEvents().filter(function (e) { return e.impact >= mi && e.ts - ms <= beforeMin * 60000 && ms - e.ts <= afterMin * 60000; })[0] || null;
     },
     when: function (ts) { return fmt(ts, state.tz, { weekday: "long", day: "numeric", month: "long" }) + ", " + hhmm(ts, state.tz) + " " + tzShort(state.tz); },
     hm: function (ts) { return hhmm(ts, state.tz) + " " + tzShort(state.tz); },

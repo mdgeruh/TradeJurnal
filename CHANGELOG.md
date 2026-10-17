@@ -3,6 +3,50 @@
 Perubahan Jurnal XAUUSD, terbaru di atas. Semua rilis 22 Sep – 1 Okt 2026. Versi berbahasa pengguna akhir ada di aplikasi (Setelan → Tentang aplikasi). v1.1.144 ke atas dicatat per versi; sebelumnya diringkas per tema. Status dan jebakan bug: `SUMMARY.md`; rencana dan todo: `roadmap.md`.
 
 ## Rilis terbaru
+### 1.1.190 — 16 Okt
+- **Detail Transaksi: tombol X pindah ke baris aksi bawah** (`#detailCloseBtn` kini di `#detailViewActions`, setelah tombol Edit; tidak ada lagi `.modal-x` di header). Esc tetap menutup (pada mode edit lewat konfirmasi "Buang perubahan?"); mode edit memakai Batal.
+- CSS stretch tombol di ≤480px dibatasi ke `#entryModalBox` dan `#detailEditActions`; tombol hapus di mode lihat tidak lagi melebar.
+- `APP_VERSION`, `V` (`sw.js`) dan `?v=` → 1.1.190.
+
+### 1.1.189 — 16 Okt
+- **Detail dan Edit Transaksi disamakan dengan modal Tambah.** `#detailModalBox.wide` (560px). Tampilan detail (`#detailView.detail-grid`): kisi dua kolom (satu kolom ≤480px), baris Laba menonjol berwarna (`.detail-result`), baris baru Durasi (`#dvDurRow`, dari waktu buka ke waktu tutup), blok "Catatan psikologi". Form edit (`#detailEdit.entry-grid`): urutan sama dengan Tambah (Arah+Lot, Harga, Waktu, Laba aktual, Catatan psikologi).
+- **Pratinjau edit** (`updEditPreview`, `#editPreview`) meniru aturan simpan: laba/pips hanya dihitung ulang bila arah/lot/harga diubah, atau laba aktual diedit; peringatan selisih >5% dan waktu tutup < waktu buka. Simpan menolak waktu tutup < waktu buka.
+- **Pelindung isian:** klik di luar tidak menutup saat edit sudah diubah; X dan Batal edit meminta konfirmasi "Buang perubahan?". Enter pindah isian, Ctrl/Cmd+Enter simpan (+Shift = Simpan & lanjut).
+- Waktu berformat spasi (`YYYY-MM-DD HH:MM`, data demo/lama) dinormalkan ke `T` di picker edit (sebelumnya tampil NaN).
+- `fmtDurMin` kini fungsi global. `APP_VERSION`, `V` (`sw.js`) dan `?v=` → 1.1.189.
+
+### 1.1.188 — 16 Okt
+- **Optimalisasi modal Tambah Transaksi.** Form (`#entryFormTrade`) jadi grid dua kolom (`.entry-grid`; satu kolom untuk waktu di ≤480px), modal melebar ke 560px (`#entryModalBox.wide`), tombol aksi menempel di bawah (sticky). Urutan isian: Arah+Lot, Harga buka+tutup, Waktu buka+tutup, Laba aktual, lalu blok Catatan psikologi.
+- **Pratinjau langsung** (`updEntryPreview`, `#entryPreviewTrade`): laba, pips, menang/rugi, durasi; peringatan harga >10% dari harga tutup transaksi terakhir (atau selisih buka/tutup >5%), waktu tutup < waktu buka, laba aktual beda dari hitungan, ID posisi sudah ada. Simpan kini menolak waktu tutup < waktu buka.
+- **Isi awal dari transaksi manual terakhir** (`localStorage['jurnalEntryLast']`: arah, lot, trigger entry, jenis entry; tombol Kosongkan). **Simpan & tambah lagi** (`#entryModalSaveMore`; form dibuka ulang setelah muat ulang lewat `sessionStorage['jurnalEntryReopen']`). Enter pindah isian, Ctrl/Cmd+Enter simpan (+Shift = tambah lagi), fokus otomatis di perangkat berpointer halus.
+- **Pelindung isian:** ketukan di luar tidak menutup form yang sudah diubah; Batal/Esc meminta konfirmasi "Buang isian?".
+- `APP_VERSION`, `V` (`sw.js`) dan `?v=` → 1.1.188.
+
+### 1.1.187 — 15 Okt
+- **Event dampak sedang bisa ikut dinilai.** `KAL.near(ms, before, after, minImpact)` (kalender.js) menerima ambang dampak (2 atau 3, bawaan 3). `NEWS_IMP` di app.js dibaca dari `localStorage['jurnalNewsImp']` ('2'|'3'); chip `#newsImpChips` di Setelan → Trading. Dipakai `tradeNewsEvent` (Laporan "Saat rilis", filter Berita, rincian transaksi); judul `#lapNewsTitle` mengikuti. Kunci masuk `SETTINGS_VALIDATORS`.
+- `APP_VERSION`, `V` (`sw.js`) dan `?v=` → 1.1.187.
+
+### 1.1.186 — 14 Okt
+- **Jendela rilis bisa diatur.** `NEWS_WIN` kini `let`, dibaca dari `localStorage['jurnalNewsWin']` (15/30/60, bawaan 30); chip `#newsWinChips` di Setelan → Trading (`#newsWinSection`). Mengubahnya merender ulang Transaksi dan Laporan; judul `#lapNewsTitle` mengikuti. Kunci masuk `SETTINGS_VALIDATORS` (ekspor/impor setelan). Label filter Berita menjadi "Dekat rilis" tanpa angka.
+- `APP_VERSION`, `V` (`sw.js`) dan `?v=` → 1.1.186.
+
+### 1.1.185 — 14 Okt
+- **Transaksi: filter "Berita"** (`#csw_filterBerita`: Semua / Dekat rilis ±30 mnt / Di luar rilis). Memakai `tradeNewsEvent` (`KAL.near`, `NEWS_WIN`); transaksi di luar `KAL.cover` tidak dinilai sehingga hilang dari kedua pilihan. Ikut hitungan lencana filter, reset dan state sesi (`fBerita`).
+- `APP_VERSION`, `V` (`sw.js`) dan `?v=` → 1.1.185.
+
+### 1.1.184 — 14 Okt
+- **Performa: heatmap harian setahun** (`renderYearHeat`, `#perfHeat`, `#perfHeatYears`, `#perfHeatSum`). Grid CSS: kolom per minggu (Senin di baris atas), satu kotak per hari (`.yh-cell`), label bulan di baris pertama. Warna menurut P/L harian (kunci GMT+8): `yh-up` hijau, `yh-down` merah, `yh-flat` untuk hari impas; kepekatan = |P/L| / hari terbesar tahun itu (minimal 0,28). Ketuk kotak membuka daftar transaksi hari itu lewat `openListModal` (sudah tersaring). Mengikuti filter arah dan sesi (dipanggil dari `redraw`). Ringkasan: hari trading, hari untung, total. Wadah menggulir di dalam (`.yh-scroll`); posisi awal diarahkan ke hari trading terakhir dan diterapkan lewat `ResizeObserver` karena panel Performa bisa tersembunyi saat render.
+- `APP_VERSION`, `V` (`sw.js`) dan `?v=` → 1.1.184.
+
+### 1.1.183 — 14 Okt
+- **Performa bulanan: garis target pada batang.** `computePerf` menambah `base` (saldo sebelum bulan itu). Bila target bulanan diatur, `renderMonths` menaruh `.m-tgt-line` di `target% x base / batang terpanjang` (maks 99,2%); batang yang melewati garis sama dengan "target tercapai". Tooltip garis memuat nilai target. Batang tetap relatif terhadap bulan terpanjang, jadi pada saldo besar garis cenderung dekat sisi kanan.
+- **Performa mingguan:** ringkasan menyebut minggu terbaik dan terburuk pada rentang terpilih (minimal 3 minggu).
+- `APP_VERSION`, `V` (`sw.js`) dan `?v=` → 1.1.183.
+
+### 1.1.182 — 14 Okt
+- **Kalender: tampilan Mingguan** (`#kalViewChips`: Daftar / Mingguan; `state.view` di `kal-prefs`). `renderWeek()` membuat grid Senin–Jumat menurut zona waktu terpilih (`mondayOf`/`addDays` dengan kunci tanggal YYYY-MM-DD, bukan `Date` lokal), tiap event berpenanda warna dampak (`.kalw-ev.l1/l2/l3`), navigasi minggu (◀ ▶, Minggu ini; `weekOff`, tidak disimpan), ketuk event memilih (`selEv`) dan menampilkan rincian lewat `eventNode` di bawah grid. Memakai filter Dampak dan zona waktu yang sama; filter Rentang dan Riwayat (`.kal-only-list`) disembunyikan di tampilan ini. Event akhir pekan dihitung dan dicatat hanya tampil di Daftar. Di bawah 720 px kolom bertumpuk.
+- `APP_VERSION`, `APP_BUILD_DATE`, `V` (`sw.js`) dan `?v=` → 1.1.182.
+
 ### 1.1.181 — 9 Okt
 - **Kalender: impor/ekspor jadwal (JSON)** (`#kalExportBtn`, `#kalImportBtn`, `#kalImportInput`, catatan `#kalIoNote`). Format `{app:'jurnal-xauusd', type:'kalender', version:1, events:[{id,t,cur,name,impact,status,f,p,a,gold}]}`; impor juga menerima larik event polos. `normalizeEvent` memvalidasi (nama maks 120, `t` harus tanggal, dampak 1–3, mata uang 2–4 huruf kapital, `f/p/a` maks 60, `gold` maks 400; status hanya `ok`/`est`), maksimal 300 event per berkas dan 200 event impor total. Event diimpor disimpan di `kal-manual` (bisa dihapus dari detail, ikut ekspor pengaturan). ID yang sama diperbarui; ID event bawaan dilewati (tidak menimpa `EVENTS`).
 - Banner "jadwal habis" kini mempertimbangkan event impor. `KAL.cover` (rentang yang dinilai Laporan "Saat rilis") tetap hanya jadwal bawaan.

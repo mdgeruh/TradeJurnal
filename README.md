@@ -86,6 +86,30 @@ Tiap tab punya tautan hash: `#ringkasan`, `#analisis`, `#performa`, `#laporan`, 
 ## Chart XAUUSD (v1.1.173)
 Kartu **Chart XAUUSD** di tab Ringkasan memuat widget gratis TradingView (`OANDA:XAUUSD`, H4) dari `s3.tradingview.com` hanya saat tombol Tampilkan ditekan. Butuh internet; tidak di-cache service worker. Tema dan zona waktu mengikuti Setelan. Tidak tampil di pratinjau artifact karena CSP sandbox.
 
+## Detail dan Edit Transaksi (v1.1.189)
+Ketuk baris transaksi: tampilan detail dua kolom (tombol tutup X ada di baris tombol bawah, v1.1.190) (laba menonjol, durasi, catatan psikologi). **Edit** memakai tata letak yang sama dengan modal Tambah, dengan pratinjau hasil langsung; **Enter** pindah isian, **Ctrl+Enter** simpan. Perubahan yang belum disimpan tidak tertutup oleh ketukan di luar; X/Batal meminta konfirmasi. Waktu tutup tidak boleh lebih awal dari waktu buka.
+
+## Modal Tambah Transaksi (v1.1.188)
+Tombol **+** → Transaksi. Isian dua kolom dengan **pratinjau langsung** (laba, pips, menang/rugi, durasi) dan peringatan (harga jauh dari transaksi terakhir, waktu tutup lebih awal dari waktu buka, ID sudah ada). Arah, lot, trigger entry dan jenis entry diisi dari transaksi manual terakhir (**Kosongkan** untuk menghapus). **Simpan & tambah lagi** membuka form berikutnya; **Enter** pindah isian, **Ctrl+Enter** simpan. Form yang sudah diisi tidak tertutup oleh ketukan di luar; Batal/Esc meminta konfirmasi.
+
+## Event dampak sedang (v1.1.187)
+Setelan → Trading → **Event yang dihitung**: *Dampak tinggi saja* (bawaan) atau *Tinggi + sedang*. Disimpan di `jurnalNewsImp`; berlaku untuk Laporan, filter Berita, dan rincian transaksi.
+
+## Jendela rilis berita (v1.1.186)
+Setelan → Trading → **Jendela rilis berita**: pilih ±15, ±30 (bawaan) atau ±60 menit. Berlaku untuk Laporan (Saat rilis), filter Berita dan penanda rilis di rincian transaksi; disimpan di `jurnalNewsWin` dan ikut ekspor/impor setelan.
+
+## Transaksi: filter Berita (v1.1.185)
+Filter **Berita** di bar filter Transaksi: *Dekat rilis (±30 mnt)* menampilkan transaksi yang dibuka dalam 30 menit dari event dampak tinggi; *Di luar rilis* sisanya. Hanya transaksi dalam rentang jadwal bawaan Kalender (2 Okt–6 Nov 2026) yang dinilai; di luar itu tidak muncul di kedua pilihan.
+
+## Performa: heatmap harian setahun (v1.1.184)
+Bagian **Heatmap harian** di tab Performa: satu kotak per hari, kolom per minggu (Senin di atas). Hijau untung, merah rugi, abu-abu terang impas; makin pekat makin besar dibanding hari terbesar tahun itu. Pilih tahun, ketuk kotak untuk daftar transaksi hari itu, arahkan kursor untuk nilai. Mengikuti filter arah dan sesi. Ringkasan di atasnya: hari trading, hari untung, total.
+
+## Performa: garis target pada batang bulanan (v1.1.183)
+Bila **Target bulanan** diatur (Setelan → Trading → Target performa), tiap batang bulanan punya garis putih: target % dikali saldo sebelum bulan itu. Batang yang melewati garis berarti target tercapai (sama dengan label "Target tercapai"). Panjang batang tetap relatif terhadap bulan terbesar, jadi pada saldo besar garis berada dekat sisi kanan; arahkan kursor ke garis untuk nilainya. Ringkasan mingguan menyebut minggu terbaik dan terburuk.
+
+## Kalender: tampilan Mingguan (v1.1.182)
+Di tab Kalender, pilih **Tampilan: Daftar / Mingguan**. Mingguan menampilkan grid Senin sampai Jumat menurut zona waktu terpilih; garis kiri tiap event berwarna sesuai dampak (merah tinggi, emas sedang, abu rendah). Panah berpindah minggu, **Minggu ini** kembali ke minggu berjalan, ketuk event untuk rincian dan isian Prakiraan/Sebelumnya/Aktual. Event akhir pekan hanya tampil di Daftar. Pilihan tampilan diingat.
+
 ## Kalender: impor dan ekspor jadwal (v1.1.181)
 Tab Kalender → **Impor dan ekspor jadwal**. Ekspor menyimpan semua event (bawaan dan buatan sendiri) dengan Prakiraan/Sebelumnya/Aktual ke `jurnal-xauusd-kalender-<tanggal>.json`. Impor menerima berkas yang sama formatnya, atau larik event:
 ```json

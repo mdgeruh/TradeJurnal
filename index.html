@@ -37,7 +37,7 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="style.css?v=1.1.181">
+<link rel="stylesheet" href="style.css?v=1.1.190">
 </head>
 <body>
 <div class="login-gate" id="loginGate" role="dialog" aria-modal="true" aria-labelledby="lgTitle">
@@ -248,6 +248,17 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
 
   <section>
     <div class="section-head">
+      <h2>Heatmap harian</h2>
+      <div class="section-note">P/L per hari sepanjang tahun (GMT+8). Hijau untung, merah rugi; makin pekat makin besar. Ketuk kotak untuk melihat transaksinya.</div>
+    </div>
+    <div class="lap-gran-tabs" id="perfHeatYears" role="tablist" aria-label="Tahun heatmap"></div>
+    <div class="section-note" id="perfHeatSum" style="text-align:left;margin:0 0 10px;"></div>
+    <div id="perfHeat"></div>
+    <div class="yh-legend" aria-hidden="true"><span>Rugi</span><i class="yh-cell yh-down" style="--lv:1"></i><i class="yh-cell yh-down" style="--lv:.5"></i><i class="yh-cell"></i><i class="yh-cell yh-up" style="--lv:.5"></i><i class="yh-cell yh-up" style="--lv:1"></i><span>Untung</span></div>
+  </section>
+
+  <section>
+    <div class="section-head">
       <h2>Rekor transaksi</h2>
       <div class="section-note" id="maxddNote"></div>
     </div>
@@ -340,6 +351,7 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
       <div class="custom-select" id="csw_filterTrigger"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter trigger entry"><span class="cs-label">Semua trigger</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Filter trigger entry"></ul></div>
       <div class="custom-select" id="csw_filterJenis"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter jenis entry"><span class="cs-label">Semua jenis entry</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Filter jenis entry"></ul></div>
       <div class="custom-select" id="csw_filterSesi"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter sesi pasar"><span class="cs-label">Semua sesi</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Filter sesi pasar"></ul></div>
+      <div class="custom-select" id="csw_filterBerita"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter dekat rilis berita"><span class="cs-label">Semua berita</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Filter dekat rilis berita"></ul></div>
       <div class="dt-picker" id="dtp_ledgerFrom" aria-label="Dari tanggal"></div>
       <span class="ledger-range-sep">–</span>
       <div class="dt-picker" id="dtp_ledgerTo" aria-label="Sampai tanggal"></div>
@@ -496,7 +508,7 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
     <div class="psy-group"><h3>Silang psikologi</h3><div class="lap-heat-mode" id="lapMxMode"></div><div class="lap-mx" id="lapMx"></div><div class="psy-cover" id="lapMxNote" style="margin-top:8px;"></div></div>
     <div class="psy-group"><h3>Jam &amp; hari buka (GMT+8)</h3><div id="lapHeat"></div><div class="psy-cover" id="lapHeatInfo" style="margin-top:8px;"></div></div>
     <div class="psy-group"><h3>Sesi pasar (waktu buka, GMT+8)</h3><div id="lapSession"></div><div class="psy-cover" id="lapSessionNote" style="margin-top:8px;"></div></div>
-    <div class="psy-group"><h3>Saat rilis berita (±30 menit dari event dampak tinggi)</h3><div id="lapNews"></div><div class="psy-cover" id="lapNewsNote" style="margin-top:8px;"></div></div>
+    <div class="psy-group"><h3 id="lapNewsTitle">Saat rilis berita (±30 menit dari event dampak tinggi)</h3><div id="lapNews"></div><div class="psy-cover" id="lapNewsNote" style="margin-top:8px;"></div></div>
     <div class="psy-group"><h3>Durasi posisi vs hasil</h3><div id="lapDur"></div></div>
     <div class="psy-group"><h3>Beli vs Jual</h3><div id="lapArahSplit"></div><div class="stats" id="lapArahStats" style="margin-top:10px;"></div><div class="psy-cover" id="lapArahNote" style="margin-top:8px;"></div></div>
     <div class="psy-group"><h3>Distribusi hasil per transaksi</h3>
@@ -596,11 +608,15 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
           <div class="kal-chips" id="kalImpChips"></div>
         </div>
         <div class="kal-group">
+          <span class="kal-lbl">Tampilan</span>
+          <div class="kal-chips" id="kalViewChips"></div>
+        </div>
+        <div class="kal-group kal-only-list">
           <span class="kal-lbl">Rentang</span>
           <div class="kal-chips" id="kalRangeChips"></div>
         </div>
-        <div class="kal-group">
-          <span class="kal-lbl">Tampilan</span>
+        <div class="kal-group kal-only-list">
+          <span class="kal-lbl">Riwayat</span>
           <div class="kal-chips"><button type="button" class="kal-chip" id="kalPastChip" aria-pressed="false">Sudah lewat</button></div>
         </div>
       </div>
@@ -774,6 +790,19 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
         <span>Target laba per bulan terhadap saldo sebelum bulan itu. Kosongkan untuk menonaktifkan.</span>
       </div>
       <input type="number" id="perfTarget" class="settings-input" min="0.1" max="1000" step="0.5" placeholder="mis. 5" aria-label="Target PNL bulanan dalam persen">
+    </div>
+  </section>
+
+  <section id="newsWinSection" data-sgroup="trading" aria-labelledby="newsWinTitle">
+    <div class="section-head">
+      <h2 id="newsWinTitle">Jendela rilis berita</h2>
+      <div class="section-note">Transaksi dihitung "dekat rilis" bila dibuka dalam rentang ini sebelum atau sesudah event di Kalender (dampak tinggi, atau tinggi + sedang). Dipakai di Laporan (Saat rilis), filter Berita di Transaksi, dan penanda di rincian transaksi.</div>
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc"><strong>Rentang waktu</strong><div class="lap-gran" id="newsWinChips" role="tablist" aria-label="Jendela rilis berita"></div></div>
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc"><strong>Event yang dihitung</strong><div class="lap-gran" id="newsImpChips" role="tablist" aria-label="Dampak event yang dihitung"></div></div>
     </div>
   </section>
 
@@ -1133,39 +1162,30 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
 </div>
 
 <div class="modal-overlay" id="entryModalOverlay" role="dialog" aria-modal="true" aria-labelledby="entryModalTitle">
-  <div class="modal-box entry-modal-box">
+  <div class="modal-box entry-modal-box" id="entryModalBox">
     <p class="modal-title" id="entryModalTitle">Tambah Transaksi</p>
     <div class="kal-warn-slot" role="status" hidden></div>
-    <div id="entryFormTrade" class="entry-form">
-      <div class="calc-field"><label>ID Posisi <span style="color:var(--paper-faint);font-weight:400;">(opsional)</span></label><input type="text" id="entryIdPosisi" placeholder="mis. 123456789 — kosongkan untuk ID otomatis"></div>
+    <div id="entryFormTrade" class="entry-form entry-grid">
+      <div class="ef-flash ef-full" id="entryFlash" role="status" hidden></div>
+      <div class="calc-field ef-full"><label for="entryIdPosisi">ID Posisi <span style="color:var(--paper-faint);font-weight:400;">(opsional)</span></label><input type="text" id="entryIdPosisi" placeholder="mis. 123456789 — kosongkan untuk ID otomatis" autocomplete="off"></div>
+      <div class="ef-note ef-full" id="entryPrefillNote" hidden><span>Arah, lot, trigger entry dan jenis entry diisi dari transaksi manual terakhir.</span> <button type="button" class="ef-link" id="entryPrefillClear">Kosongkan</button></div>
       <div class="calc-field">
         <label>Arah</label>
         <div class="custom-select" id="csw_entryArah"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Arah"><span class="cs-label">Beli</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Arah"></ul></div>
       </div>
-      <div class="calc-field"><label>Lot</label><input type="number" id="entryLot" step="0.01" min="0.01" placeholder="mis. 0.05"></div>
-      <div class="calc-field"><label>Waktu Buka</label><div class="dt-picker" id="dtp_entryWaktuBuka"></div></div>
-      <div class="calc-field"><label>Harga Buka</label><input type="number" id="entryBuka" step="0.01" placeholder="mis. 4359.05"></div>
-      <div class="calc-field"><label>Harga Tutup</label><input type="number" id="entryTutup" step="0.01" placeholder="mis. 4363.11"></div>
-      <div class="calc-field"><label>Laba aktual (¢, opsional)</label><input type="number" id="entryLaba" step="0.01" placeholder="kosong = dihitung otomatis"></div>
-      <div class="calc-field"><label>Waktu Tutup</label><div class="dt-picker" id="dtp_entryWaktuTrade"></div></div>
-      <div class="calc-field">
-        <label>Trigger Entry</label>
-        <div class="custom-select" id="csw_entryTrigger"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Trigger entry"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Trigger entry"></ul></div>
-      </div>
-      <div class="calc-field">
-        <label>Trigger Exit</label>
-        <div class="custom-select" id="csw_entryTriggerExit"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Trigger exit"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Trigger exit"></ul></div>
-      </div>
-      <div class="calc-field">
-        <label>Kondisi Emosi</label>
-        <div class="custom-select" id="csw_entryEmosi"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Kondisi emosi"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Kondisi emosi"></ul></div>
-      </div>
-      <div class="calc-field">
-        <label>Jenis Entry</label>
-        <div class="custom-select" id="csw_entryJenisEntry"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Jenis entry"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Jenis entry"></ul></div>
-      </div>
-      <div class="calc-field"><label for="entryCatatan">Catatan bebas</label><textarea id="entryCatatan" rows="3" maxlength="1000" placeholder="Alasan entry, pelajaran, apa yang akan diubah (opsional)"></textarea></div>
-      <div class="entry-preview" id="entryPreviewTrade"></div>
+      <div class="calc-field"><label for="entryLot">Lot</label><input type="number" id="entryLot" step="0.01" min="0.01" inputmode="decimal" placeholder="mis. 0.05"></div>
+      <div class="calc-field"><label for="entryBuka">Harga Buka</label><input type="number" id="entryBuka" step="0.01" inputmode="decimal" placeholder="mis. 4359.05"></div>
+      <div class="calc-field"><label for="entryTutup">Harga Tutup</label><input type="number" id="entryTutup" step="0.01" inputmode="decimal" placeholder="mis. 4363.11"></div>
+      <div class="calc-field ef-time"><label>Waktu Buka</label><div class="dt-picker" id="dtp_entryWaktuBuka"></div></div>
+      <div class="calc-field ef-time"><label>Waktu Tutup</label><div class="dt-picker" id="dtp_entryWaktuTrade"></div></div>
+      <div class="calc-field ef-full"><label for="entryLaba">Laba aktual (¢, opsional)</label><input type="number" id="entryLaba" step="0.01" inputmode="decimal" placeholder="kosong = dihitung otomatis"></div>
+      <div class="entry-preview ef-full" id="entryPreviewTrade" aria-live="polite"></div>
+      <p class="ef-sec ef-full">Catatan psikologi <span>(opsional)</span></p>
+      <div class="calc-field"><label>Trigger Entry</label><div class="custom-select" id="csw_entryTrigger"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Trigger entry"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Trigger entry"></ul></div></div>
+      <div class="calc-field"><label>Trigger Exit</label><div class="custom-select" id="csw_entryTriggerExit"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Trigger exit"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Trigger exit"></ul></div></div>
+      <div class="calc-field"><label>Kondisi Emosi</label><div class="custom-select" id="csw_entryEmosi"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Kondisi emosi"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Kondisi emosi"></ul></div></div>
+      <div class="calc-field"><label>Jenis Entry</label><div class="custom-select" id="csw_entryJenisEntry"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Jenis entry"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Jenis entry"></ul></div></div>
+      <div class="calc-field ef-full"><label for="entryCatatan">Catatan bebas</label><textarea id="entryCatatan" rows="3" maxlength="1000" placeholder="Alasan entry, pelajaran, apa yang akan diubah (opsional)"></textarea></div>
     </div>
     <div id="entryFormDeposit" class="entry-form" style="display:none;">
       <div class="calc-field"><label id="entryJumlahLabel">Jumlah (USD)</label><input type="number" id="entryUsd" step="0.01" min="0.01" placeholder="mis. 50"></div>
@@ -1175,61 +1195,50 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
     <p class="modal-message" id="entryModalError" style="display:none;color:var(--loss);margin:0 0 14px;"></p>
     <div class="modal-actions">
       <button type="button" class="ledger-reset-btn has-ic" id="entryModalCancel"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg><span>Batal</span></button>
+      <button type="button" class="ledger-reset-btn has-ic" id="entryModalSaveMore" title="Simpan lalu buka form kosong (Ctrl+Shift+Enter)"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg><span>Simpan &amp; tambah lagi</span></button>
       <button type="button" class="ledger-reset-btn modal-btn-primary has-ic" id="entryModalSave"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg><span>Simpan</span></button>
     </div>
   </div>
 </div>
 
 <div class="modal-overlay" id="detailModalOverlay" role="dialog" aria-modal="true" aria-labelledby="detailModalTitle">
-  <div class="modal-box entry-modal-box">
-    <button type="button" class="modal-x" id="detailCloseBtn" aria-label="Tutup" title="Tutup"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg></button>
+  <div class="modal-box entry-modal-box wide" id="detailModalBox">
     <p class="modal-title" id="detailModalTitle">Detail Transaksi</p>
-    <div id="detailView">
+    <div id="detailView" class="detail-grid">
       <div class="detail-row"><span class="detail-lbl">ID</span><span class="detail-val" id="dvId"></span></div>
       <div class="detail-row"><span class="detail-lbl">Arah</span><span class="detail-val" id="dvArah"></span></div>
       <div class="detail-row"><span class="detail-lbl">Lot</span><span class="detail-val" id="dvLot"></span></div>
+      <div class="detail-row"><span class="detail-lbl">Pips</span><span class="detail-val" id="dvPips"></span></div>
       <div class="detail-row"><span class="detail-lbl">Harga Buka</span><span class="detail-val" id="dvBuka"></span></div>
       <div class="detail-row"><span class="detail-lbl">Harga Tutup</span><span class="detail-val" id="dvTutup"></span></div>
-      <div class="detail-row"><span class="detail-lbl">Pips</span><span class="detail-val" id="dvPips"></span></div>
-      <div class="detail-row"><span class="detail-lbl">Laba</span><span class="detail-val" id="dvLaba"></span></div>
       <div class="detail-row"><span class="detail-lbl">Waktu buka</span><span class="detail-val" id="dvWaktuBuka"></span></div>
-      <div class="detail-row" id="dvNewsRow" hidden><span class="detail-lbl">Dekat rilis</span><span class="detail-val" id="dvNews"></span></div>
       <div class="detail-row"><span class="detail-lbl">Waktu tutup</span><span class="detail-val" id="dvWaktu"></span></div>
-      <div class="detail-row" id="dvPartRow" hidden><span class="detail-lbl">Penutupan</span><span class="detail-val" id="dvPart"></span></div>
+      <div class="detail-row dg-full detail-result"><span class="detail-lbl">Laba</span><span class="detail-val" id="dvLaba"></span></div>
+      <div class="detail-row dg-full" id="dvDurRow" hidden><span class="detail-lbl">Durasi</span><span class="detail-val" id="dvDur"></span></div>
+      <div class="detail-row dg-full" id="dvPartRow" hidden><span class="detail-lbl">Penutupan</span><span class="detail-val" id="dvPart"></span></div>
+      <div class="detail-row dg-full" id="dvNewsRow" hidden><span class="detail-lbl">Dekat rilis</span><span class="detail-val" id="dvNews"></span></div>
+      <p class="detail-sec dg-full">Catatan psikologi</p>
       <div class="detail-row"><span class="detail-lbl">Trigger entry</span><span class="detail-val" id="dvTrigger"></span></div>
       <div class="detail-row"><span class="detail-lbl">Trigger exit</span><span class="detail-val" id="dvTriggerExit"></span></div>
       <div class="detail-row"><span class="detail-lbl">Kondisi emosi</span><span class="detail-val" id="dvEmosi"></span></div>
       <div class="detail-row"><span class="detail-lbl">Jenis entry</span><span class="detail-val" id="dvJenisEntry"></span></div>
-      <div class="detail-row detail-row-note"><span class="detail-lbl">Catatan bebas</span><span class="detail-val detail-note" id="dvCatatan"></span></div>
+      <div class="detail-row detail-row-note dg-full"><span class="detail-lbl">Catatan bebas</span><span class="detail-val detail-note" id="dvCatatan"></span></div>
     </div>
-    <div id="detailEdit" class="entry-form" style="display:none;">
-      <div class="calc-field">
-        <label>Arah</label>
-        <div class="custom-select" id="csw_editArah"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Arah"><span class="cs-label">Beli</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Arah"></ul></div>
-      </div>
-      <div class="calc-field"><label>Lot</label><input type="number" id="editLot" step="0.01" min="0.01"></div>
-      <div class="calc-field"><label>Waktu Buka</label><div class="dt-picker" id="dtp_editWaktuBuka"></div></div>
-      <div class="calc-field"><label>Harga Buka</label><input type="number" id="editBuka" step="0.01"></div>
-      <div class="calc-field"><label>Harga Tutup</label><input type="number" id="editTutup" step="0.01"></div>
-      <div class="calc-field"><label>Laba aktual (¢)</label><input type="number" id="editLaba" step="0.01"></div>
-      <div class="calc-field"><label>Waktu Tutup</label><div class="dt-picker" id="dtp_editWaktu"></div></div>
-      <div class="calc-field">
-        <label>Trigger Entry</label>
-        <div class="custom-select" id="csw_editTrigger"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Trigger entry"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Trigger entry"></ul></div>
-      </div>
-      <div class="calc-field">
-        <label>Trigger Exit</label>
-        <div class="custom-select" id="csw_editTriggerExit"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Trigger exit"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Trigger exit"></ul></div>
-      </div>
-      <div class="calc-field">
-        <label>Kondisi Emosi</label>
-        <div class="custom-select" id="csw_editEmosi"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Kondisi emosi"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Kondisi emosi"></ul></div>
-      </div>
-      <div class="calc-field">
-        <label>Jenis Entry</label>
-        <div class="custom-select" id="csw_editJenisEntry"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Jenis entry"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Jenis entry"></ul></div>
-      </div>
-      <div class="calc-field"><label for="editCatatan">Catatan bebas</label><textarea id="editCatatan" rows="3" maxlength="1000" placeholder="Alasan entry, pelajaran, apa yang akan diubah (opsional)"></textarea></div>
+    <div id="detailEdit" class="entry-form entry-grid" style="display:none;">
+      <div class="calc-field"><label>Arah</label><div class="custom-select" id="csw_editArah"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Arah"><span class="cs-label">Beli</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Arah"></ul></div></div>
+      <div class="calc-field"><label for="editLot">Lot</label><input type="number" id="editLot" step="0.01" min="0.01" inputmode="decimal"></div>
+      <div class="calc-field"><label for="editBuka">Harga Buka</label><input type="number" id="editBuka" step="0.01" inputmode="decimal"></div>
+      <div class="calc-field"><label for="editTutup">Harga Tutup</label><input type="number" id="editTutup" step="0.01" inputmode="decimal"></div>
+      <div class="calc-field ef-time"><label>Waktu Buka</label><div class="dt-picker" id="dtp_editWaktuBuka"></div></div>
+      <div class="calc-field ef-time"><label>Waktu Tutup</label><div class="dt-picker" id="dtp_editWaktu"></div></div>
+      <div class="calc-field ef-full"><label for="editLaba">Laba aktual (¢)</label><input type="number" id="editLaba" step="0.01" inputmode="decimal"></div>
+      <div class="entry-preview ef-full" id="editPreview" aria-live="polite"></div>
+      <p class="ef-sec ef-full">Catatan psikologi</p>
+      <div class="calc-field"><label>Trigger Entry</label><div class="custom-select" id="csw_editTrigger"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Trigger entry"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Trigger entry"></ul></div></div>
+      <div class="calc-field"><label>Trigger Exit</label><div class="custom-select" id="csw_editTriggerExit"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Trigger exit"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Trigger exit"></ul></div></div>
+      <div class="calc-field"><label>Kondisi Emosi</label><div class="custom-select" id="csw_editEmosi"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Kondisi emosi"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Kondisi emosi"></ul></div></div>
+      <div class="calc-field"><label>Jenis Entry</label><div class="custom-select" id="csw_editJenisEntry"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Jenis entry"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Jenis entry"></ul></div></div>
+      <div class="calc-field ef-full"><label for="editCatatan">Catatan bebas</label><textarea id="editCatatan" rows="3" maxlength="1000" placeholder="Alasan entry, pelajaran, apa yang akan diubah (opsional)"></textarea></div>
     </div>
     <p class="modal-message" id="detailModalError" style="display:none;color:var(--loss);margin:10px 0 0;"></p>
     <div class="modal-actions" id="detailViewActions" style="margin-top:18px;justify-content:space-between;">
@@ -1238,6 +1247,7 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
         <button type="button" class="ledger-reset-btn" id="detailPrevBtn" aria-label="Transaksi sebelumnya (baris atas)" title="Sebelumnya (baris atas)">‹</button>
         <button type="button" class="ledger-reset-btn" id="detailNextBtn" aria-label="Transaksi berikutnya (baris bawah)" title="Berikutnya (baris bawah)">›</button>
         <button type="button" class="ledger-reset-btn modal-btn-primary has-ic ic-only" id="detailEditBtn" aria-label="Edit" title="Edit"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg><span class="btn-sr">Edit</span></button>
+        <button type="button" class="ledger-reset-btn has-ic ic-only" id="detailCloseBtn" aria-label="Tutup" title="Tutup (Esc)"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg></button>
       </div>
     </div>
     <div class="modal-actions" id="detailEditActions" style="display:none;margin-top:4px;">
@@ -1320,11 +1330,11 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
 </div>
 
 <script id="journal-data" type="application/json">{"summary": {"total": 0, "win": 0, "loss": 0, "winrate": 0, "pl_cent": 0, "pl_rp": 0, "saldo_akhir": 0, "pct_pl": null}, "periods": [], "kurs": 0, "dashboard": {"update": "Update terakhir: -", "saldo": 0, "stats": {"total": 0, "winrate": 0, "pf": 0, "maxdd": 0, "expectancy": 0}, "top_win": [], "top_loss": [], "mm": {"equity": 0, "risk": 0.01, "sl": 150, "pipval": 10, "lot": 0, "tp_pips": 0, "tp_cent": 0}}, "maxdd_note": "", "equity": [], "months": [], "weeks": [], "trades": [], "deposit": {"total_deposit": 0, "total_penarikan": 0, "total_mc": 0, "modal_bersih": 0, "log": []}, "period_ranges": [], "modal_kumulatif": []}</script>
-<script src="config.js?v=1.1.181"></script>
-<script src="app.js?v=1.1.181"></script>
-<script src="kalender.js?v=1.1.181"></script>
-<script src="broker.js?v=1.1.181"></script>
-<script src="sync.js?v=1.1.181"></script>
-<script src="pwa.js?v=1.1.181"></script>
+<script src="config.js?v=1.1.190"></script>
+<script src="app.js?v=1.1.190"></script>
+<script src="kalender.js?v=1.1.190"></script>
+<script src="broker.js?v=1.1.190"></script>
+<script src="sync.js?v=1.1.190"></script>
+<script src="pwa.js?v=1.1.190"></script>
 </body>
 </html>
