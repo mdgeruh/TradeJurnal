@@ -7,7 +7,8 @@ create table if not exists trades (
   tanggal text, tanggal_gmt8 text, waktu_buka text,
   "trigger" text, trigger_exit text, emosi text, jenis_entry text,
   catatan text,
-  primary key (user_id, id)
+  account_id text not null default 'utama',
+  primary key (user_id, account_id, id)
 );
 -- v1.1.129: untuk tabel trades yang sudah ada sebelum kolom catatan (catatan bebas per transaksi). Aman dijalankan ulang.
 alter table trades add column if not exists catatan text;
@@ -16,12 +17,24 @@ create table if not exists deposit_log (
   user_id uuid not null default auth.uid() references auth.users,
   tanggal text not null, tipe text not null,
   jenis text, usd numeric, cent numeric not null,
-  primary key (user_id, tanggal, tipe, cent)
+  account_id text not null default 'utama',
+  primary key (user_id, account_id, tanggal, tipe, cent)
 );
 create table if not exists pengaturan (
-  user_id uuid primary key default auth.uid() references auth.users,
-  kurs numeric
+  user_id uuid not null default auth.uid() references auth.users,
+  kurs numeric,
+  account_id text not null default 'utama',
+  primary key (user_id, account_id)
 );
+-- v1.1.194: banyak akun trading. Untuk proyek yang sudah ada, jalankan migrasi-multi-akun.sql.
+create table if not exists akun (
+  user_id uuid not null default auth.uid() references auth.users,
+  id text not null, nama text, tipe text, kurs numeric,
+  primary key (user_id, id)
+);
+alter table akun enable row level security;
+drop policy if exists "own akun" on akun;
+create policy "own akun" on akun for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 alter table trades enable row level security;
 alter table deposit_log enable row level security;

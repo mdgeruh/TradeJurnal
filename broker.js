@@ -4,11 +4,13 @@
 (function () {
   "use strict";
   var UNDO_KEY = "jurnalUndoSnapshot", SALDO_KEY = "jurnalBrokerSaldo";
-  var CENT = 100; // akun cent: 0.001 lot di riwayat = 0.1 lot di jurnal
+  var CENT = typeof LOT_SCALE === "number" ? LOT_SCALE : 100; // akun cent: 0.001 lot di riwayat = 0.1 lot di jurnal; akun standar x1
+  var LK = typeof LOT_K === "number" ? LOT_K : 10; // laba(¢) = pips * lot * LK
+  function toCent(v) { return typeof amtToCent === "function" ? amtToCent(v) : v; }
   var BROKER_OFFSET_H = 5; // jam broker (GMT+3) -> GMT+8
 
   function r2(n) { return Math.round((n + Number.EPSILON) * 100) / 100; }
-  function fc(n) { return n.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "¢"; }
+  function fc(n) { var u = typeof ACCT_UNIT === "string" ? ACCT_UNIT : "¢", v = typeof centToAmt === "function" ? centToAmt(n) : n; var s = v.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); return u === "¢" ? s + "¢" : u + (u === "Rp" ? " " : "") + s; }
   function sgn(n) { return (n > 0 ? "+" : n < 0 ? "−" : "") + fc(Math.abs(n)); }
   function pad(n) { return String(n).padStart(2, "0"); }
   function isoOf(d) { return d.getUTCFullYear() + "-" + pad(d.getUTCMonth() + 1) + "-" + pad(d.getUTCDate()) + "T" + pad(d.getUTCHours()) + ":" + pad(d.getUTCMinutes()) + ":" + pad(d.getUTCSeconds()); }
@@ -134,12 +136,14 @@
       if (!id) continue;
       var sym = map.sym != null ? String(row[map.sym] || "").trim() : "XAUUSDc";
       if (!/^xau/i.test(sym)) { skipped.bukanXau++; continue; }
-      if (!/c$/.test(sym)) { skipped.bukanCent++; continue; }
+      var isCentSym = /c$/.test(sym);
+      if (CENT === 100 ? !isCentSym : isCentSym) { skipped.bukanCent++; continue; }
       var close = dateIso(row[map.close]);
       if (!close) { openIds[id] = true; continue; }
       var open = dateIso(row[map.open]), act = String(row[map.act] || "").trim().toLowerCase(),
           lot = num(row[map.lot]), po = num(row[map.po]), pc = num(row[map.pc]), laba = num(row[map.laba]);
       if (!open || !(act === "buy" || act === "sell" || act === "beli" || act === "jual") || !(lot > 0) || !isFinite(po) || !isFinite(pc) || !isFinite(laba)) { skipped.tidakValid++; continue; }
+      laba = toCent(laba); if (!isFinite(laba)) { skipped.tidakValid++; continue; }
       var closeBuy = act === "buy" || act === "beli"; // baris penutupan: aksi penutupnya kebalikan arah posisi
       var part = { id: id, arah: closeBuy ? "Jual" : "Beli", lot: Math.round(lot * CENT * 10000) / 10000, buka: po, tutup: pc, pips: 0, laba: r2(laba),
                    tanggal: close, tanggal_gmt8: plus5(close), waktu_buka: plus5(open) };
@@ -150,7 +154,7 @@
     var openOnly = Object.keys(openIds).filter(function (id) { return !by[id]; }).length;
     return { positions: positions, openOnly: openOnly, skipped: skipped };
   }
-  function finish(t) { t.pips = Math.round(t.laba / (t.lot * 10) * 10) / 10; return t; }
+  function finish(t) { t.pips = Math.round(t.laba / (t.lot * LK) * 10) / 10; return t; }
 
   // Gabungkan beberapa bagian penutupan satu posisi menjadi satu transaksi: lot dijumlah, harga tutup rata-rata berbobot lot,
   // laba dijumlah, waktu tutup = bagian terakhir, waktu buka = paling awal. Field lain (trigger, emosi, catatan) dari bagian pertama.
@@ -167,7 +171,7 @@
     base.tanggal = last.tanggal; base.tanggal_gmt8 = last.tanggal_gmt8;
     base.waktu_buka = first || base.waktu_buka || "";
     base.bagian = parts_n;
-    base.pips = Math.round(base.laba / (base.lot * 10) * 10) / 10;
+    base.pips = Math.round(base.laba / (base.lot * LK) * 10) / 10;
     return base;
   }
 
@@ -221,7 +225,7 @@
       if (!open) add(t, "buka-kosong", "info", "Jam buka kosong (statistik durasi dan sesi tidak bisa dihitung).");
       else if (ms(open) > ms(close)) add(t, "tutup-sebelum-buka", "warn", "Jam tutup lebih awal dari jam buka (" + norm(close).replace("T", " ") + " < " + norm(open).replace("T", " ") + "); kemungkinan zona waktu salah.");
       if (t.tanggal && t.tanggal_gmt8 && Math.abs(ms(t.tanggal_gmt8) - ms(t.tanggal) - BROKER_OFFSET_H * 3600000) > 1000) add(t, "gmt8-tak-sesuai", "warn", "Jam GMT+8 tidak sama dengan jam broker + 5 jam.");
-      var dir = t.arah === "Beli" ? 1 : -1, exp = r2((t.tutup - t.buka) * dir * 100 * t.lot);
+      var dir = t.arah === "Beli" ? 1 : -1, exp = r2((t.tutup - t.buka) * dir * LK * 10 * t.lot);
       if (Math.abs(exp) > 2 && Math.sign(exp) !== Math.sign(t.laba) && Math.abs(t.laba) > 0.005) add(t, "laba-tanda", "warn", "Tanda laba (" + sgn(t.laba) + ") berlawanan dengan arah dan harga (seharusnya " + sgn(exp) + ").");
       else if (Math.abs(t.laba - exp) > Math.max(5, Math.abs(exp) * 0.05)) add(t, "laba-beda-rumus", "info", "Laba " + sgn(t.laba) + " beda dari hitungan harga " + sgn(exp) + " (swap/komisi, atau penutupan bertahap, atau salah ketik).");
     });
@@ -274,7 +278,7 @@
     var cmp = compareWithJournal(g.positions, DATA.trades), multi = g.positions.filter(function (p) { return p.bagian > 1; }).length;
     var skip = g.skipped, skipTxt = [];
     if (skip.bukanXau) skipTxt.push(skip.bukanXau + " baris bukan XAUUSD");
-    if (skip.bukanCent) skipTxt.push(skip.bukanCent + " baris akun non-cent (belum didukung)");
+    if (skip.bukanCent) skipTxt.push(skip.bukanCent + (CENT === 100 ? " baris akun non-cent (bukan akun ini)" : " baris simbol akun cent (bukan akun ini)"));
     if (skip.tidakValid) skipTxt.push(skip.tidakValid + " baris tidak valid");
     if (g.openOnly) skipTxt.push(g.openOnly + " posisi masih terbuka");
     if (!cmp.fresh.length && !cmp.diff.length && !cmp.bagian.length) {
@@ -304,9 +308,9 @@
   try { var sv = localStorage.getItem(SALDO_KEY); if (sv) sIn.value = sv; } catch (e) {}
   $("brokerSaldoBtn").addEventListener("click", function () {
     var raw = sIn.value.trim(), v = num(raw);
-    if (raw === "" || !isFinite(v)) { sRes.hidden = false; sRes.className = "bk-result warn"; sRes.textContent = "Isi saldo dari MT5 (dalam ¢, mis. 6271,16)."; return; }
+    if (raw === "" || !isFinite(v)) { sRes.hidden = false; sRes.className = "bk-result warn"; sRes.textContent = "Isi saldo dari MT5 (dalam " + (typeof ACCT_UNIT === "string" ? ACCT_UNIT : "¢") + ", mis. 6271,16)."; return; }
     try { localStorage.setItem(SALDO_KEY, raw); } catch (e) {}
-    var c = checkSaldo(v, DATA);
+    var c = checkSaldo(toCent(v), DATA);
     sRes.hidden = false;
     if (Math.abs(c.diff) < 0.005) { sRes.className = "bk-result ok"; sRes.textContent = "Cocok. Saldo jurnal sama dengan broker: " + fc(c.journal) + "."; return; }
     sRes.className = "bk-result warn";

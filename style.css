@@ -1508,3 +1508,28 @@ button.yh-cell:hover,button.yh-cell:focus-visible{outline:2px solid var(--gold);
 .detail-result .detail-val{font-size:15px;font-weight:600;}
 .detail-result .detail-val.gain{color:var(--gain);} .detail-result .detail-val.loss{color:var(--loss);}
 @media (max-width:480px){ .detail-grid{grid-template-columns:1fr;} }
+
+/* ---- Multi-akun (v1.1.191) ---- */
+.acct-btn{display:inline-flex;align-items:center;gap:6px;max-width:150px;padding:5px 10px;border:1px solid var(--border,#ccc);border-radius:999px;background:transparent;color:inherit;font:inherit;font-size:12px;cursor:pointer}
+.acct-btn #acctBtnLabel{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acct-dot{width:8px;height:8px;border-radius:50%;background:#c9a24a;flex:none}
+.acct-dot[data-type="usd"]{background:#3b8f5c}.acct-dot[data-type="idr"]{background:#c0504d}
+.acct-modal-box{max-width:460px}
+.acct-hint,.acct-note{font-size:12px;opacity:.75;margin:0 0 10px}
+.acct-list{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.acct-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border,#ccc);border-radius:10px;flex-wrap:wrap}
+.acct-row.active{border-color:#c9a24a;background:rgba(201,162,74,.08)}
+.acct-row .acct-name{flex:1;min-width:0;font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.acct-row .acct-meta{font-size:11px;opacity:.7;width:100%}
+.acct-row button{font-size:12px;padding:4px 10px}
+.acct-add input{width:100%;box-sizing:border-box;padding:8px 10px;margin-bottom:8px;border:1px solid var(--border,#ccc);border-radius:8px;background:transparent;color:inherit;font:inherit}
+.acct-add-title{font-weight:600;margin:0 0 6px}
+.acct-types{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+.acct-types button{padding:6px 12px;border:1px solid var(--border,#ccc);border-radius:999px;background:transparent;color:inherit;font:inherit;font-size:12px;cursor:pointer}
+.acct-types button[aria-checked="true"]{border-color:#c9a24a;background:rgba(201,162,74,.15);font-weight:600}
+@media (max-width:480px){ .masthead-right{gap:8px} .acct-btn{max-width:72px;padding:4px 8px;gap:4px} .masthead-top{flex-wrap:wrap;row-gap:6px} .masthead-right{max-width:100%} }
+
+.acct-dot[data-type="total"]{background:linear-gradient(135deg,#c9a24a,#3b8f5c)}
+.total-banner{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:8px 0 12px;padding:8px 12px;border:1px solid #c9a24a;border-radius:10px;background:rgba(201,162,74,.1);font-size:12.5px}
+.total-banner[hidden]{display:none}
+body.ro-total #fabWrap,body.ro-total #detailEditBtn,body.ro-total #detailDeleteBtn,body.ro-total #ledgerImportBtn,body.ro-total #ledgerSelectBtn,body.ro-total #backupNudge,body.ro-total #brokerSection,body.ro-total #syncSection,body.ro-total #rulesEditBtn,body.ro-total #undoDeleteBar{display:none!important}

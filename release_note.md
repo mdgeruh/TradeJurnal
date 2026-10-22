@@ -2,7 +2,7 @@
 
 Ringkasan perubahan untuk pengguna, terbaru di atas. Isinya sama dengan **Setelan → Tentang aplikasi → Lihat riwayat** di aplikasi (data `USER_CHANGELOG` di `app.js`). Rincian teknis per versi ada di `CHANGELOG.md`; rencana ke depan di `roadmap.md`.
 
-**Versi saat ini: 1.1.190** (14 Okt 2026)
+**Versi saat ini: 1.1.196** (24 Okt 2026)
 
 ## Sorotan
 - Ringkasan: kurva ekuitas yang jelas (modal, puncak berjalan, drawdown, tooltip), pilihan **Ekuitas / PNL kumulatif**, PNL Minggu/Bulan Ini, lencana DD saat ini.
@@ -12,8 +12,14 @@ Ringkasan perubahan untuk pengguna, terbaru di atas. Isinya sama dengan **Setela
 - **Data aman:** sinkron cloud (Supabase), status dan pengingat cadangan, ekspor HTML mandiri/JSON, ekspor-impor pengaturan.
 - **Aplikasi terpasang (PWA)** di Android dan iOS, terbuka cepat dan bisa offline.
 
-## 1 Okt 2026 (v1.1.145 – v1.1.190)
+## 1 Okt 2026 (v1.1.145 – v1.1.192)
 **Baru**
+- Kalender ekonomi bawaan diperpanjang sampai 30 Des 2026 (NFP, CPI, PPI, FOMC, klaim, JOLTS).
+- Label satuan di akun USD dan Rupiah lebih jelas (footer, batas rugi harian, nilai pip, saldo kalkulator, cek saldo broker).
+- Sinkron cloud per akun (jalankan `migrasi-multi-akun.sql` sekali di Supabase). Data lama menjadi Akun utama.
+- Total gabungan: lihat semua akun dijumlahkan dalam USD (hanya baca) dari menu akun.
+- Satuan per jenis akun: akun USD standar (lot/laba dalam dolar) dan Rupiah (dikonversi kurs) kini dihitung benar di form transaksi dan impor broker.
+- Multi-akun: pilih/kelola akun trading (Cent, USD, Rupiah) di header dan Setelan → Akun; data tiap akun terpisah. Satuan per jenis akun, tab Total, dan cloud per akun menyusul.
 - Detail Transaksi: tombol tutup (X) pindah ke baris tombol bawah; tombol hapus tidak lagi melebar di HP.
 - Detail dan Edit Transaksi disamakan dengan form Tambah: dua kolom, pratinjau hasil, durasi, Enter/Ctrl+Enter, dan perubahan yang belum disimpan tidak hilang tanpa konfirmasi.
 - Tambah Transaksi lebih cepat: pratinjau hasil langsung, isian dari transaksi terakhir, Simpan & tambah lagi, Enter pindah isian, dan form tidak tertutup tanpa sengaja.

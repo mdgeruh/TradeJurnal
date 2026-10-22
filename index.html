@@ -37,7 +37,7 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="style.css?v=1.1.190">
+<link rel="stylesheet" href="style.css?v=1.1.196">
 </head>
 <body>
 <div class="login-gate" id="loginGate" role="dialog" aria-modal="true" aria-labelledby="lgTitle">
@@ -76,6 +76,7 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
     <div class="masthead-top">
       <div class="brand">Jurnal <em>XAUUSD</em></div>
       <div class="masthead-right">
+        <button type="button" class="acct-btn" id="acctBtn" aria-haspopup="dialog" title="Ganti / kelola akun trading"><span class="acct-dot" id="acctDot" aria-hidden="true"></span><span id="acctBtnLabel">Akun</span></button>
         <div class="custom-select tz-select-wrap" id="tzSelectWrap" title="Zona waktu tampilan jam transaksi">
           <button type="button" class="custom-select-btn" id="tzSelectBtn" aria-haspopup="listbox" aria-expanded="false" aria-label="Pilih zona waktu">
             <span class="cs-label" id="tzSelectLabel">—</span>
@@ -90,6 +91,8 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
     <div class="updated" id="updatedLine">—</div>
     <button type="button" class="sync-pill" id="syncPill" hidden title="Status sinkron cloud (ketuk untuk membuka Setelan → Akun)"><i class="sync-dot" aria-hidden="true"></i><span id="syncPillText"></span></button>
   </header>
+
+  <div class="total-banner" id="totalBanner" hidden role="status"><span><strong>Σ Total gabungan</strong> · semua akun dijumlahkan dalam USD. Hanya baca: tambah atau ubah transaksi di tiap akun.</span><button type="button" class="ledger-reset-btn" id="totalBannerBack">Kembali ke akun</button></div>
 
   <nav class="main-tabs" id="mainTabs" role="tablist" aria-label="Bagian dashboard">
     <button class="main-tab-btn active" role="tab" aria-selected="true" id="tabbtn-grafik" aria-controls="tabpanel-grafik" data-tab="grafik" title="Ringkasan"><svg class="mt-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg><span class="mt-label">Ringkasan</span></button>
@@ -868,6 +871,17 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
     <div class="section-note accent-msg" id="cpNote" role="status" aria-live="polite" style="text-align:left;"></div>
   </section>
 
+  <section id="acctSection" data-sgroup="akun">
+    <div class="section-head">
+      <h2>Akun trading</h2>
+      <div class="section-note">Pisahkan akun Cent, USD standar, atau Rupiah. Data tiap akun terpisah.</div>
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc"><strong id="acctSetCur">—</strong><span id="acctSetInfo"></span></div>
+      <div class="settings-control"><button type="button" class="ledger-reset-btn" id="acctSetBtn">Kelola akun</button></div>
+    </div>
+  </section>
+
   <section id="syncSection" data-sgroup="akun">
     <div class="section-head">
       <h2>Sinkron Supabase</h2>
@@ -1005,7 +1019,7 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
     <div class="settings-row">
       <div class="settings-desc">
         <strong>Cek saldo terhadap broker</strong>
-        <span>Isi saldo dari MT5 (dalam &cent;). Aplikasi menunjukkan cocok atau selisihnya.</span>
+        <span>Isi saldo dari MT5 (dalam satuan akun aktif: &cent; untuk akun cent, $ untuk USD, Rp untuk Rupiah). Aplikasi menunjukkan cocok atau selisihnya.</span>
       </div>
       <div class="bk-inline">
         <input type="text" id="brokerSaldo" class="settings-input" inputmode="decimal" autocomplete="off" placeholder="mis. 6271,16" aria-label="Saldo broker dalam sen">
@@ -1301,6 +1315,21 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
   </div>
 </div>
 
+<div class="modal-overlay" id="acctModalOverlay" role="dialog" aria-modal="true" aria-labelledby="acctModalTitle">
+  <div class="modal-box entry-modal-box acct-modal-box">
+    <p class="modal-title" id="acctModalTitle">Akun trading</p>
+    <p class="acct-hint">Setiap akun punya transaksi, deposit, dan kurs sendiri. Berganti akun memuat ulang halaman.</p>
+    <div class="acct-list" id="acctList"></div>
+    <div class="acct-add" id="acctAdd">
+      <p class="acct-add-title">Tambah akun</p>
+      <input type="text" id="acctNewName" maxlength="30" placeholder="Nama akun, mis. Exness USD" autocomplete="off">
+      <div class="acct-types" id="acctNewType" role="radiogroup" aria-label="Jenis akun"></div>
+      <p class="acct-note" id="acctNewNote"></p>
+      <div class="modal-actions"><button type="button" class="ledger-reset-btn" id="acctAddBtn">Tambah &amp; beralih</button><button type="button" class="ledger-reset-btn" id="acctCloseBtn">Tutup</button></div>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="changelogModalOverlay" role="dialog" aria-modal="true" aria-labelledby="changelogModalTitle">
   <div class="modal-box entry-modal-box changelog-modal-box">
     <button type="button" class="modal-x" id="changelogCloseBtn" aria-label="Tutup" title="Tutup"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg></button>
@@ -1330,11 +1359,11 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
 </div>
 
 <script id="journal-data" type="application/json">{"summary": {"total": 0, "win": 0, "loss": 0, "winrate": 0, "pl_cent": 0, "pl_rp": 0, "saldo_akhir": 0, "pct_pl": null}, "periods": [], "kurs": 0, "dashboard": {"update": "Update terakhir: -", "saldo": 0, "stats": {"total": 0, "winrate": 0, "pf": 0, "maxdd": 0, "expectancy": 0}, "top_win": [], "top_loss": [], "mm": {"equity": 0, "risk": 0.01, "sl": 150, "pipval": 10, "lot": 0, "tp_pips": 0, "tp_cent": 0}}, "maxdd_note": "", "equity": [], "months": [], "weeks": [], "trades": [], "deposit": {"total_deposit": 0, "total_penarikan": 0, "total_mc": 0, "modal_bersih": 0, "log": []}, "period_ranges": [], "modal_kumulatif": []}</script>
-<script src="config.js?v=1.1.190"></script>
-<script src="app.js?v=1.1.190"></script>
-<script src="kalender.js?v=1.1.190"></script>
-<script src="broker.js?v=1.1.190"></script>
-<script src="sync.js?v=1.1.190"></script>
-<script src="pwa.js?v=1.1.190"></script>
+<script src="config.js?v=1.1.196"></script>
+<script src="app.js?v=1.1.196"></script>
+<script src="kalender.js?v=1.1.196"></script>
+<script src="broker.js?v=1.1.196"></script>
+<script src="sync.js?v=1.1.196"></script>
+<script src="pwa.js?v=1.1.196"></script>
 </body>
 </html>
