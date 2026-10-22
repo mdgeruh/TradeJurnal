@@ -2,7 +2,7 @@
 
 Satu-satunya daftar rencana dan todo proyek (dulu ada di `SUMMARY.md`). Prioritas: **P1** tinggi, **P2** sedang, **P3** rendah. Tidak ada tanggal tetap. Setiap butir yang mengubah kode mengikuti **Alur rilis** di `README.md`; saat selesai, hapus dari sini (centang bila perlu satu rilis), pindahkan tema barunya ke tabel "Sudah selesai", dan catat di `release_note.md` dan `CHANGELOG.md`. Jebakan bug tiap area ada di `SUMMARY.md`.
 
-## Sudah selesai (v1.1.190)
+## Sudah selesai (v1.1.196)
 - Detail Transaksi: tombol X di baris aksi bawah (v1.1.190).
 - Detail dan Edit Transaksi disamakan dengan modal Tambah (v1.1.189): kisi dua kolom, pratinjau, durasi, pelindung isian.
 - Optimalisasi modal Tambah Transaksi (v1.1.188): grid dua kolom, pratinjau hasil, peringatan, isian terakhir, simpan & tambah lagi, pelindung isian.
@@ -64,7 +64,7 @@ Hampir semua fitur baru hanya diuji di Chromium dengan data sintetis dan Supabas
 
 **Kalender ekonomi** (tab baru v1.1.167; kartu Ringkasan, peringatan jendela berita, Laporan Saat rilis, banner jadwal habis selesai v1.1.169)
 - [ ] **Isi `f`/`p` di `EVENTS`** untuk event lain begitu konsensus terbit (kini baru klaim 8 Okt dan CPI); sumber sering beda angka, cek ulang.
-- [ ] **Perbarui `EVENTS`** tiap bulan (kini 2 Okt – 6 Nov 2026, hanya USD); cek ulang tanggal ke BLS/BEA/Fed. Berikutnya: event non-USD (ECB, BoE, BoJ), data China/Eropa yang menggerakkan emas.
+- [ ] **Perbarui `EVENTS`** tiap bulan (kini 2 Okt – 30 Des 2026, hanya USD); cek ulang tanggal ke BLS/BEA/Fed. Berikutnya: event non-USD (ECB, BoE, BoJ), data China/Eropa yang menggerakkan emas.
 - [x] **Kunci `kal-manual`/`kal-notes`/`kal-prefs` ikut ekspor pengaturan** (v1.1.177). Sisa: sinkron cloud bila perlu.
 - [ ] **Hubungkan ke jurnal (lanjutan):** filter Transaksi "dekat rilis" (selesai v1.1.185; Laporan sudah punya tampilan "Saat rilis"); jendela rilis bisa diatur 15/30/60 menit di Setelan (selesai v1.1.186); event dampak Sedang bisa ikut dinilai (selesai v1.1.187).
 - [x] **Impor/ekspor jadwal** (JSON, v1.1.181). Sisa: format CSV dan memperluas cakupan Laporan "Saat rilis" (`KAL.cover`) ke event impor.
@@ -101,3 +101,14 @@ Hampir semua fitur baru hanya diuji di Chromium dengan data sintetis dan Supabas
 - Pilihan periode berdiri sendiri per tab (mulai dari All, tidak disimpan). Performa dan Deposit **tidak** diberi filter periode: Performa sudah per bulan/minggu, Deposit punya pencarian dan filter tipe.
 - Login tidak wajib: aplikasi harus tetap bisa dipakai lokal (offline-first), jadi ada "Lanjut tanpa masuk".
 - Ukuran kontrak tidak jadi isian terpisah: sudah tercakup nilai pip per lot di Setelan → Kalkulator lot.
+
+
+## Multi-akun
+- [x] v1.1.191 model akun + pemilih + penyimpanan per akun
+- [x] v1.1.192 satuan/mata uang per jenis akun
+- [x] v1.1.193 tab Total gabungan
+- [x] v1.1.194 Supabase per akun (SQL migrasi)
+
+- [ ] Uji nyata: jalankan migrasi-multi-akun.sql di Supabase sungguhan lalu sinkronkan dua akun dari dua perangkat.
+
+- [ ] Kalender: tambah PCE, PDB, penjualan ritel, ISM Nov-Des setelah tanggalnya terverifikasi; kalender bawaan berakhir 30 Des 2026, perpanjang menjelang Desember.

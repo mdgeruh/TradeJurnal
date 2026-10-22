@@ -85,7 +85,7 @@
   const num = v => (v === null || v === undefined || v === '') ? null : Number(v);
   const depKey = l => `${l.tanggal}|${l.tipe}|${Number(l.cent)}`;
   // Info sinkron terakhir (waktu perangkat), disimpan terpisah dari DATA supaya tidak ikut ekspor/impor JSON.
-  const INFO_KEY = 'jurnalSyncInfo';
+  const INFO_KEY = acctKey('jurnalSyncInfo');
   const BLN = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
   const p2 = n => String(n).padStart(2, '0');
   const fmtWhen = iso => { const d = new Date(iso); return isNaN(d) ? '' : `${d.getDate()} ${BLN[d.getMonth()]} ${d.getFullYear()}, ${p2(d.getHours())}:${p2(d.getMinutes())}`; };
@@ -112,10 +112,24 @@
   function depRow(l, uid){
     return { user_id: uid, tanggal: str(l.tanggal), tipe: str(l.tipe), jenis: str(l.jenis), usd: num(l.usd), cent: num(l.cent) };
   }
-  async function fetchAll(table, cols){
+  // Multi-akun (v1.1.194): kolom account_id + tabel akun dibuat oleh migrasi-multi-akun.sql. Tanpa itu hanya Akun utama yang bisa disinkronkan (perilaku lama).
+  const AID = ACCT.id;
+  let multi = null;
+  async function detectMulti(){
+    if(multi !== null) return multi;
+    const a = await sb.from('trades').select('account_id').limit(1), b = await sb.from('akun').select('id').limit(1);
+    multi = !(a.error || b.error);
+    return multi;
+  }
+  const NEED_MIGRATION = 'Cloud belum disiapkan untuk banyak akun. Jalankan migrasi-multi-akun.sql sekali di Supabase → SQL Editor, lalu coba lagi.';
+  const conflict = { trades: () => multi ? 'user_id,account_id,id' : 'user_id,id', deposit_log: () => multi ? 'user_id,account_id,tanggal,tipe,cent' : 'user_id,tanggal,tipe,cent', pengaturan: () => multi ? 'user_id,account_id' : 'user_id' };
+  const withAcc = r => multi ? Object.assign(r, { account_id: AID }) : r;
+  async function fetchAll(table, cols, perAccount){
     const out = [];
     for(let from = 0; ; from += 1000){
-      const { data, error } = await sb.from(table).select(cols).range(from, from + 999);
+      let q = sb.from(table).select(cols);
+      if(multi && perAccount !== false) q = q.eq('account_id', AID);
+      const { data, error } = await q.range(from, from + 999);
       if(error) throw new Error(error.message);
       out.push(...data);
       if(data.length < 1000) break;
@@ -170,31 +184,37 @@
   $('lgForgot').addEventListener('click', gateForgot);
 
   async function push(){
+    if(typeof IS_TOTAL !== 'undefined' && IS_TOTAL){ say('Tampilan Total hanya baca; sinkronkan tiap akun dari akunnya.'); return; }
+    setBusy(true); say('Memeriksa cloud…');
+    try{ await detectMulti(); }catch(e){ setBusy(false); say('Gagal terhubung: ' + e.message, false); return; }
+    setBusy(false); say('');
+    if(!multi && AID !== DEFAULT_ACCT_ID){ say(NEED_MIGRATION, false); return; }
     const uid = session.user.id;
-    const trades = [...new Map(DATA.trades.map(t => [str(t.id), tradeRow(t, uid)])).values()];
-    const deps = [...new Map(DATA.deposit.log.map(l => [depKey(l), depRow(l, uid)])).values()];
+    const trades = [...new Map(DATA.trades.map(t => [str(t.id), withAcc(tradeRow(t, uid))])).values()];
+    const deps = [...new Map(DATA.deposit.log.map(l => [depKey(l), withAcc(depRow(l, uid))])).values()];
     const warn = (!trades.length && !deps.length) ? ' Browser ini KOSONG, jadi semua data di cloud akan terhapus.' : '';
-    if(!await showConfirmModal(`Sinkronkan ${trades.length} transaksi & ${deps.length} deposit ke cloud? Data di cloud yang tidak ada di browser ini akan dihapus.${warn}`)) return;
+    if(!await showConfirmModal(`Sinkronkan akun "${ACCT.name}": ${trades.length} transaksi & ${deps.length} deposit ke cloud? Data akun ini di cloud yang tidak ada di browser ini akan dihapus.${warn}`)) return;
     setBusy(true); say('Mengirim…');
     try{
       // Bila kolom `catatan` belum ada di Supabase (migrasi belum dijalankan), kirim ulang tanpa kolom itu supaya sinkron tetap jalan.
       let noCatatan = false;
       const stripCat = rows => rows.map(({ catatan, ...r }) => r);
       for(const c of chunks(trades, 500)){
-        let res = await sb.from('trades').upsert(noCatatan ? stripCat(c) : c, { onConflict: 'user_id,id' });
-        if(res.error && !noCatatan && /catatan/i.test(res.error.message)){ noCatatan = true; res = await sb.from('trades').upsert(stripCat(c), { onConflict: 'user_id,id' }); }
+        let res = await sb.from('trades').upsert(noCatatan ? stripCat(c) : c, { onConflict: conflict.trades() });
+        if(res.error && !noCatatan && /catatan/i.test(res.error.message)){ noCatatan = true; res = await sb.from('trades').upsert(stripCat(c), { onConflict: conflict.trades() }); }
         must(res);
       }
-      for(const c of chunks(deps, 500)) must(await sb.from('deposit_log').upsert(c, { onConflict: 'user_id,tanggal,tipe,cent' }));
-      must(await sb.from('pengaturan').upsert({ user_id: uid, kurs: num(DATA.kurs) || 0 }, { onConflict: 'user_id' }));
+      for(const c of chunks(deps, 500)) must(await sb.from('deposit_log').upsert(c, { onConflict: conflict.deposit_log() }));
+      must(await sb.from('pengaturan').upsert(withAcc({ user_id: uid, kurs: num(DATA.kurs) || 0 }), { onConflict: conflict.pengaturan() }));
+      if(multi) must(await sb.from('akun').upsert({ user_id: uid, id: AID, nama: ACCT.name, tipe: ACCT.type, kurs: num(DATA.kurs) || 0 }, { onConflict: 'user_id,id' }));
 
       const localIds = new Set(trades.map(t => t.id));
       const gone = (await fetchAll('trades', 'id')).map(r => r.id).filter(id => !localIds.has(id));
-      for(const c of chunks(gone, 100)) must(await sb.from('trades').delete().in('id', c));
+      for(const c of chunks(gone, 100)){ let q = sb.from('trades').delete().in('id', c); if(multi) q = q.eq('account_id', AID); must(await q); }
 
       const localDep = new Set(deps.map(depKey));
       const goneDep = (await fetchAll('deposit_log', 'tanggal,tipe,cent')).filter(r => !localDep.has(depKey(r)));
-      for(const r of goneDep) must(await sb.from('deposit_log').delete().eq('tanggal', r.tanggal).eq('tipe', r.tipe).eq('cent', r.cent));
+      for(const r of goneDep){ let q = sb.from('deposit_log').delete().eq('tanggal', r.tanggal).eq('tipe', r.tipe).eq('cent', r.cent); if(multi) q = q.eq('account_id', AID); must(await q); }
 
       markSync('push');
       const lostCat = noCatatan ? trades.filter(t => t.catatan).length : 0;
@@ -205,14 +225,18 @@
   }
 
   async function pull(){
+    if(typeof IS_TOTAL !== 'undefined' && IS_TOTAL){ say('Tampilan Total hanya baca; pulihkan data dari tiap akun.'); return; }
     setBusy(true); say('Mengambil…');
     try{
+      await detectMulti();
+      if(!multi && AID !== DEFAULT_ACCT_ID){ say(NEED_MIGRATION, false); return; }
       const [tr, dp, cfgRows] = await Promise.all([
         fetchAll('trades', '*'), fetchAll('deposit_log', '*'), fetchAll('pengaturan', '*')
       ]);
-      if(!tr.length && !dp.length){ say('Cloud masih kosong. Tidak ada yang dipulihkan.', false); return; }
+      const cloudAccts = multi ? await fetchAll('akun', '*', false) : [];
+      if(!tr.length && !dp.length){ say('Cloud masih kosong untuk akun ini. Tidak ada yang dipulihkan.', false); return; }
       setBusy(false);
-      if(!await showConfirmModal(`Timpa data browser ini dengan data cloud (${tr.length} transaksi, ${dp.length} deposit)? Cadangan JSON data sekarang didownload otomatis dulu.`)){ say(''); return; }
+      if(!await showConfirmModal(`Timpa data akun "${ACCT.name}" di browser ini dengan data cloud (${tr.length} transaksi, ${dp.length} deposit)? Cadangan JSON data sekarang didownload otomatis dulu.`)){ say(''); return; }
       setBusy(true);
       if(DATA.trades.length || DATA.deposit.log.length){
         downloadTextFile(`jurnal-xauusd-data-${dateStampNow()}-sebelum-tarik.json`, JSON.stringify(DATA, null, 2), 'application/json;charset=utf-8;');
@@ -230,6 +254,10 @@
       DATA.deposit.log = dp.map(r => ({ tanggal: r.tanggal, jenis: str(r.jenis), tipe: r.tipe, usd: Number(r.usd), cent: Number(r.cent) }))
         .sort((a, b) => a.tanggal < b.tanggal ? -1 : a.tanggal > b.tanggal ? 1 : 0);
       if(cfgRows.length && cfgRows[0].kurs != null) DATA.kurs = Number(cfgRows[0].kurs);
+      // Akun yang ada di cloud tetapi belum ada di perangkat ini ikut didaftarkan (data masing-masing dipulihkan dari akunnya).
+      let addedAcc = 0;
+      cloudAccts.forEach(r => { const id = String(r.id || ''); if(/^[a-z0-9-]{1,24}$/.test(id) && !ACCOUNTS.some(x => x.id === id)){ ACCOUNTS.push({ id, name: String(r.nama || id).slice(0,30), type: ['cent','usd','idr'].includes(r.tipe) ? r.tipe : 'cent', created: '' }); addedAcc++; } });
+      if(addedAcc) saveAccounts();
       rebuildEquitySeries();
       recomputeAll();
       if(!saveActiveData(DATA)){ say('Gagal menyimpan ke penyimpanan lokal browser (penuh atau diblokir).', false); return; }

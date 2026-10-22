@@ -5,7 +5,75 @@
 // tetap ringan — data yang sesungguhnya hidup di localStorage setelah impor
 // pertama. Jika localStorage kosong (kunjungan pertama / browser baru), UI
 // menampilkan status kosong dan menunggu impor JSON dari tab Setelan.
-const JOURNAL_LS_KEY = 'jurnalXauusdData_v1';
+// ---------- Multi-akun trading (v1.1.191) ----------
+// Beberapa akun (Cent / USD standar / Rupiah), masing-masing dengan data sendiri di localStorage. Satu akun aktif per tampilan;
+// berganti akun memuat ulang halaman. Akun pertama ('utama') memakai kunci lama tanpa akhiran supaya data yang sudah ada tidak berpindah.
+const ACCT_LIST_KEY = 'jurnalAccounts', ACCT_ACTIVE_KEY = 'jurnalActiveAccount', DEFAULT_ACCT_ID = 'utama';
+const ACCT_TYPES = {
+  cent: { label:'Cent (USC)', short:'Cent', note:'Akun cent: saldo dalam USC, lot di riwayat broker dikali 100.' },
+  usd:  { label:'USD standar', short:'USD', note:'Akun standar dalam USD: lot apa adanya, laba dalam USD.' },
+  idr:  { label:'Rupiah (IDR)', short:'Rp', note:'Akun dalam Rupiah: saldo dan laba dalam Rp.' }
+};
+function readAccounts(){
+  let list = [];
+  try{ const v = JSON.parse(localStorage.getItem(ACCT_LIST_KEY) || 'null'); if(Array.isArray(v)) list = v; }catch(e){}
+  const seen = new Set(), out = [];
+  list.forEach(x => {
+    if(!x || typeof x.id !== 'string' || !/^[a-z0-9-]{1,24}$/.test(x.id) || seen.has(x.id)) return;
+    seen.add(x.id);
+    out.push({ id:x.id, name:String(x.name || x.id).trim().slice(0,30) || x.id, type: ACCT_TYPES[x.type] ? x.type : 'cent', created: x.created || '' });
+  });
+  if(!seen.has(DEFAULT_ACCT_ID)) out.unshift({ id:DEFAULT_ACCT_ID, name:'Akun utama', type:'cent', created:'' });
+  return out;
+}
+let ACCOUNTS = readAccounts();
+function saveAccounts(){ try{ localStorage.setItem(ACCT_LIST_KEY, JSON.stringify(ACCOUNTS)); return true; }catch(e){ return false; } }
+// Tampilan "Total gabungan" (v1.1.193): akun virtual hanya-baca yang menjumlahkan semua akun dalam sen-USD.
+const TOTAL_ID = 'total';
+let ACCT = (()=>{
+  let id = DEFAULT_ACCT_ID;
+  try{ const s = localStorage.getItem(ACCT_ACTIVE_KEY); if(s === TOTAL_ID && ACCOUNTS.length > 1) return { id:TOTAL_ID, name:'Total gabungan', type:'usd', created:'' }; if(s && ACCOUNTS.some(x => x.id === s)) id = s; }catch(e){}
+  return ACCOUNTS.find(x => x.id === id) || ACCOUNTS[0];
+})();
+const IS_TOTAL = ACCT.id === TOTAL_ID;
+// Kunci penyimpanan per akun: akun utama = kunci lama; akun lain = kunci + '@' + id.
+const acctKey = (base, id) => { id = id || ACCT.id; return id === DEFAULT_ACCT_ID ? base : base + '@' + id; };
+const JOURNAL_LS_KEY = acctKey('jurnalXauusdData_v1');
+// Satuan per jenis akun (v1.1.192). Semua nilai uang disimpan dalam sen-USD (¢): cent: 1 USC = 1¢; USD: $1 = 100¢; Rupiah: Rp/kurs*100.
+// LOT_SCALE = lot riwayat broker -> lot jurnal (akun cent x100). LOT_K: laba(¢) = pips * lot * LOT_K (cent 10, standar 1000).
+const LOT_SCALE = ACCT.type === 'cent' ? 100 : 1;
+const LOT_K = ACCT.type === 'cent' ? 10 : 1000;
+const ACCT_UNIT = ACCT.type === 'usd' ? '$' : (ACCT.type === 'idr' ? 'Rp' : '\u00a2');
+function amtToCent(v){ if(ACCT.type === 'cent') return v; if(ACCT.type === 'usd') return v * 100; const k = (typeof DATA !== 'undefined' && DATA.kurs) || 0; return k > 0 ? v / k * 100 : NaN; }
+function centToAmt(c){ if(ACCT.type === 'cent') return c; if(ACCT.type === 'usd') return c / 100; const k = (typeof DATA !== 'undefined' && DATA.kurs) || 0; return c / 100 * k; }
+function emptyData(kurs){
+  return { summary:{total:0,win:0,loss:0,winrate:0,pl_cent:0,pl_rp:0,saldo_akhir:0,pct_pl:null}, periods:[], kurs: kurs || 0,
+    dashboard:{update:'Update terakhir: -',saldo:0,stats:{total:0,winrate:0,pf:0,maxdd:0,expectancy:0},top_win:[],top_loss:[],mm:{equity:0,risk:0.01,sl:150,pipval:(ACCT.type==='cent'?10:1000),lot:0,tp_pips:0,tp_cent:0}},
+    maxdd_note:'', equity:[], months:[], weeks:[], trades:[], deposit:{total_deposit:0,total_penarikan:0,total_mc:0,modal_bersih:0,log:[]}, period_ranges:[], modal_kumulatif:[] };
+}
+// Baca data akun lain tanpa mengaktifkannya (untuk daftar akun dan tampilan Total). Akun aktif memakai DATA yang sedang berjalan.
+function buildTotalData(){
+  const out = emptyData(0), seen = new Set(), logSeen = new Set();
+  ACCOUNTS.forEach(ac => {
+    const d = peekAccountData(ac.id); if(!d) return;
+    if(!out.kurs && d.kurs > 0) out.kurs = d.kurs;
+    (d.trades || []).forEach(t => {
+      const c = JSON.parse(JSON.stringify(t));
+      if(ac.type === 'cent') c.lot = Math.round(c.lot / 100 * 10000) / 10000;   // samakan ke lot standar
+      let id = String(c.id); if(seen.has(id)) id = id + '@' + ac.id; seen.add(id); c.id = id; c.akun = ac.name;
+      out.trades.push(c);
+    });
+    ((d.deposit && d.deposit.log) || []).forEach(l => { out.deposit.log.push(Object.assign({}, l, { akun: ac.name })); });
+  });
+  out.trades.sort((x,y) => String(x.tanggal_gmt8).replace(' ','T') < String(y.tanggal_gmt8).replace(' ','T') ? -1 : 1);
+  out.deposit.log.sort((x,y) => String(x.tanggal).localeCompare(String(y.tanggal)));
+  return out;
+}
+function peekAccountData(id){
+  if(id === ACCT.id && typeof DATA !== 'undefined') return DATA;
+  try{ const s = localStorage.getItem(acctKey('jurnalXauusdData_v1', id)); if(s) return JSON.parse(s); }catch(e){}
+  return id === DEFAULT_ACCT_ID ? null : emptyData(0);
+}
 // Opsi bawaan + opsi kustom pengguna (Setelan → Trading → Opsi trigger dan exit; disimpan di localStorage 'jurnalCustomOpts').
 const TRIGGER_BASE = ['Breakout','Retest/Pullback','Support/Resistance','Trend Following','Reversal/Pembalikan','Order Block','FVG','Fibonacci Retracement','Moving Average Cross','News/Fundamental'];
 const EXIT_BASE = ['TP','SL','Cut Loss','ABC (Asal Biru Close)'];
@@ -32,21 +100,28 @@ function loadEmbeddedData(){
 function loadActiveData(){
   try{
     const saved = localStorage.getItem(JOURNAL_LS_KEY);
-    if(saved) return JSON.parse(saved);
+    if(saved && !IS_TOTAL) return JSON.parse(saved);
   }catch(e){}
+  if(IS_TOTAL) return emptyData(0);   // diisi buildTotalData() setelah fungsi hitung tersedia
+  if(ACCT.id !== DEFAULT_ACCT_ID){ // akun tambahan baru: mulai kosong, pakai kurs yang sudah ada di akun utama bila ada
+    let k = 0; try{ const m = JSON.parse(localStorage.getItem('jurnalXauusdData_v1') || 'null'); k = (m && m.kurs) || 0; }catch(e){}
+    return emptyData(k);
+  }
   return loadEmbeddedData();
 }
 function saveActiveData(data, silent){
+  if(IS_TOTAL) return false;   // tampilan Total hanya-baca
   try{
     localStorage.setItem(JOURNAL_LS_KEY, JSON.stringify(data));
     // Catat waktu perubahan lokal (untuk pengingat cadangan). silent=true untuk simpan otomatis saat muat halaman.
-    if(!silent){ try{ localStorage.setItem('jurnalLastChange', new Date().toISOString()); }catch(e){} }
+    if(!silent){ try{ localStorage.setItem(acctKey('jurnalLastChange'), new Date().toISOString()); }catch(e){} }
     return true;
   }catch(e){
     return false;
   }
 }
 let DATA = loadActiveData();
+if(IS_TOTAL){ DATA = buildTotalData(); }
 
 // ---------- GMT+8 time helpers ----------
 // Fixes "Hari Ini" / kalender mengikuti timezone browser atau UTC, bukan GMT+8 (acuan data).
@@ -159,7 +234,7 @@ const fmtPct = n => (n*100).toLocaleString('id-ID',{minimumFractionDigits:1,maxi
 const HERO_CURRENCIES = [{value:'USD',label:'USD'},{value:'USC',label:'USC (\u00a2)'},{value:'IDR',label:'Rp'}];
 let HERO_CURRENCY = 'USD';
 try{
-  const savedCur = localStorage.getItem('jurnalHeroCurrency');
+  const savedCur = localStorage.getItem(acctKey('jurnalHeroCurrency')) || (ACCT.id !== DEFAULT_ACCT_ID ? (ACCT.type === 'idr' ? 'IDR' : ACCT.type === 'cent' ? 'USC' : 'USD') : null);
   if(savedCur==='USDC') HERO_CURRENCY = 'USC'; // nilai lama v1.1.71 (maksudnya US cent, bukan USD Coin)
   else if(HERO_CURRENCIES.some(o=>o.value===savedCur)) HERO_CURRENCY = savedCur;
 }catch(e){}
@@ -1277,7 +1352,7 @@ function renderLapLanjut(matched, range){
 // ---------- Batas harian pribadi (Setelan) untuk analisis overtrading di Laporan (L6) ----------
 let DAY_LIMITS = {maxLoss:null, maxTrades:null}; // maxLoss dalam sen (¢)
 try{
-  const v = JSON.parse(localStorage.getItem('jurnalDayLimits') || 'null');
+  const v = JSON.parse(localStorage.getItem(acctKey('jurnalDayLimits')) || 'null');
   if(v){
     if(v.maxLoss > 0) DAY_LIMITS.maxLoss = +v.maxLoss;
     if(v.maxTrades >= 1) DAY_LIMITS.maxTrades = Math.floor(+v.maxTrades);
@@ -1337,7 +1412,7 @@ function renderDayLimitStatus(){
   const onChange = ()=>{
     const l = parseFloat(lossEl.value), n = parseInt(trEl.value, 10);
     DAY_LIMITS = {maxLoss: l>0 ? l : null, maxTrades: n>=1 ? n : null};
-    try{ localStorage.setItem('jurnalDayLimits', JSON.stringify(DAY_LIMITS)); }catch(e){}
+    try{ localStorage.setItem(acctKey('jurnalDayLimits'), JSON.stringify(DAY_LIMITS)); }catch(e){}
     showHint();
     renderDayLimitStatus();
     if(typeof renderLap2 === 'function') renderLap2();
@@ -3037,7 +3112,7 @@ window.renderSplitArah = renderSplitArah;
 const mm = DATA.dashboard.mm;
 // Parameter kalkulator dengan nilai aman (v1.1.145). tp_pips 0/kosong (file baru) → R:R bawaan 1,5,
 // bukan 0 seperti sebelumnya (dulu tp_pips/sl = 0 lalu diklem ke 0,01).
-const CALC_DEFAULTS = { pipval:10, risk:0.01, sl:150, rr:1.5 };
+const CALC_DEFAULTS = { pipval:LOT_K, risk:0.01, sl:150, rr:1.5 };
 function calcParams(){
   const pos = (v, d) => (typeof v==='number' && isFinite(v) && v>0) ? v : d;
   const sl = pos(mm.sl, CALC_DEFAULTS.sl);
@@ -3656,7 +3731,7 @@ function csvToTrades(text){
     inFile.add(fk);
     let pips = pn(get(r,'pips')), laba = pn(get(r,'laba'));
     if(!isFinite(pips)) pips = round2((arah==='Beli' ? (tutup-buka) : (buka-tutup)) * 10);
-    if(!isFinite(laba)) laba = round2(pips * lot * 10);
+    if(!isFinite(laba)) laba = round2(pips * lot * LOT_K);
     fresh.push({ id, arah, lot, buka, tutup, pips, laba,
       tanggal: new Date(new Date(g8 + 'Z').getTime() - 5*3600*1000).toISOString().slice(0,19), tanggal_gmt8: g8,
       waktu_buka: pdt(get(r,'wb')), trigger: get(r,'trigger'), trigger_exit: get(r,'trigger_exit'), emosi: get(r,'emosi'), jenis_entry: get(r,'jenis_entry'), ...(get(r,'catatan') ? { catatan: get(r,'catatan').slice(0,1000) } : {}) });
@@ -4471,7 +4546,7 @@ function recomputeAll(){
 
   const now = new Date();
   const bln = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-  DATA.dashboard.update = `Update terakhir: ${now.getDate()} ${bln[now.getMonth()]} ${now.getFullYear()}  •  Akun Cent (1 USD = 100¢)`;
+  DATA.dashboard.update = `Update terakhir: ${now.getDate()} ${bln[now.getMonth()]} ${now.getFullYear()}  •  ${ACCT.type==='cent' ? 'Akun Cent (1 USD = 100¢)' : ACCT.type==='usd' ? 'Akun USD standar (1 USD = 100¢ internal)' : 'Akun Rupiah (kurs ' + (DATA.kurs||0) + ')'}`;
 }
 
 // ---------- Dropdown kustom generik (bukan <select> bawaan browser) ----------
@@ -4803,7 +4878,7 @@ DTP.build('editWaktu', 'Pilih waktu tutup');
 // ---------- Pemilih mata uang kartu hero (USD / USC / Rp) ----------
 function setHeroCurrency(v){
   HERO_CURRENCY = v || 'USD';
-  try{ localStorage.setItem('jurnalHeroCurrency', HERO_CURRENCY); }catch(e){}
+  try{ localStorage.setItem(acctKey('jurnalHeroCurrency'), HERO_CURRENCY); }catch(e){}
   // Semua tab (kartu, tabel, kurva, laporan) dibangun dari data saat halaman dibuka, jadi cara
   // paling aman supaya SEMUANYA ikut ganti mata uang: reload, lalu kembali ke tab yang sama.
   try{
@@ -4940,7 +5015,7 @@ syncLedgerAllChip(); // default: chip All aktif (tanpa batas tanggal); dipanggil
       // Isi awal dari transaksi manual terakhir (arah, lot, trigger entry, jenis entry); bisa dikosongkan.
       const pre = document.getElementById('entryPrefillNote'); pre.hidden = true;
       try{
-        const last = JSON.parse(localStorage.getItem('jurnalEntryLast')||'null');
+        const last = JSON.parse(localStorage.getItem(acctKey('jurnalEntryLast'))||'null');
         if(last && typeof last==='object'){
           let used = false;
           if(last.arah==='Beli' || last.arah==='Jual'){ CS.set('csw_entryArah', last.arah); }
@@ -4987,11 +5062,12 @@ syncLedgerAllChip(); // default: chip All aktif (tanpa batas tanggal); dipanggil
     const main = [], warn = [], info = [];
     if(lot>0 && buka>0 && tutup>0){
       const pips = round2((arah==='Beli' ? tutup-buka : buka-tutup) * 10);
-      let laba = round2(pips * lot * 10);
+      let laba = round2(pips * lot * LOT_K);
       const raw = document.getElementById('entryLaba').value.trim();
-      if(raw!=='' && isFinite(+raw)){
-        if(Math.abs(+raw - laba) > Math.max(5, Math.abs(laba)*0.05)) info.push(`Laba aktual ${(+raw>=0?'+':'')+fmtMoney(+raw)} berbeda dari hitungan harga (${(laba>=0?'+':'')+fmtMoney(laba)}); selisih bisa dari swap/komisi.`);
-        laba = round2(+raw);
+      if(raw!=='' && isFinite(+raw) && isFinite(amtToCent(+raw))){
+        const rc = amtToCent(+raw);
+        if(Math.abs(rc - laba) > Math.max(5, Math.abs(laba)*0.05)) info.push(`Laba aktual ${(rc>=0?'+':'')+fmtMoney(rc)} berbeda dari hitungan harga (${(laba>=0?'+':'')+fmtMoney(laba)}); selisih bisa dari swap/komisi.`);
+        laba = round2(rc);
       }
       main.push(`<span class="${laba>0?'gain':laba<0?'loss':''}">${laba>=0?'+':''}${fmtMoney(laba)}</span> · ${pips>=0?'+':''}${pips} pips · ${laba>0?'Menang':laba<0?'Rugi':'Impas'}`);
       const last = DATA.trades.length ? DATA.trades.reduce((x,y)=> parseGmt8(y.tanggal_gmt8) > parseGmt8(x.tanggal_gmt8) ? y : x) : null;
@@ -5009,7 +5085,7 @@ syncLedgerAllChip(); // default: chip All aktif (tanpa batas tanggal); dipanggil
   setInterval(()=>{ if(overlay.classList.contains('show')) updEntryPreview(); }, 500); // arah dan waktu dipilih lewat picker kustom
   document.getElementById('entryPrefillClear').addEventListener('click', ()=>{
     CS.set('csw_entryArah','Beli'); document.getElementById('entryLot').value = ''; CS.set('csw_entryTrigger',''); CS.set('csw_entryJenisEntry','');
-    document.getElementById('entryPrefillNote').hidden = true; try{ localStorage.removeItem('jurnalEntryLast'); }catch(e){}
+    document.getElementById('entryPrefillNote').hidden = true; try{ localStorage.removeItem(acctKey('jurnalEntryLast')); }catch(e){}
     openSnap = entrySnap(); updEntryPreview();
   });
   // Enter pindah ke isian berikutnya; Ctrl/Cmd+Enter menyimpan (Shift menambah: simpan lalu form kosong).
@@ -5063,12 +5139,12 @@ syncLedgerAllChip(); // default: chip All aktif (tanpa batas tanggal); dipanggil
         errEl.style.display = 'block'; return;
       }
       const pips = round2((arah==='Beli' ? (tutup-buka) : (buka-tutup)) * 10);
-      let laba = round2(pips * lot * 10);
+      let laba = round2(pips * lot * LOT_K);
       const labaRaw = document.getElementById('entryLaba').value.trim();
       if(labaRaw !== ''){
         const lv = parseFloat(labaRaw);
-        if(!isFinite(lv)){ errEl.textContent = 'Laba aktual harus berupa angka (dalam ¢) atau dikosongkan.'; errEl.style.display = 'block'; return; }
-        laba = round2(lv);
+        if(!isFinite(lv) || !isFinite(amtToCent(lv))){ errEl.textContent = 'Laba aktual harus berupa angka (dalam ' + ACCT_UNIT + (ACCT.type === 'idr' ? ', dan kurs harus sudah diisi di Setelan' : '') + ') atau dikosongkan.'; errEl.style.display = 'block'; return; }
+        laba = round2(amtToCent(lv));
       }
       const tanggal_gmt8 = waktu + ':00';
       const tanggal = gmt8ToServerIso(waktu);
@@ -5112,7 +5188,7 @@ syncLedgerAllChip(); // default: chip All aktif (tanpa batas tanggal); dipanggil
       errEl.textContent = 'Gagal menyimpan ke penyimpanan lokal browser (mungkin penuh atau diblokir).';
       errEl.style.display = 'block'; return;
     }
-    if(mode==='trade'){ try{ localStorage.setItem('jurnalEntryLast', JSON.stringify({ arah:CS.get('csw_entryArah')||'Beli', lot:parseFloat(document.getElementById('entryLot').value)||0, trigger:CS.get('csw_entryTrigger')||'', jenis_entry:CS.get('csw_entryJenisEntry')||'' })); }catch(e){} }
+    if(mode==='trade'){ try{ localStorage.setItem(acctKey('jurnalEntryLast'), JSON.stringify({ arah:CS.get('csw_entryArah')||'Beli', lot:parseFloat(document.getElementById('entryLot').value)||0, trigger:CS.get('csw_entryTrigger')||'', jenis_entry:CS.get('csw_entryJenisEntry')||'' })); }catch(e){} }
     closeEntryModal();
     if(again && mode==='trade'){
       try{ sessionStorage.setItem('jurnalEntryReopen','1'); sessionStorage.setItem('jurnalEntryFlash', mergedPartial ? `Tersimpan: bagian penutupan digabung ke ${mergedPartial}.` : 'Transaksi tersimpan. Isi transaksi berikutnya.'); }catch(e){}
@@ -5204,11 +5280,11 @@ function fmtDurMin(m){ m = Math.round(m); const d = Math.floor(m/1440), h = Math
     if(lot>0 && buka>0 && tutup>0){
       const changed = t.arah!==arah || t.lot!==lot || t.buka!==buka || t.tutup!==tutup;
       let pips = t.pips, laba = t.laba;
-      if(changed){ pips = round2((arah==='Beli' ? tutup-buka : buka-tutup) * 10); laba = round2(pips * lot * 10); }
+      if(changed){ pips = round2((arah==='Beli' ? tutup-buka : buka-tutup) * 10); laba = round2(pips * lot * LOT_K); }
       const raw = document.getElementById('editLaba').value.trim();
-      if(raw!=='' && isFinite(+raw) && +raw !== t.laba){ laba = round2(+raw); }
+      if(raw!=='' && isFinite(+raw) && isFinite(amtToCent(+raw)) && +raw !== round2(centToAmt(t.laba))){ laba = round2(amtToCent(+raw)); }
       main.push(`<span class="${laba>0?'gain':laba<0?'loss':''}">${laba>=0?'+':''}${fmtMoney(laba)}</span> · ${pips>=0?'+':''}${(+pips).toFixed(1)} pips · ${laba>0?'Menang':laba<0?'Rugi':'Impas'}`);
-      if(changed){ const exp = round2((arah==='Beli' ? tutup-buka : buka-tutup) * 100 * lot); if(laba !== exp && Math.abs(laba-exp) > Math.max(5, Math.abs(exp)*0.05)) info.push(`Laba berbeda dari hitungan harga (${exp>=0?'+':''}${fmtMoney(exp)}); selisih bisa dari swap/komisi.`); else if(laba === t.laba && laba !== exp) info.push('Harga diubah, tetapi laba aktual yang lama dipertahankan. Kosongkan atau ubah kolom Laba aktual untuk hitung ulang.'); }
+      if(changed){ const exp = round2((arah==='Beli' ? tutup-buka : buka-tutup) * LOT_K * 10 * lot); if(laba !== exp && Math.abs(laba-exp) > Math.max(5, Math.abs(exp)*0.05)) info.push(`Laba berbeda dari hitungan harga (${exp>=0?'+':''}${fmtMoney(exp)}); selisih bisa dari swap/komisi.`); else if(laba === t.laba && laba !== exp) info.push('Harga diubah, tetapi laba aktual yang lama dipertahankan. Kosongkan atau ubah kolom Laba aktual untuk hitung ulang.'); }
       if(Math.abs(tutup-buka)/buka > 0.05) warn.push('Selisih harga buka dan tutup lebih dari 5%. Periksa lagi.');
     } else main.push('<span class="ep-info">Lot, harga buka, dan harga tutup harus terisi.</span>');
     if(w1 && w2){ const d = (parseGmt8(w2+':00') - parseGmt8(w1+':00')) / 60000; if(d < 0) warn.push('Waktu tutup lebih awal dari waktu buka.'); else main.push('Durasi ' + fmtDurMin(d)); }
@@ -5240,7 +5316,7 @@ function fmtDurMin(m){ m = Math.round(m); const d = Math.floor(m/1440), h = Math
     DTP.set('editWaktuBuka', t.waktu_buka ? String(t.waktu_buka).replace(' ','T').slice(0,16) : '');
     document.getElementById('editBuka').value = t.buka;
     document.getElementById('editTutup').value = t.tutup;
-    document.getElementById('editLaba').value = t.laba;
+    document.getElementById('editLaba').value = round2(centToAmt(t.laba));
     DTP.set('editWaktu', String(t.tanggal_gmt8).replace(' ','T').slice(0,16));
     CS.set('csw_editTrigger', t.trigger || '');
     CS.set('csw_editTriggerExit', t.trigger_exit || '');
@@ -5279,15 +5355,15 @@ function fmtDurMin(m){ m = Math.round(m); const d = Math.floor(m/1440), h = Math
     // Simpan (termasuk sekadar mengisi catatan psikologi lewat "Simpan & lanjut") menimpa laba/pips asli
     // broker (yang sudah termasuk swap/komisi) dengan rumus lot × selisih harga.
     const prevLaba = t.laba, labaIn = document.getElementById('editLaba').value.trim(), labaNum = labaIn==='' ? null : parseFloat(labaIn);
-    if(labaIn!=='' && !isFinite(labaNum)){ errEl.textContent = 'Laba aktual harus berupa angka (dalam ¢).'; errEl.style.display='block'; return; }
+    if(labaIn!=='' && !isFinite(labaNum)){ errEl.textContent = 'Laba aktual harus berupa angka (dalam ' + ACCT_UNIT + ').'; errEl.style.display='block'; return; }
     const priceChanged = t.arah!==arah || t.lot!==lot || t.buka!==buka || t.tutup!==tutup;
     t.arah = arah; t.lot = lot; t.buka = buka; t.tutup = tutup;
     if(priceChanged){
       t.pips = round2((arah==='Beli' ? (tutup-buka) : (buka-tutup)) * 10);
-      t.laba = round2(t.pips * lot * 10);
+      t.laba = round2(t.pips * lot * LOT_K);
     }
     // v1.1.125: laba yang diisi/diubah manual di kolom "Laba aktual" menang atas hitungan rumus (mis. sudah termasuk swap/komisi).
-    if(labaNum!==null && labaNum!==prevLaba) t.laba = round2(labaNum);
+    if(labaNum!==null && labaNum!==round2(centToAmt(prevLaba))) t.laba = round2(amtToCent(labaNum));
     // Waktu: jangan menimpa detik asli bila menit tidak diubah (input hanya sampai menit).
     if(waktu !== String(t.tanggal_gmt8||'').replace(' ','T').slice(0,16)){
       t.tanggal_gmt8 = waktu + ':00';
@@ -5337,7 +5413,7 @@ function fmtDurMin(m){ m = Math.round(m); const d = Math.floor(m/1440), h = Math
       errEl.textContent = 'Gagal menyimpan ke penyimpanan lokal browser (mungkin penuh atau diblokir).';
       errEl.style.display='block'; return;
     }
-    try{ localStorage.setItem('jurnalUndoDelete', JSON.stringify({ trade:t, at:Date.now() })); }catch(e){}
+    try{ localStorage.setItem(acctKey('jurnalUndoDelete'), JSON.stringify({ trade:t, at:Date.now() })); }catch(e){}
     closeDetail();
     queueNotifyAfterReload('Transaksi berhasil dihapus. Bisa dikembalikan lewat tombol "Batalkan hapus" di tab Transaksi (30 menit).', 'success');
     setTimeout(()=>{ location.reload(); }, 300);
@@ -5439,7 +5515,7 @@ renderPsyPrompt();
 })();
 // v1.1.124: batalkan hapus (satu tingkat, 30 menit, hanya di browser ini; tidak ikut sinkron/ekspor).
 (function(){
-  const K = 'jurnalUndoDelete', bar = document.getElementById('undoDeleteBar');
+  const K = acctKey('jurnalUndoDelete'), bar = document.getElementById('undoDeleteBar');
   let v = null; try{ v = JSON.parse(localStorage.getItem(K) || 'null'); }catch(e){}
   const drop = ()=>{ try{ localStorage.removeItem(K); }catch(e){} if(bar) bar.style.display = 'none'; };
   if(!bar || !v || !v.trade || !v.trade.id || Date.now() - v.at > 30*60000){ if(v) drop(); return; }
@@ -5477,11 +5553,11 @@ renderPsyPrompt();
 const BACKUP_STALE_DAYS = 7;
 function readJsonLS(k){ try{ return JSON.parse(localStorage.getItem(k)) || {}; }catch(e){ return {}; } }
 function markBackup(kind){
-  try{ const i = readJsonLS('jurnalBackupInfo'); i[kind] = new Date().toISOString(); localStorage.setItem('jurnalBackupInfo', JSON.stringify(i)); }catch(e){}
+  try{ const i = readJsonLS(acctKey('jurnalBackupInfo')); i[kind] = new Date().toISOString(); localStorage.setItem(acctKey('jurnalBackupInfo'), JSON.stringify(i)); }catch(e){}
   renderBackupStatus();
 }
 function lastBackupInfo(){
-  const b = readJsonLS('jurnalBackupInfo'), s = readJsonLS('jurnalSyncInfo');
+  const b = readJsonLS(acctKey('jurnalBackupInfo')), s = readJsonLS(acctKey('jurnalSyncInfo'));
   const c = [[b.json,'ekspor JSON'],[b.html,'ekspor HTML'],[s.push,'sinkron ke cloud'],[s.pull,'pemulihan dari cloud']]
     .map(([iso,label]) => ({t: Date.parse(iso), label})).filter(x => isFinite(x.t));
   return c.length ? c.reduce((m,x) => x.t > m.t ? x : m) : null;
@@ -5497,7 +5573,7 @@ function renderBackupStatus(){
   else{
     const days = Math.floor((Date.now() - last.t) / 86400000);
     const d = new Date(last.t);
-    const chg = Date.parse(localStorage.getItem('jurnalLastChange'));
+    const chg = Date.parse(localStorage.getItem(acctKey('jurnalLastChange')));
     msg = `Terakhir dicadangkan: ${days <= 0 ? 'hari ini' : days + ' hari lalu'}, ${d.getDate()} ${ID_BULAN[d.getMonth()]} ${p2(d.getHours())}:${p2(d.getMinutes())} (${last.label}).`;
     if(isFinite(chg) && chg - last.t > 1000){ warn = true; msg += ' Ada perubahan data setelah cadangan itu.'; }
     if(days > BACKUP_STALE_DAYS){ warn = true; msg += ` Sudah lebih dari ${BACKUP_STALE_DAYS} hari.`; }
@@ -5529,8 +5605,8 @@ function renderBackupStatus(){
   const hasSession = () => { try{ return Object.keys(localStorage).some(k => /^sb-.*-auth-token$/.test(k)); }catch(e){ return false; } };
   const ago = t => { const m = Math.floor((Date.now()-t)/60000); if(m < 1) return 'baru saja'; if(m < 60) return m+' mnt lalu'; const h = Math.floor(m/60); if(h < 24) return h+' jam lalu'; return Math.floor(h/24)+' hari lalu'; };
   function render(){
-    if(!hasSession()){ pill.hidden = true; return; }
-    const info = readJsonLS('jurnalSyncInfo'), push = Date.parse(info.push), chg = Date.parse(localStorage.getItem('jurnalLastChange'));
+    if(!hasSession() || IS_TOTAL){ pill.hidden = true; return; }
+    const info = readJsonLS(acctKey('jurnalSyncInfo')), push = Date.parse(info.push), chg = Date.parse(localStorage.getItem(acctKey('jurnalLastChange')));
     let state, msg;
     if(!isFinite(push)){ state = 'warn'; msg = 'Cloud: belum disinkronkan'; }
     else if(isFinite(chg) && chg - push > 1000){ state = 'warn'; msg = 'Cloud: ada perubahan belum dikirim'; }
@@ -5541,6 +5617,103 @@ function renderBackupStatus(){
   ['jurnalBackupChanged','jurnalAuthChanged','storage'].forEach(ev => window.addEventListener(ev, render));
   setInterval(render, 60000);
   render();
+})();
+
+
+(function(){ // label satuan laba mengikuti jenis akun
+  if(ACCT.type !== 'cent' && !IS_TOTAL){   // kolom yang berisi sen-USD internal: jelaskan satuannya
+    [['limMaxLoss','Maks rugi harian'],['cpPipval','Nilai pip per 1 lot']].forEach(([id,txt]) => { const el = document.getElementById(id), s = el && el.closest('.settings-row') && el.closest('.settings-row').querySelector('strong'); if(s) s.textContent = txt + ' (sen-USD, 100\u00a2 = $1)'; });
+    const cs = document.querySelector('label[for="calcSaldo"]'); if(cs) cs.textContent = 'Saldo (sen-USD, 100\u00a2 = $1)';
+  }
+  const l1 = document.querySelector('label[for="entryLaba"]'), l2 = document.querySelector('label[for="editLaba"]');
+  if(l1) l1.textContent = 'Laba aktual (' + ACCT_UNIT + ', opsional)';
+  if(l2) l2.textContent = 'Laba aktual (' + ACCT_UNIT + ')';
+})();
+// ---------- Multi-akun: pemilih akun, modal kelola, ringkasan di Setelan (v1.1.191) ----------
+(function setupAccounts(){
+  const $ = id => document.getElementById(id);
+  const btn = $('acctBtn'), ov = $('acctModalOverlay'); if(!btn || !ov) return;
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  let newType = 'cent';
+  const multi = () => ACCOUNTS.length > 1;
+  function paintBtn(){
+    $('acctBtnLabel').textContent = IS_TOTAL ? '\u03a3 Total' : ACCT.name;
+    $('acctDot').dataset.type = IS_TOTAL ? 'total' : ACCT.type;
+    btn.title = 'Akun: ' + ACCT.name + ' (' + ACCT_TYPES[ACCT.type].label + '). Ketuk untuk ganti / kelola.';
+    $('acctSetCur').textContent = ACCT.name + ' · ' + ACCT_TYPES[ACCT.type].label;
+    $('acctSetInfo').textContent = ACCOUNTS.length + ' akun terdaftar. ' + ACCT_TYPES[ACCT.type].note;
+    document.title = (ACCT.id === DEFAULT_ACCT_ID ? '' : ACCT.name + ' · ') + document.title.replace(/^.*? · /, '');
+  }
+  function switchTo(id){
+    try{ localStorage.setItem(ACCT_ACTIVE_KEY, id); }catch(e){}
+    try{ sessionStorage.removeItem('jurnalTradesFilter'); }catch(e){}
+    location.reload();
+  }
+  function render(){
+    const totRow = ACCOUNTS.length > 1 ? `<div class="acct-row${IS_TOTAL?' active':''}" data-id="${TOTAL_ID}"><span class="acct-dot" data-type="total"></span><span class="acct-name">\u03a3 Total gabungan</span>`
+      + (IS_TOTAL ? '<span class="acct-meta" style="width:auto">aktif</span>' : '<button type="button" class="ledger-reset-btn" data-act="go">Buka</button>')
+      + '<span class="acct-meta">Semua akun dalam USD \u00b7 hanya baca</span></div>' : '';
+    $('acctList').innerHTML = totRow + ACCOUNTS.map(x => {
+      const d = peekAccountData(x.id), n = d && d.trades ? d.trades.length : 0, on = x.id === ACCT.id && !IS_TOTAL;
+      return `<div class="acct-row${on?' active':''}" data-id="${x.id}"><span class="acct-dot" data-type="${x.type}"></span><span class="acct-name">${esc(x.name)}</span>`
+        + (on ? '<span class="acct-meta" style="width:auto">aktif</span>' : '<button type="button" class="ledger-reset-btn" data-act="go">Beralih</button>')
+        + '<button type="button" class="ledger-reset-btn" data-act="ren">Ubah nama</button>'
+        + (x.id !== DEFAULT_ACCT_ID && !on ? '<button type="button" class="ledger-reset-btn" data-act="del">Hapus</button>' : '')
+        + `<span class="acct-meta">${ACCT_TYPES[x.type].label} · ${n} transaksi</span></div>`;
+    }).join('');
+    $('acctNewType').innerHTML = Object.keys(ACCT_TYPES).map(k => `<button type="button" role="radio" aria-checked="${k===newType}" data-t="${k}">${ACCT_TYPES[k].label}</button>`).join('');
+    $('acctNewNote').textContent = ACCT_TYPES[newType].note;
+  }
+  const open = () => { render(); ov.classList.add('show'); };
+  const close = () => ov.classList.remove('show');
+  btn.addEventListener('click', open);
+  $('acctSetBtn').addEventListener('click', open);
+  $('acctCloseBtn').addEventListener('click', close);
+  ov.addEventListener('click', e => { if(e.target === ov) close(); });
+  document.addEventListener('keydown', e => { if(e.key === 'Escape' && ov.classList.contains('show')) close(); });
+  $('acctNewType').addEventListener('click', e => { const b = e.target.closest('button[data-t]'); if(!b) return; newType = b.dataset.t; render(); });
+  $('acctAddBtn').addEventListener('click', () => {
+    const name = $('acctNewName').value.trim().slice(0,30);
+    if(!name){ $('acctNewName').focus(); return; }
+    if(ACCOUNTS.some(x => x.name.toLowerCase() === name.toLowerCase())){ showNotifyModal('Nama akun sudah dipakai.'); return; }
+    let id; do{ id = 'a' + Math.random().toString(36).slice(2,8); }while(ACCOUNTS.some(x => x.id === id));
+    ACCOUNTS.push({ id, name, type:newType, created:new Date().toISOString() });
+    if(!saveAccounts()){ ACCOUNTS.pop(); showNotifyModal('Gagal menyimpan akun (penyimpanan browser penuh/diblokir).'); return; }
+    switchTo(id);
+  });
+  $('acctList').addEventListener('click', async e => {
+    const b = e.target.closest('button[data-act]'); if(!b) return;
+    const row = b.closest('.acct-row'), id = row.dataset.id, acc = ACCOUNTS.find(x => x.id === id);
+    if(b.dataset.act === 'go' && id === TOTAL_ID) return switchTo(TOTAL_ID);
+    if(!acc) return;
+    if(b.dataset.act === 'go') return switchTo(id);
+    if(b.dataset.act === 'ren'){
+      const nameEl = row.querySelector('.acct-name');
+      nameEl.innerHTML = `<input type="text" maxlength="30" value="${esc(acc.name)}" aria-label="Nama akun" style="width:100%;margin:0">`;
+      const inp = nameEl.firstChild; inp.focus(); inp.select(); b.textContent = 'Simpan';
+      b.dataset.act = 'rensave';
+      inp.addEventListener('keydown', ev => { if(ev.key === 'Enter'){ ev.preventDefault(); b.click(); } });
+      return;
+    }
+    if(b.dataset.act === 'rensave'){
+      const nm = row.querySelector('input').value.trim().slice(0,30);
+      if(nm && !ACCOUNTS.some(x => x.id !== id && x.name.toLowerCase() === nm.toLowerCase())){ acc.name = nm; saveAccounts(); paintBtn(); }
+      render(); return;
+    }
+    if(b.dataset.act === 'del'){
+      const n = (peekAccountData(id).trades || []).length;
+      const ok = await showConfirmModal(`Hapus akun "${acc.name}" beserta ${n} transaksinya dari browser ini? Tidak bisa dibatalkan. Ekspor JSON dulu bila perlu.`, { yes:'Hapus akun' });
+      if(!ok) return;
+      ['jurnalXauusdData_v1','jurnalLastChange','jurnalDayLimits','jurnalEntryLast','jurnalUndoDelete','jurnalBackupInfo','jurnalSyncInfo'].forEach(k => { try{ localStorage.removeItem(acctKey(k, id)); }catch(e){} });
+      ACCOUNTS = ACCOUNTS.filter(x => x.id !== id); saveAccounts(); render();
+    }
+  });
+  paintBtn();
+  if(IS_TOTAL){   // mode hanya-baca
+    document.body.classList.add('ro-total');
+    const bn = $('totalBanner'); if(bn){ bn.hidden = false; const bb = $('totalBannerBack'); if(bb) bb.addEventListener('click', () => switchTo(DEFAULT_ACCT_ID)); }
+    ['importJsonBtn'].forEach(i => { const e = $(i), s = e && e.closest('section'); if(s) s.hidden = true; });
+  }
 })();
 
 // ---------- Setelan → Kurs (Rp per USD) (v1.1.135) ----------
@@ -5652,9 +5825,27 @@ function renderBackupStatus(){
   sync();
 })();
 
-const APP_VERSION = '1.1.190';
-const APP_BUILD_DATE = '2026-10-16';   // ikut diganti tiap rilis (ISO), tampil di Setelan → Tentang
+const APP_VERSION = '1.1.196';
+const APP_BUILD_DATE = '2026-10-24';   // ikut diganti tiap rilis (ISO), tampil di Setelan → Tentang
 const USER_CHANGELOG = [
+  { date:'2026-10-24', items:[
+    'Kalender ekonomi bawaan diperpanjang sampai 30 Des 2026: NFP, CPI, PPI, klaim pengangguran, JOLTS, keputusan dan risalah FOMC Nov-Des (tanggal dari jadwal resmi BLS dan The Fed; ditandai perkiraan sampai dikonfirmasi). Analisis "saat rilis berita" kini menjangkau transaksi hingga akhir Desember.',
+  ]},
+  { date:'2026-10-23', items:[
+    'Label satuan di akun USD dan Rupiah dibenahi: keterangan akun di footer, kolom batas rugi harian, nilai pip, saldo kalkulator, dan pesan cek saldo broker kini mengikuti jenis akun.',
+  ]},
+  { date:'2026-10-22', items:[
+    'Sinkron cloud per akun: tiap akun trading (Cent, USD, Rupiah) kini disinkronkan terpisah ke Supabase, dan Pulihkan dari cloud juga mendaftarkan akun yang belum ada di perangkat ini. Perlu menjalankan migrasi-multi-akun.sql sekali di Supabase; data lama otomatis menjadi Akun utama.',
+  ]},
+  { date:'2026-10-21', items:[
+    'Total gabungan: dengan dua akun atau lebih, pilih \u201cΣ Total gabungan\u201d di menu akun untuk melihat semua akun dijumlahkan dalam USD (saldo, kurva ekuitas, statistik, laporan). Tampilan ini hanya baca; tambah atau ubah transaksi di tiap akun. Lot akun cent disamakan ke lot standar.',
+  ]},
+  { date:'2026-10-20', items:[
+    'Satuan per jenis akun: akun USD standar memakai lot dan laba dalam dolar, akun Rupiah dalam Rp (dikonversi dengan kurs), akun Cent tetap seperti sekarang. Form Tambah/Edit Transaksi, impor riwayat broker, cek saldo, dan kalkulator lot mengikuti jenis akun aktif.',
+  ]},
+  { date:'2026-10-18', items:[
+    'Multi-akun: sekarang bisa punya lebih dari satu akun trading (Cent, USD standar, atau Rupiah). Pilih akun lewat tombol di pojok atas; tiap akun punya transaksi, deposit, dan kurs sendiri. Kelola (tambah, ubah nama, hapus) di Setelan → Akun. Akun Anda yang sekarang tetap utuh sebagai Akun utama. Sinkron cloud untuk akun tambahan menyusul.',
+  ]},
   { date:'2026-10-16', items:[
     'Detail Transaksi: tombol tutup (X) dipindah ke baris tombol di bawah, tidak lagi di pojok atas, sehingga judul dan isian lebih lega di HP. Tombol hapus tidak lagi melebar.',
     'Detail dan Edit Transaksi disamakan dengan form Tambah: tampilan dua kolom, laba menonjol dengan durasi, catatan psikologi dikelompokkan, pratinjau hasil langsung saat mengedit, Enter pindah isian, Ctrl+Enter menyimpan, dan perubahan yang belum disimpan tidak hilang oleh ketukan di luar (Batal/tutup meminta konfirmasi). Menyimpan kini menolak waktu tutup yang lebih awal dari waktu buka.',

@@ -19,7 +19,21 @@
     { id: "pce-2026-10", t: "2026-10-30T12:30:00Z", cur: "USD", name: "PCE Inti dan Belanja Pribadi (data September)", impact: 3, status: "est", gold: "Ukuran inflasi yang diacu Fed. Reaksinya mirip CPI." },
     { id: "ism-2026-11", t: "2026-11-02T15:00:00Z", cur: "USD", name: "ISM PMI Manufaktur", impact: 2, status: "est", gold: "Di bawah 50 berarti kontraksi sektor manufaktur." },
     { id: "jc-2026-11-05", t: "2026-11-05T13:30:00Z", cur: "USD", name: "Klaim Pengangguran Mingguan", impact: 1, status: "ok", gold: "Rilis rutin tiap Kamis." },
-    { id: "nfp-2026-11", t: "2026-11-06T13:30:00Z", cur: "USD", name: "Nonfarm Payrolls (data Oktober)", impact: 3, status: "est", gold: "Data tenaga kerja kuat cenderung menguatkan USD dan menekan emas; data lemah mendukung emas." }
+    { id: "nfp-2026-11", t: "2026-11-06T13:30:00Z", cur: "USD", name: "Nonfarm Payrolls (data Oktober)", impact: 3, status: "est", gold: "Data tenaga kerja kuat cenderung menguatkan USD dan menekan emas; data lemah mendukung emas." },
+    { id: "cpi-2026-11", t: "2026-11-10T13:30:00Z", cur: "USD", name: "CPI Inflasi Konsumen (data Oktober)", impact: 3, status: "est", gold: GOLD_CPI },
+    { id: "jc-2026-11-12", t: "2026-11-12T13:30:00Z", cur: "USD", name: "Klaim Pengangguran Mingguan", impact: 1, status: "est", gold: "Rilis rutin tiap Kamis. Pengaruh kecil kecuali angkanya jauh dari ekspektasi." },
+    { id: "ppi-2026-11", t: "2026-11-13T13:30:00Z", cur: "USD", name: "PPI Inflasi Produsen (data Oktober)", impact: 2, status: "est", gold: "Dilihat sebagai petunjuk tekanan harga di hulu setelah CPI." },
+    { id: "fomc-min-2026-11", t: "2026-11-18T19:00:00Z", cur: "USD", name: "Risalah Rapat FOMC (rapat Oktober)", impact: 2, status: "est", gold: "Risalah menunjukkan arah pembahasan suku bunga. Nada hawkish menekan emas, nada dovish mendukungnya." },
+    { id: "jc-2026-11-19", t: "2026-11-19T13:30:00Z", cur: "USD", name: "Klaim Pengangguran Mingguan", impact: 1, status: "est", gold: "Rilis rutin tiap Kamis. Pengaruh kecil kecuali angkanya jauh dari ekspektasi." },
+    { id: "jolts-2026-12", t: "2026-12-01T15:00:00Z", cur: "USD", name: "Lowongan Kerja JOLTS (data Oktober)", impact: 2, status: "est", gold: "Ukuran permintaan tenaga kerja; angka kuat mendukung USD." },
+    { id: "jc-2026-12-03", t: "2026-12-03T13:30:00Z", cur: "USD", name: "Klaim Pengangguran Mingguan", impact: 1, status: "est", gold: "Rilis rutin tiap Kamis. Pengaruh kecil kecuali angkanya jauh dari ekspektasi." },
+    { id: "nfp-2026-12", t: "2026-12-04T13:30:00Z", cur: "USD", name: "Nonfarm Payrolls (data November)", impact: 3, status: "est", gold: "Data tenaga kerja kuat cenderung menguatkan USD dan menekan emas; data lemah mendukung emas." },
+    { id: "fomc-2026-12", t: "2026-12-09T19:00:00Z", cur: "USD", name: "Keputusan Suku Bunga FOMC (rapat 8-9 Des)", impact: 3, status: "est", gold: "Keputusan suku bunga dan proyeksi The Fed adalah penggerak utama emas; nada hawkish menekan, dovish mendukung." },
+    { id: "cpi-2026-12", t: "2026-12-10T13:30:00Z", cur: "USD", name: "CPI Inflasi Konsumen (data November)", impact: 3, status: "est", gold: GOLD_CPI },
+    { id: "jc-2026-12-10", t: "2026-12-10T13:30:00Z", cur: "USD", name: "Klaim Pengangguran Mingguan", impact: 1, status: "est", gold: "Rilis rutin tiap Kamis. Pengaruh kecil kecuali angkanya jauh dari ekspektasi." },
+    { id: "ppi-2026-12", t: "2026-12-15T13:30:00Z", cur: "USD", name: "PPI Inflasi Produsen (data November)", impact: 2, status: "est", gold: "Dilihat sebagai petunjuk tekanan harga di hulu setelah CPI." },
+    { id: "jc-2026-12-17", t: "2026-12-17T13:30:00Z", cur: "USD", name: "Klaim Pengangguran Mingguan", impact: 1, status: "est", gold: "Rilis rutin tiap Kamis. Pengaruh kecil kecuali angkanya jauh dari ekspektasi." },
+    { id: "fomc-min-2026-12", t: "2026-12-30T19:00:00Z", cur: "USD", name: "Risalah Rapat FOMC (rapat Desember)", impact: 2, status: "est", gold: "Risalah menunjukkan arah pembahasan suku bunga. Nada hawkish menekan emas, nada dovish mendukungnya." }
   ];
 
   // Zona waktu awal mengikuti Setelan jurnal (jurnalTzOffset, menit) bila belum ada pilihan tersimpan.

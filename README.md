@@ -37,6 +37,9 @@ Dikelompokkan dengan sub-navigasi di atas:
 - **Akun:** Sinkron Supabase (tombol Masuk membuka halaman login; Ganti password, Sinkronkan ke cloud, Pulihkan dari cloud, Keluar).
 - **Tentang:** versi aplikasi (satu-satunya tempat versi tampil), tanggal build, **Periksa pembaruan**, status **Aplikasi terpasang** dengan tombol **Instal aplikasi** (browser yang mendukung), dan **Lihat riwayat** (riwayat perubahan berbahasa pengguna, terbaru di atas).
 
+## Multi-akun (v1.1.191–192)
+Tombol akun di header membuka daftar akun trading (Cent, USD standar, Rupiah). Tiap akun punya transaksi, deposit, dan kurs sendiri di browser; berganti akun memuat ulang halaman. Akun pertama ("Akun utama") adalah data yang sudah ada. Tambah, ubah nama, dan hapus lewat tombol itu atau Setelan → Akun. Satuan mengikuti jenis akun (v1.1.192): Cent memakai lot ×100 dan laba ¢; USD standar memakai lot apa adanya dan laba $; Rupiah memakai laba Rp (dikonversi dengan kurs akun). Impor riwayat broker memilih simbol sesuai jenis akun (XAUUSDc untuk Cent). **Total gabungan (v1.1.193):** bila ada dua akun atau lebih, menu akun menawarkan "Σ Total gabungan": semua akun dijumlahkan dalam USD di seluruh tab, hanya baca. Sinkron Supabase per akun (v1.1.194): tiap akun dikirim dan dipulihkan sendiri.
+
 ## Laporan
 - **Sub-tab:** Tren · Ringkasan · Psikologi · Bandingkan · Lanjutan (di bawah bar periode, gaya sama dengan Setelan). Periode & filter berlaku untuk semuanya dan bisa dilipat (ringkasannya tetap terlihat; pilihan diingat); cetak/PDF memuat semua bagian.
 - **Periode & filter:** navigator Harian / Mingguan / Bulanan / 3 Bulan / 1 Tahun / **All Time (bawaan)**. Filter Arah, Sesi (Asia / London / New York menurut jam buka), Emosi, Trigger entry, Jenis entry (tiap filter punya "Belum dicatat"); digabung (AND).
@@ -63,6 +66,7 @@ Dikelompokkan dengan sub-navigasi di atas:
 Hanya `jurnalXauusdData_v1` yang ikut ekspor JSON dan sinkron; kunci pengaturan lain ikut **Ekspor pengaturan** (tema, skema, aksen, mata uang, zona waktu, format tanggal, kurva, angka PNL, ukuran tampilan, batas harian, garis merah, sidebar, aturan trading).
 
 ## Sinkron Supabase
+> Banyak akun (v1.1.194): proyek yang sudah ada menjalankan `migrasi-multi-akun.sql` sekali (data lama menjadi akun `utama`); instalasi baru cukup `schema.sql`. Tanpa migrasi, hanya Akun utama yang bisa disinkronkan.
 1. Jalankan `schema.sql` sekali di Supabase → SQL Editor; aktifkan Auth email (Authentication → Providers). Bila proyek dibuat sebelum v1.1.129, jalankan juga `migrasi-catatan.sql` (kolom `catatan`).
 2. `config.js` berisi URL proyek dan kunci publishable. Jangan memakai kunci service_role.
 3. Agar tautan reset password kembali ke aplikasi: Authentication → URL Configuration, tambahkan alamat aplikasi ke **Redirect URLs** dan set **Site URL**.
@@ -99,7 +103,7 @@ Setelan → Trading → **Event yang dihitung**: *Dampak tinggi saja* (bawaan) a
 Setelan → Trading → **Jendela rilis berita**: pilih ±15, ±30 (bawaan) atau ±60 menit. Berlaku untuk Laporan (Saat rilis), filter Berita dan penanda rilis di rincian transaksi; disimpan di `jurnalNewsWin` dan ikut ekspor/impor setelan.
 
 ## Transaksi: filter Berita (v1.1.185)
-Filter **Berita** di bar filter Transaksi: *Dekat rilis (±30 mnt)* menampilkan transaksi yang dibuka dalam 30 menit dari event dampak tinggi; *Di luar rilis* sisanya. Hanya transaksi dalam rentang jadwal bawaan Kalender (2 Okt–6 Nov 2026) yang dinilai; di luar itu tidak muncul di kedua pilihan.
+Filter **Berita** di bar filter Transaksi: *Dekat rilis (±30 mnt)* menampilkan transaksi yang dibuka dalam 30 menit dari event dampak tinggi; *Di luar rilis* sisanya. Hanya transaksi dalam rentang jadwal bawaan Kalender (2 Okt–30 Des 2026) yang dinilai; di luar itu tidak muncul di kedua pilihan.
 
 ## Performa: heatmap harian setahun (v1.1.184)
 Bagian **Heatmap harian** di tab Performa: satu kotak per hari, kolom per minggu (Senin di atas). Hijau untung, merah rugi, abu-abu terang impas; makin pekat makin besar dibanding hari terbesar tahun itu. Pilih tahun, ketuk kotak untuk daftar transaksi hari itu, arahkan kursor untuk nilai. Mengikuti filter arah dan sesi. Ringkasan di atasnya: hari trading, hari untung, total.

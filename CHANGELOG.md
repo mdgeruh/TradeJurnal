@@ -3,6 +3,40 @@
 Perubahan Jurnal XAUUSD, terbaru di atas. Semua rilis 22 Sep – 1 Okt 2026. Versi berbahasa pengguna akhir ada di aplikasi (Setelan → Tentang aplikasi). v1.1.144 ke atas dicatat per versi; sebelumnya diringkas per tema. Status dan jebakan bug: `SUMMARY.md`; rencana dan todo: `roadmap.md`.
 
 ## Rilis terbaru
+### 1.1.196 — 24 Okt
+- **Kalender bawaan diperpanjang ke 30 Des 2026** (`kalender.js`, +17 event): NFP 4 Des; CPI 10 Nov dan 10 Des; PPI 13 Nov dan 15 Des; JOLTS 1 Des; klaim pengangguran 12 Nov, 19 Nov, 3, 10, 17 Des; keputusan FOMC 9 Des (rapat 8-9 Des); risalah FOMC 18 Nov dan 30 Des. Tanggal BLS dan jadwal FOMC dari situs resmi; semua berstatus `est` (perkiraan jam, EST = UTC-5 setelah 1 Nov). Belum ditambahkan: PCE, PDB, penjualan ritel, ISM Nov-Des (tanggal belum terverifikasi).
+- `KAL.cover` otomatis menjadi 2 Okt – 30 Des 2026. Tes kalender dan berita lolos. `APP_VERSION`, `V` (`sw.js`) dan `?v=` → 1.1.196.
+
+### 1.1.195 — 23 Okt
+- **Label satuan per jenis akun.** Footer `dashboard.update` menyebut jenis akun; label "Maks rugi harian", "Nilai pip per 1 lot", dan "Saldo" kalkulator di akun USD/Rupiah menjelaskan sen-USD (100¢ = $1); `fc()` di `broker.js` menampilkan satuan akun (¢/$/Rp) lewat `centToAmt`. Tes `tunit.js` 31 cek. `APP_VERSION`, `V` (`sw.js`) dan `?v=` → 1.1.195.
+
+### 1.1.194 — 22 Okt
+- **Supabase per akun.** `migrasi-multi-akun.sql` (idempoten): tabel `akun` (user_id, id, nama, tipe, kurs; RLS), kolom `account_id text not null default 'utama'` di `trades`, `deposit_log`, `pengaturan`, kunci utama baru `(user_id, account_id, …)`, baris `utama` untuk pengguna lama. `schema.sql` untuk instalasi baru sudah memuatnya.
+- `sync.js`: `detectMulti()` memeriksa kolom/tabel baru. Mode multi: kirim/pulihkan/hapus difilter `account_id = ACCT.id`, upsert `onConflict` memuat `account_id`, baris `akun` ikut di-upsert. Mode lama (belum migrasi): hanya Akun utama, perilaku lama utuh; akun lain ditolak dengan petunjuk menjalankan migrasi. Tampilan Total ditolak (hanya baca).
+- Pulihkan dari cloud mendaftarkan akun yang ada di tabel `akun` tetapi belum ada di perangkat. Pil sinkron kembali tampil untuk semua akun selain Total; info sinkron/cadangan sudah per akun sejak 1.1.191.
+- Tes: `tsyncacct.js` (11 cek, Supabase tiruan di localStorage). `APP_VERSION`, `V` (`sw.js`) dan `?v=` → 1.1.194.
+
+### 1.1.193 — 21 Okt
+- **Tab Total gabungan (hanya baca).** Akun virtual `total` (`TOTAL_ID`, `IS_TOTAL`) muncul di menu akun bila ada ≥2 akun. `buildTotalData()` menggabungkan transaksi dan log deposit semua akun (nilai sudah sen-USD; lot akun cent ÷100 ke lot standar; ID kembar diberi akhiran `@idakun`; tiap baris diberi `akun`), kurs dari akun pertama yang punya kurs. Semua tab (Ringkasan, Analisis, Performa, Laporan, Transaksi, Deposit) memakai DATA gabungan lewat self-heal `recomputeAll()` yang sama.
+- Pengaman: `saveActiveData` mengembalikan `false` saat Total; `body.ro-total` menyembunyikan FAB, edit/hapus, impor, pilih massal, aturan, sinkron, broker, dan pengingat cadangan; banner `#totalBanner` dengan tombol kembali. Data akun tidak pernah ditulis dari mode ini.
+- Pil sinkron kini disembunyikan untuk semua akun selain utama.
+- Tes: `ttotal.js` (15 cek). `APP_VERSION`, `V` (`sw.js`) dan `?v=` → 1.1.193.
+
+### 1.1.192 — 20 Okt
+- **Satuan per jenis akun.** Semua nilai uang tetap disimpan dalam sen-USD (¢): cent 1 USC = 1¢, USD $1 = 100¢, Rupiah Rp/kurs×100. Konstanta global: `LOT_SCALE` (lot broker→jurnal: cent ×100, lainnya ×1), `LOT_K` (laba¢ = pips×lot×LOT_K: cent 10, USD/Rupiah 1000), `ACCT_UNIT` (¢/$/Rp), `amtToCent()`/`centToAmt()`.
+- Form Tambah/Edit: kolom Laba aktual memakai satuan akun (label, validasi, pratinjau, simpan); rumus pips/laba memakai `LOT_K`. Edit mengisi nilai dalam satuan akun.
+- `broker.js`: lot ×`LOT_SCALE`, laba lewat `amtToCent`, pips dan cek rumus memakai `LK`, filter simbol: akun cent hanya `XAUUSDc`, akun lain hanya non-`c`. Cek saldo dikonversi.
+- Default `pipval` kalkulator = `LOT_K`; mata uang tampilan awal per akun (`jurnalHeroCurrency@id`; USC/USD/IDR sesuai jenis).
+- Tes: `tunit.js` (25 cek). `APP_VERSION`, `V` (`sw.js`) dan `?v=` → 1.1.192.
+
+### 1.1.191 — 18 Okt
+- **Fondasi multi-akun.** Registri akun `jurnalAccounts` (id, nama, jenis `cent|usd|idr`), akun aktif `jurnalActiveAccount`. Akun `utama` memakai kunci lama (data tidak berpindah); akun lain memakai akhiran `@id` lewat `acctKey(base,id)`: data, `jurnalLastChange`, `jurnalDayLimits`, `jurnalEntryLast`, `jurnalUndoDelete`, `jurnalBackupInfo`, `jurnalSyncInfo`.
+- Akun tambahan mulai kosong (`emptyData`, kurs disalin dari akun utama). Berganti akun = muat ulang halaman.
+- UI: tombol akun di header (`#acctBtn`), modal `#acctModalOverlay` (beralih, ubah nama inline, hapus dengan konfirmasi, tambah akun + jenis), ringkasan di Setelan → Akun (`#acctSection`).
+- Pengaman: `push()`/`pull()` di `sync.js` menolak untuk akun tambahan sampai sinkron per akun (v1.1.194). Daftar akun rusak → kembali ke akun utama.
+- Belum: satuan/mata uang per jenis akun (v1.1.192), tab Total gabungan (v1.1.193). Tes: `tacct.js` (15 cek).
+- `APP_VERSION`, `V` (`sw.js`) dan `?v=` → 1.1.191.
+
 ### 1.1.190 — 16 Okt
 - **Detail Transaksi: tombol X pindah ke baris aksi bawah** (`#detailCloseBtn` kini di `#detailViewActions`, setelah tombol Edit; tidak ada lagi `.modal-x` di header). Esc tetap menutup (pada mode edit lewat konfirmasi "Buang perubahan?"); mode edit memakai Batal.
 - CSS stretch tombol di ≤480px dibatasi ke `#entryModalBox` dan `#detailEditActions`; tombol hapus di mode lihat tidak lagi melebar.
