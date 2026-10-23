@@ -4125,7 +4125,8 @@ window.renderTrades = renderTrades;
     {id:'kontras', n:'Kontras Tinggi', c:['#0A0A0A','#FFD166','#4DA3FF','#FF9F43'], l:['#FFFFFF','#855300','#0A58C0','#B04400']},
     {id:'midnight', n:'Midnight Biru', c:['#0F1720','#5AA9E6','#5FBF8F','#E0705F'], l:['#EFF3F8','#1F6FB5','#1B7550','#B23F2B']},
     {id:'ungu', n:'Ungu Senja', c:['#17131F','#B392F0','#7BC49A','#E07A8B'], l:['#F5F2FB','#6D45C4','#1F7A4B','#B0364A']},
-    {id:'kertas', n:'Kertas Putih', c:['#1C1B19','#D98E4A','#86B58A','#D9776A'], l:['#FAFAF8','#8A5F12','#2F7A45','#A8402B']}
+    {id:'kertas', n:'Kertas Putih', c:['#1C1B19','#D98E4A','#86B58A','#D9776A'], l:['#FAFAF8','#8A5F12','#2F7A45','#A8402B']},
+    {id:'kaca', n:'Kaca Senja', c:['#1C1718','#F2A65A','#B5E48C','#FF8A6B'], l:['#F6EEE8','#B4481A','#2F7A3A','#B8392A']}
   ];
   const mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: light)') : null;
   let mode = 'dark', scheme = 'emas';
@@ -4134,6 +4135,11 @@ window.renderTrades = renderTrades;
     if(m==='light'||m==='dark'||m==='auto') mode = m;
     if(SCHEMES.some(x=>x.id===s)) scheme = s;
   }catch(e){}
+  // Efek kaca (v1.1.217): sakelar terpisah dari skema. Tersimpan di 'jurnalGlass' ('1'/'0'); belum pernah dipilih = ikut skema Kaca Senja.
+  let glassPref = null;
+  try{ const g = localStorage.getItem('jurnalGlass'); if(g==='1' || g==='0') glassPref = g; }catch(e){}
+  const glassOn = () => glassPref === null ? scheme === 'kaca' : glassPref === '1';
+  const glassBtns = [...document.querySelectorAll('#glassModes [data-glass]')];
   const isLight = () => mode==='light' || (mode==='auto' && mq && mq.matches);
   const grid = document.getElementById('schemeGrid'), chips = [...document.querySelectorAll('#themeModes [data-mode]')];
   if(grid) grid.innerHTML = SCHEMES.map(s => `<button type="button" class="scheme-card" data-scheme-id="${s.id}" aria-pressed="false"><span class="scheme-sw">${s.c.map(c=>`<i style="background:${c}"></i>`).join('')}</span><span>${s.n}</span></button>`).join('');
@@ -4141,6 +4147,8 @@ window.renderTrades = renderTrades;
     const light = isLight();
     if(light) root.setAttribute('data-theme','light'); else root.removeAttribute('data-theme');
     if(scheme!=='emas') root.setAttribute('data-scheme',scheme); else root.removeAttribute('data-scheme');
+    if(glassOn()) root.setAttribute('data-glass','1'); else root.removeAttribute('data-glass');
+    glassBtns.forEach(b => { const on = (b.dataset.glass === '1') === glassOn(); b.classList.toggle('active', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
     toggleBtn.textContent = light ? '☀' : '☾';
     const meta = document.querySelector('meta[name="theme-color"]');
     if(meta) meta.setAttribute('content', SCHEMES.find(x=>x.id===scheme)[light ? 'l' : 'c'][0]);
@@ -4184,8 +4192,9 @@ window.renderTrades = renderTrades;
   const accReset = document.getElementById('accentReset');
   if(accReset) accReset.addEventListener('click', () => { delete accents[modeKey()]; saveAccent(); say('Aksen kembali ke bawaan skema.'); paintAccent(); repaintCharts(); });
   cbBtns.forEach(b => b.addEventListener('click', () => { cb = b.dataset.cb==='1'; saveAccent(); paintAccent(); repaintCharts(); }));
+  glassBtns.forEach(b => b.addEventListener('click', () => { glassPref = b.dataset.glass; try{ localStorage.setItem('jurnalGlass', glassPref); }catch(e){} apply(false); }));
   const resetBtn = document.getElementById('themeResetBtn');
-  if(resetBtn) resetBtn.addEventListener('click', () => { mode = 'dark'; scheme = 'emas'; accents = {}; cb = false; saveAccent(); say('Tampilan dikembalikan ke bawaan.'); apply(true); });
+  if(resetBtn) resetBtn.addEventListener('click', () => { mode = 'dark'; scheme = 'emas'; accents = {}; cb = false; glassPref = null; try{ localStorage.removeItem('jurnalGlass'); }catch(e){} saveAccent(); say('Tampilan dikembalikan ke bawaan.'); apply(true); });
   const _apply = apply;
   apply = function(persist){ _apply(persist); paintAccent(); };
   toggleBtn.addEventListener('click', () => { mode = isLight() ? 'dark' : 'light'; apply(true); });
@@ -4406,6 +4415,7 @@ const SETTINGS_VALIDATORS = {
   jurnalHideNum: v => v==='0' || v==='1',
   jurnalFontSize: v => v==='kecil' || v==='besar',
   jurnalNumFmt: v => v==='id' || v==='en',
+  jurnalGlass: v => v==='0' || v==='1',
   jurnalNotif: v => { try{ const o = JSON.parse(v); return !!o && typeof o === 'object' && !Array.isArray(o) && Object.keys(o).every(k => ['event','limit','note'].includes(k) && (o[k] === 0 || o[k] === 1)); }catch(e){ return false; } },
   jurnalCustomOpts: v => { try{ const o = JSON.parse(v); return !!o && typeof o==='object' && !Array.isArray(o) && ['trigger','exit'].every(k => o[k]===undefined || (Array.isArray(o[k]) && o[k].length<=20 && o[k].every(x => typeof x==='string' && x.length>0 && x.length<=40))); }catch(e){ return false; } },
   'kal-prefs': v => { try{ const o = JSON.parse(v); return !!o && typeof o==='object' && !Array.isArray(o); }catch(e){ return false; } },
@@ -6245,9 +6255,15 @@ function renderBackupStatus(){
   sync();
 })();
 
-const APP_VERSION = '1.1.215';
-const APP_BUILD_DATE = '2026-11-12';   // ikut diganti tiap rilis (ISO), tampil di Setelan → Tentang
+const APP_VERSION = '1.1.217';
+const APP_BUILD_DATE = '2026-11-14';   // ikut diganti tiap rilis (ISO), tampil di Setelan → Tentang
 const USER_CHANGELOG = [
+  { date:'2026-11-14', items:[
+    'Efek kaca kini berupa sakelar sendiri di Setelan → Tampilan → Efek kaca (Mati/Aktif), terpisah dari skema warna. Semua palet (Emas Klasik, Blue Ocean, Teal Green, Grafit, Kontras Tinggi, Midnight, Ungu Senja, Kertas Putih, Kaca Senja) bisa memakainya, gelap maupun terang: latar gradasi mengikuti warna aksen palet yang dipilih. Skema Kaca Senja tetap otomatis berkaca bila Anda belum pernah memilih; bisa dimatikan. Atur ulang tampilan ikut mematikan efek kaca.',
+  ]},
+  { date:'2026-11-13', items:[
+    'Skema warna baru Kaca Senja (Setelan → Tampilan): tampilan kaca buram seperti desain dasbor modern. Latar gradasi hangat (jingga dan ungu), kartu transparan dengan efek blur dan tepi bercahaya, sidebar melayang dengan sudut membulat, bilah bawah ponsel ikut kaca. Tersedia versi gelap dan terang, aksen jingga-amber, angka untung hijau muda. Modal dan dropdown tetap padat agar mudah dibaca. Bila browser tak mendukung blur atau Anda mengaktifkan pengurangan transparansi, kartu otomatis jadi padat; saat dicetak latar jadi putih.',
+  ]},
   { date:'2026-11-12', items:[
     'Setelan → Pengingat: notifikasi untuk berita dampak Tinggi 15 menit sebelum rilis, batas harian tercapai (rugi atau jumlah transaksi), dan catatan psikologi yang belum diisi (30 menit setelah transaksi terakhir hari ini). Semua mati sampai Anda menyalakannya dan memberi izin notifikasi; tiap pengingat hanya dikirim sekali. Notifikasi muncul selama aplikasi terbuka (tab atau PWA, boleh di latar belakang); tidak ada server, jadi saat aplikasi tertutup tidak ada pengingat. Ada tombol Kirim contoh untuk mencoba.',
   ]},

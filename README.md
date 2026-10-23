@@ -125,6 +125,12 @@ Tab Kalender → **Impor dan ekspor jadwal**. Ekspor menyimpan semua event (bawa
 ## Performa mingguan: rentang dan rata-rata (v1.1.180)
 Di bagian Performa mingguan pilih **12 minggu / 26 minggu / Semua**. Batang menampilkan garis putus-putus rata-rata per minggu, dengan ringkasan rata-rata dan jumlah minggu untung. Daftar mingguan mengikuti rentang, dan semuanya mengikuti filter arah/sesi. Pilihan diingat dan ikut ekspor pengaturan.
 
+## Efek kaca (v1.1.217)
+Setelan → Tampilan → Efek kaca: sakelar `jurnalGlass` (`html[data-glass="1"]`) yang bisa dipakai dengan semua skema warna; gradasi latar mengikuti aksen palet. Kaca Senja otomatis berkaca bila belum pernah memilih. Tes: `tglass.js`.
+
+## Skema Kaca Senja (v1.1.216)
+Setelan → Tampilan → Kaca Senja: kartu kaca buram (`backdrop-filter`) di atas gradasi hangat, sidebar melayang, varian gelap dan terang; fallback padat bila blur tidak didukung atau `prefers-reduced-transparency`. Tes: `tkaca.js`.
+
 ## Notifikasi pengingat (v1.1.215)
 Setelan → Pengingat: berita dampak Tinggi 15 menit sebelum rilis, batas harian tercapai, catatan psikologi belum diisi. Mati bawaan, butuh izin notifikasi, berjalan saat aplikasi terbuka (tanpa server push). Tes: `tnotif.js`.
 

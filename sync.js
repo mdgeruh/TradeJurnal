@@ -110,7 +110,7 @@
       emosi: str(t.emosi), jenis_entry: str(t.jenis_entry), catatan: str(t.catatan), setup: str(t.setup), konfirmasi: !!t.konfirmasi, langgar: (t.langgar && t.langgar.length) ? JSON.stringify(t.langgar) : '' };
   }
   // Pengaturan trading ikut cloud (kolom pengaturan.setelan, teks JSON). Pengaturan tampilan khas perangkat tidak ikut.
-  const SETELAN_SKIP = ['jurnalTheme','jurnalScheme','jurnalAccent','jurnalCB','jurnalSidebar','jurnalFontSize','jurnalHideNum','jurnalNumFmt','jurnalNotif'];
+  const SETELAN_SKIP = ['jurnalTheme','jurnalScheme','jurnalAccent','jurnalCB','jurnalSidebar','jurnalFontSize','jurnalHideNum','jurnalNumFmt','jurnalNotif','jurnalGlass'];
   function collectSetelan(){
     const o = {};
     try{ Object.keys(SETTINGS_VALIDATORS).forEach(k => { if(SETELAN_SKIP.includes(k)) return; const v = localStorage.getItem(k); if(v !== null && v.length <= 2000 && SETTINGS_VALIDATORS[k](v)) o[k] = v; }); }catch(e){}

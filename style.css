@@ -1641,3 +1641,80 @@ body.ro-total #fabWrap,body.ro-total #detailEditBtn,body.ro-total #detailDeleteB
 .week-val{position:absolute;left:-4px;right:-4px;text-align:center;font-size:8.5px;line-height:1;white-space:nowrap;pointer-events:none;font-variant-numeric:tabular-nums;color:var(--paper-dim);}
 .week-val.up{color:var(--gain);}
 .week-val.down{color:var(--loss);}
+
+/* ---------- Efek kaca (v1.1.217): sakelar terpisah dari palet, jadi semua skema warna bisa memakainya ----------
+   Palet "Kaca Senja" (v1.1.216) kini hanya palet; efeknya ada di html[data-glass="1"] dan memakai warna aksen palet terpilih.
+   --ink-raised tetap padat (dipakai dropdown, tooltip, modal) sehingga teks di atasnya selalu terbaca. */
+html[data-scheme="kaca"]{--ink:#1C1718;--ink-raised:#3A3230;--paper:#F5EEE9;--paper-dim:#C9BAB2;--paper-faint:#AE9D95;--gold:#F2A65A;--gold-dim:#B87A42;--gain:#B5E48C;--loss:#FF8A6B;--line:rgba(255,255,255,.16);--line-soft:rgba(255,255,255,.09);}
+html[data-theme="light"][data-scheme="kaca"]{--ink:#F6EEE8;--ink-raised:#FBF6F2;--paper:#2B2124;--paper-dim:#5E4F51;--paper-faint:#6F5F61;--gold:#B4481A;--gold-dim:#D98A63;--gain:#2F7A3A;--loss:#B8392A;--line:rgba(60,40,40,.16);--line-soft:rgba(60,40,40,.09);}
+html[data-glass="1"]{--glass:linear-gradient(145deg,rgba(255,255,255,.14),rgba(255,255,255,.05));--glass-edge:rgba(255,255,255,.18);--glass-shadow:0 12px 40px rgba(0,0,0,.30);--glass-nav:rgba(16,13,13,.78);--glass-input:rgba(255,255,255,.07);--glass-th:rgba(0,0,0,.30);}
+html[data-theme="light"][data-glass="1"]{--glass:linear-gradient(145deg,rgba(255,255,255,.72),rgba(255,255,255,.42));--glass-edge:rgba(255,255,255,.85);--glass-shadow:0 12px 36px rgba(90,60,50,.14);--glass-nav:rgba(255,255,255,.62);--glass-input:rgba(255,255,255,.6);--glass-th:rgba(255,255,255,.7);}
+@supports (background:color-mix(in srgb,red 50%,transparent)){
+  html[data-glass="1"]{--glass-nav:color-mix(in srgb,var(--ink) 80%,transparent);}
+  html[data-theme="light"][data-glass="1"]{--glass-nav:color-mix(in srgb,var(--ink) 62%,transparent);}
+}
+html[data-glass="1"] body{background:var(--ink);background-attachment:fixed;}
+@supports (background:color-mix(in srgb,red 50%,transparent)){
+  html[data-glass="1"] body{background:
+    radial-gradient(1000px 720px at 78% 2%,color-mix(in srgb,var(--gold) 50%,transparent),transparent 64%),
+    radial-gradient(860px 780px at 2% 96%,color-mix(in srgb,var(--gold-dim) 48%,transparent),transparent 66%),
+    radial-gradient(760px 560px at 46% 50%,color-mix(in srgb,var(--gold) 16%,transparent),transparent 74%),
+    var(--ink);background-attachment:fixed;}
+  html[data-theme="light"][data-glass="1"] body{background:
+    radial-gradient(1000px 720px at 78% 2%,color-mix(in srgb,var(--gold) 34%,transparent),transparent 64%),
+    radial-gradient(860px 780px at 2% 96%,color-mix(in srgb,var(--gold-dim) 34%,transparent),transparent 66%),
+    radial-gradient(760px 560px at 46% 50%,color-mix(in srgb,var(--gold) 12%,transparent),transparent 74%),
+    var(--ink);background-attachment:fixed;}
+}
+/* Palet Kaca Senja punya gradasi sendiri (jingga dan ungu) */
+html[data-scheme="kaca"][data-glass="1"] body{background:
+  radial-gradient(1000px 720px at 78% 2%,rgba(232,118,56,.62),transparent 64%),
+  radial-gradient(860px 780px at 2% 96%,rgba(128,92,190,.52),transparent 66%),
+  radial-gradient(760px 560px at 46% 50%,rgba(190,120,96,.26),transparent 74%),
+  #1A1517;background-attachment:fixed;}
+html[data-theme="light"][data-scheme="kaca"][data-glass="1"] body{background:
+  radial-gradient(900px 620px at 80% 4%,rgba(255,164,112,.55),transparent 62%),
+  radial-gradient(800px 720px at 4% 92%,rgba(172,152,232,.45),transparent 64%),
+  radial-gradient(700px 520px at 48% 52%,rgba(255,206,180,.35),transparent 72%),
+  #F6EEE8;background-attachment:fixed;}
+html[data-glass="1"] section,
+html[data-glass="1"] .chart-card,
+html[data-glass="1"] .recent-card,
+html[data-glass="1"] .rules-card{
+  background:var(--glass);border:1px solid var(--glass-edge);border-radius:26px;
+  -webkit-backdrop-filter:blur(22px) saturate(150%);backdrop-filter:blur(22px) saturate(150%);
+  box-shadow:var(--glass-shadow),inset 0 1px 0 var(--glass-edge);}
+html[data-glass="1"] input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]),
+html[data-glass="1"] textarea,
+html[data-glass="1"] .pref-select{background:var(--glass-input);border-radius:12px;}
+html[data-glass="1"] .quick-chip,
+html[data-glass="1"] .custom-select-btn,
+html[data-glass="1"] .theme-toggle{border-radius:999px;}
+html[data-glass="1"] .modal-box,
+html[data-glass="1"] .entry-modal-box{border-radius:24px;box-shadow:0 24px 70px rgba(0,0,0,.45);}
+html[data-glass="1"] .modal-overlay{-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);}
+html[data-glass="1"] .bottom-nav{background:var(--glass-nav);-webkit-backdrop-filter:blur(20px) saturate(150%);backdrop-filter:blur(20px) saturate(150%);border-top:1px solid var(--glass-edge);}
+html[data-glass="1"] table.ledger thead th{background:var(--glass-th);}
+@media screen and (min-width:1100px){
+  html[data-glass="1"] .main-tabs{top:14px;left:14px;bottom:14px;width:calc(var(--sb-cur) - 24px);border:1px solid var(--glass-edge);border-radius:30px;background:var(--glass-nav);-webkit-backdrop-filter:blur(22px) saturate(150%);backdrop-filter:blur(22px) saturate(150%);box-shadow:var(--glass-shadow);}
+  html[data-glass="1"] .main-tab-btn{border-radius:16px;}
+  html[data-glass="1"] .main-tab-btn:hover{background:rgba(255,255,255,.10);}
+  html[data-glass="1"] .main-tab-btn.active{background:rgba(255,255,255,.16);box-shadow:inset 0 0 0 1px var(--glass-edge);}
+  html[data-theme="light"][data-glass="1"] .main-tab-btn:hover{background:rgba(255,255,255,.7);}
+  html[data-theme="light"][data-glass="1"] .main-tab-btn.active{background:rgba(255,255,255,.95);}
+  html[data-glass="1"] .sb-toggle{left:calc(var(--sb-cur) - 24px);}
+}
+@media (max-width:720px){
+  html[data-glass="1"] section,html[data-glass="1"] .chart-card,html[data-glass="1"] .recent-card,html[data-glass="1"] .rules-card{border-radius:20px;-webkit-backdrop-filter:blur(14px) saturate(140%);backdrop-filter:blur(14px) saturate(140%);}
+}
+/* Tanpa dukungan blur, atau pengguna meminta transparansi dikurangi: kartu jadi padat agar teks tetap terbaca */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  html[data-glass="1"] section,html[data-glass="1"] .chart-card,html[data-glass="1"] .recent-card,html[data-glass="1"] .rules-card,html[data-glass="1"] .main-tabs,html[data-glass="1"] .bottom-nav{background:var(--ink-raised);}
+}
+@media (prefers-reduced-transparency:reduce){
+  html[data-glass="1"] section,html[data-glass="1"] .chart-card,html[data-glass="1"] .recent-card,html[data-glass="1"] .rules-card,html[data-glass="1"] .main-tabs,html[data-glass="1"] .bottom-nav{background:var(--ink-raised);-webkit-backdrop-filter:none;backdrop-filter:none;}
+}
+@media print{
+  html[data-glass="1"] body{background:#fff !important;}
+  html[data-glass="1"] section,html[data-glass="1"] .chart-card{-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:none;}
+}

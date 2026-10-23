@@ -2,7 +2,9 @@
 
 Satu-satunya daftar rencana dan todo proyek (dulu ada di `SUMMARY.md`). Prioritas: **P1** tinggi, **P2** sedang, **P3** rendah. Tidak ada tanggal tetap. Setiap butir yang mengubah kode mengikuti **Alur rilis** di `README.md`; saat selesai, hapus dari sini (centang bila perlu satu rilis), pindahkan tema barunya ke tabel "Sudah selesai", dan catat di `release_note.md` dan `CHANGELOG.md`. Jebakan bug tiap area ada di `SUMMARY.md`.
 
-## Sudah selesai (v1.1.215)
+## Sudah selesai (v1.1.217)
+- Efek kaca sebagai sakelar terpisah untuk semua palet warna (v1.1.217).
+- Skema tampilan Kaca Senja (glass) gelap dan terang (v1.1.216).
 - Notifikasi pengingat berita dampak tinggi, batas harian, dan catatan psikologi (v1.1.215).
 - Format angka Indonesia/Internasional di Setelan (terjemahan teks UI belum) (v1.1.214).
 - Kinerja: cache pemformat angka; diukur, memo dan render bertahap tidak diperlukan (v1.1.213).
