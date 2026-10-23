@@ -37,7 +37,7 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="style.css?v=1.1.196">
+<link rel="stylesheet" href="style.css?v=1.1.215">
 </head>
 <body>
 <div class="login-gate" id="loginGate" role="dialog" aria-modal="true" aria-labelledby="lgTitle">
@@ -223,9 +223,26 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
 
   <div class="tab-panel" data-panel="statistik" id="tabpanel-statistik" role="tabpanel" aria-labelledby="tabbtn-statistik">
 
+  <section>
+    <div class="section-head">
+      <h2>Ringkasan mingguan</h2>
+      <div class="section-note">Tinjauan satu minggu (Senin&ndash;Minggu, GMT+8) dari seluruh transaksi, tanpa filter di bawah. Geser dengan panah untuk minggu lain.</div>
+    </div>
+    <div id="weekReview"></div>
+  </section>
+
   <div class="lap-gran-tabs" id="perfArahTabs" role="tablist" aria-label="Filter arah posisi di Performa"></div>
   <div class="lap-gran-tabs" id="perfSesiTabs" role="tablist" aria-label="Filter sesi pasar di Performa"></div>
+  <div class="lap-filter-row" id="perfPsyFilter" aria-label="Filter catatan psikologi di Performa"><div class="custom-select" id="csw_perfEmosi"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter emosi"><span class="cs-label">Semua emosi</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Filter emosi"></ul></div><div class="custom-select" id="csw_perfTrigger"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter trigger entry"><span class="cs-label">Semua trigger</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Filter trigger entry"></ul></div><div class="custom-select" id="csw_perfJenis"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter jenis entry"><span class="cs-label">Semua jenis</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Filter jenis entry"></ul></div></div>
   <div class="section-note" id="perfArahNote" hidden></div>
+
+  <section>
+    <div class="section-head">
+      <h2>Metrik risiko</h2>
+      <div class="section-note">Dari seluruh transaksi yang lolos filter di atas. Win rate impas = win rate minimum agar expectancy tidak negatif pada risk:reward ini. "Lot naik" menghitung entri setelah transaksi rugi yang lotnya &ge; 1,25&times; lot sebelumnya.</div>
+    </div>
+    <div class="stats" id="perfRisk"></div>
+  </section>
 
   <section>
     <div class="section-head">
@@ -235,6 +252,24 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
     <div class="month-grid" id="monthGrid"></div>
   </section>
 
+  <section id="perfAcctSec" hidden>
+    <div class="section-head">
+      <h2>Rincian per akun</h2>
+      <div class="section-note">Tampilan Total: hasil tiap akun dari transaksi yang lolos filter di atas. Laba dalam sen-USD yang disatukan; Max DD dari kurva laba kumulatif akun itu.</div>
+    </div>
+    <div id="perfAcct"></div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Bandingkan dua periode</h2>
+      <div class="section-note">Sama seperti di Laporan, tetapi mengikuti filter Performa di atas. Hijau = B lebih baik dari A.</div>
+    </div>
+    <div class="lap-filter-row"><div class="custom-select" id="csw_perfCmpA"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Periode A"><span class="cs-label">Bulan lalu</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Periode A"></ul></div><div class="custom-select" id="csw_perfCmpB"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Periode B"><span class="cs-label">Bulan ini</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Periode B"></ul></div></div>
+    <div id="perfCmp"></div>
+    <div class="psy-cover" id="perfCmpNote" style="margin-top:8px;"></div>
+  </section>
+
   <section>
     <div class="section-head">
       <h2>Performa mingguan</h2>
@@ -242,9 +277,12 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
     </div>
     <div class="lap-gran-tabs" id="perfWeekRange" role="tablist" aria-label="Rentang minggu"></div>
     <div class="section-note" id="weekSummary"></div>
+    <div class="week-chart">
+    <div class="week-axis" id="weekAxis" aria-hidden="true"></div>
     <div class="week-strip-scroll">
       <div class="week-strip" id="weekStrip"></div>
       <div class="week-labels" id="weekLabels"></div>
+    </div>
     </div>
     <div class="wk-list" id="weekList"></div>
   </section>
@@ -258,6 +296,15 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
     <div class="section-note" id="perfHeatSum" style="text-align:left;margin:0 0 10px;"></div>
     <div id="perfHeat"></div>
     <div class="yh-legend" aria-hidden="true"><span>Rugi</span><i class="yh-cell yh-down" style="--lv:1"></i><i class="yh-cell yh-down" style="--lv:.5"></i><i class="yh-cell"></i><i class="yh-cell yh-up" style="--lv:.5"></i><i class="yh-cell yh-up" style="--lv:1"></i><span>Untung</span></div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Jam &amp; hari buka</h2>
+      <div class="section-note">Kapan entri paling untung atau rugi: waktu buka (GMT+8), per 2 jam, dari seluruh transaksi yang lolos filter di atas. Ketuk sel untuk detail dan daftar transaksinya.</div>
+    </div>
+    <div id="perfHeat2"></div>
+    <div class="psy-cover" id="perfHeat2Info" style="margin-top:8px;"></div>
   </section>
 
   <section>
@@ -280,8 +327,9 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
   <section>
     <div class="section-head">
       <h2>Split arah: Beli vs Jual</h2>
-      <div class="section-note">Perbandingan performa posisi Beli (long) vs Jual (short). Arahkan kursor atau ketuk salah satu untuk detail.</div>
+      <div class="section-note">Perbandingan performa posisi Beli (long) vs Jual (short), mengikuti filter sesi dan psikologi di atas. Arahkan kursor atau ketuk salah satu untuk detail; ketuk judul kolom tabel untuk melihat transaksinya.</div>
     </div>
+    <div class="lap-gran-tabs" id="splitRange" role="tablist" aria-label="Rentang waktu Split arah"></div>
     <div class="split-pie-wrap" id="splitArahGrid">
       <div class="split-pie-box">
         <svg viewBox="0 0 160 160" width="160" height="160">
@@ -293,6 +341,8 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
       </div>
       <div class="split-pie-legend" id="splitPieLegend"></div>
     </div>
+    <div id="splitTbl"></div>
+    <div class="psy-cover" id="splitVerdict" style="margin-top:8px;"></div>
   </section>
 
   </div>
@@ -353,6 +403,8 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
       <div class="custom-select" id="csw_filterEmosi"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter emosi"><span class="cs-label">Semua emosi</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Filter emosi"></ul></div>
       <div class="custom-select" id="csw_filterTrigger"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter trigger entry"><span class="cs-label">Semua trigger</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Filter trigger entry"></ul></div>
       <div class="custom-select" id="csw_filterJenis"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter jenis entry"><span class="cs-label">Semua jenis entry</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Filter jenis entry"></ul></div>
+      <div class="custom-select" id="csw_filterSetup"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter setup"><span class="cs-label">Semua setup</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Filter setup"></ul></div>
+      <div class="custom-select" id="csw_filterLanggar"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter pelanggaran aturan"><span class="cs-label">Semua aturan</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Filter pelanggaran aturan"></ul></div>
       <div class="custom-select" id="csw_filterSesi"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter sesi pasar"><span class="cs-label">Semua sesi</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Filter sesi pasar"></ul></div>
       <div class="custom-select" id="csw_filterBerita"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter dekat rilis berita"><span class="cs-label">Semua berita</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Filter dekat rilis berita"></ul></div>
       <div class="dt-picker" id="dtp_ledgerFrom" aria-label="Dari tanggal"></div>
@@ -375,6 +427,7 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
       <div class="custom-select" id="csw_bulkEmosi"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Isi emosi massal"><span class="cs-label">Isi emosi</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Isi emosi massal"></ul></div>
       <div class="custom-select" id="csw_bulkTrigger"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Isi trigger massal"><span class="cs-label">Isi trigger</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Isi trigger massal"></ul></div>
       <div class="custom-select" id="csw_bulkJenis"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Isi jenis entry massal"><span class="cs-label">Isi jenis entry</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Isi jenis entry massal"></ul></div>
+      <div class="custom-select" id="csw_bulkSetup"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Isi setup massal"><span class="cs-label">Isi setup</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Isi setup massal"></ul></div>
       <button type="button" class="ledger-reset-btn modal-btn-primary" id="bulkApplyBtn">Terapkan</button>
     </div>
     <div class="ledger-sort-m" id="ledgerSortM">
@@ -480,6 +533,23 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
     <div class="psy-group">
       <h3>Jenis entry</h3>
       <div id="laporanJenisEntry"></div>
+    </div>
+    <div class="psy-group">
+      <h3>Setup / strategi</h3>
+      <div id="laporanSetup"></div>
+    </div>
+    <div class="psy-group">
+      <h3>Konfirmasi setup</h3>
+      <div id="laporanKonfirmasi"></div>
+    </div>
+    <div class="psy-group">
+      <h3>Pelanggaran aturan trading</h3>
+      <div id="laporanLanggar"></div>
+      <div class="psy-cmp" id="laporanLanggarCmp" hidden></div>
+    </div>
+    <div class="psy-group">
+      <h3>Aturan yang paling sering dilanggar</h3>
+      <div id="laporanLanggarRule"></div>
     </div>
   </section>
 
@@ -656,7 +726,7 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
       <div class="section-note" id="kalIoNote" style="text-align:left;" hidden></div>
     </section>
 
-    <p class="kal-foot">Jadwal USD diambil dari kalender publik (<a href="https://fedratecalc.com/us-economic-calendar/october-2026/" target="_blank" rel="noopener">fedratecalc.com</a>, <a href="https://www.financecalendar.com/" target="_blank" rel="noopener">financecalendar.com</a>). Label <b>Perkiraan</b> berarti tanggal mengikuti pola rilis biasa dan belum dikonfirmasi. Jam rilis AS memakai waktu Eastern (EDT sampai 1 November, lalu EST) dan sudah dikonversi. Angka prakiraan, sebelumnya, dan aktual tidak disertakan; isi sendiri. Cek ulang tanggal di situs resmi BLS, BEA, dan Federal Reserve sebelum trading.</p>
+    <p class="kal-foot">Jadwal USD diambil dari kalender publik (<a href="https://fedratecalc.com/us-economic-calendar/october-2026/" target="_blank" rel="noopener">fedratecalc.com</a>, <a href="https://www.financecalendar.com/" target="_blank" rel="noopener">financecalendar.com</a>). Label <b>Perkiraan</b> berarti tanggal mengikuti pola rilis biasa dan belum dikonfirmasi. Rapat ECB, BoE, dan BoJ mengikuti kalender resmi bank sentral masing-masing (jam BoJ perkiraan). Jam rilis AS memakai waktu Eastern (EDT sampai 1 November, lalu EST) dan sudah dikonversi. Angka prakiraan, sebelumnya, dan aktual tidak disertakan; isi sendiri. Cek ulang tanggal di situs resmi BLS, BEA, dan Federal Reserve sebelum trading.</p>
   </div>
 
   <div class="tab-panel" data-panel="setelan" id="tabpanel-setelan" role="tabpanel" aria-labelledby="settingsGearBtn">
@@ -731,6 +801,10 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
       <div class="theme-modes" id="prefDate" role="group" aria-label="Format tanggal"></div>
     </div>
     <div class="settings-row">
+      <div class="settings-desc"><strong>Format angka</strong><span>Pemisah ribuan dan desimal: Indonesia (1.234,56) atau Internasional (1,234.56). Halaman dimuat ulang agar semua tab ikut berubah. Teks tetap berbahasa Indonesia.</span></div>
+      <div class="theme-modes" id="prefNum" role="group" aria-label="Format angka"></div>
+    </div>
+    <div class="settings-row">
       <div class="settings-desc"><strong>Angka PNL saat dibuka</strong><span>Pilih Tersembunyi agar angka PNL (Hari Ini, 7H, 30H, dst.) di kartu Ringkasan langsung disamarkan setiap aplikasi dibuka, sama seperti tombol mata. Tombol mata tetap bisa menampilkannya sementara.</span></div>
       <div class="theme-modes" id="prefHide" role="group" aria-label="Angka PNL saat dibuka"></div>
     </div>
@@ -758,6 +832,33 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
         <span>Transaksi ke-(N+1) dan seterusnya pada hari yang sama dihitung melewati batas.</span>
       </div>
       <input type="number" id="limMaxTrades" class="settings-input" min="1" step="1" placeholder="mis. 5" aria-label="Maks jumlah transaksi per hari">
+    </div>
+  </section>
+
+  <section data-sgroup="trading">
+    <div class="section-head">
+      <h2>Pengingat</h2>
+      <div class="section-note">Notifikasi muncul selama aplikasi terbuka (tab atau PWA terpasang, boleh di latar belakang). Tanpa server: bila aplikasi tertutup, pengingat tidak dikirim. Tersimpan di browser ini dan tidak ikut sinkron cloud.</div>
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc"><strong>Izin notifikasi</strong><span id="notifPermNote">Memeriksa...</span></div>
+      <button type="button" class="quick-chip" id="notifPermBtn">Izinkan</button>
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc"><strong>Berita dampak tinggi</strong><span>15 menit sebelum rilis dampak Tinggi di tab Kalender (sekali per event).</span></div>
+      <div class="theme-modes" id="notifEvent" role="group" aria-label="Pengingat berita dampak tinggi"></div>
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc"><strong>Batas harian tercapai</strong><span>Saat rugi harian atau jumlah transaksi mencapai batas yang diatur di atas (sekali per hari).</span></div>
+      <div class="theme-modes" id="notifLimit" role="group" aria-label="Pengingat batas harian"></div>
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc"><strong>Catatan psikologi belum diisi</strong><span>30 menit setelah transaksi terakhir hari ini bila masih ada yang belum bercatatan (sekali per hari).</span></div>
+      <div class="theme-modes" id="notifNote" role="group" aria-label="Pengingat catatan psikologi"></div>
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc"><strong>Coba notifikasi</strong><span>Kirim satu contoh untuk memastikan izin dan tampilannya.</span></div>
+      <button type="button" class="quick-chip" id="notifTestBtn">Kirim contoh</button>
     </div>
   </section>
 
@@ -811,7 +912,7 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
 
   <section id="optSection" data-sgroup="trading" aria-labelledby="optTitle">
     <div class="section-head">
-      <h2 id="optTitle">Opsi trigger dan exit</h2>
+      <h2 id="optTitle">Opsi trigger, exit, dan setup</h2>
       <div class="section-note">Tambah setup atau exit sendiri (mis. Liquidity Sweep). Opsi muncul di form transaksi, filter, dan laporan. Menghapus opsi tidak mengubah transaksi lama. Halaman dimuat ulang setelah perubahan.</div>
     </div>
     <div class="settings-row opt-row">
@@ -832,6 +933,16 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
       <div class="bk-inline">
         <input type="text" id="optExitIn" class="settings-input" maxlength="40" autocomplete="off" placeholder="mis. Trailing Stop" aria-label="Trigger exit baru">
         <button type="button" id="optExitAdd" class="ledger-reset-btn"><span>Tambah</span></button>
+      </div>
+    </div>
+    <div class="settings-row opt-row">
+      <div class="settings-desc">
+        <strong>Setup / strategi</strong>
+        <div class="opt-chips" id="optSetupChips"></div>
+      </div>
+      <div class="bk-inline">
+        <input type="text" id="optSetupIn" class="settings-input" maxlength="40" autocomplete="off" placeholder="mis. Breaker Block" aria-label="Setup baru">
+        <button type="button" id="optSetupAdd" class="ledger-reset-btn"><span>Tambah</span></button>
       </div>
     </div>
     <div class="section-note" id="optNote" style="text-align:left;" role="status"></div>
@@ -1045,6 +1156,30 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
     <div class="section-note" id="brokerNote" style="text-align:left;" role="status"></div>
   </section>
 
+  <section id="arsipSection" data-sgroup="data" aria-labelledby="arsipTitle">
+    <div class="section-head">
+      <h2 id="arsipTitle">Arsipkan riwayat lama</h2>
+      <div class="section-note">Unduh transaksi lama sebagai berkas arsip lalu hapus dari jurnal supaya aplikasi tetap ringan. Saldo dan kurva ekuitas tidak berubah.</div>
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc">
+        <strong>Arsipkan sampai tanggal</strong>
+        <span id="arsipSummary"></span>
+      </div>
+      <div class="dt-picker" id="dtp_arsipUntil" aria-label="Arsipkan sampai tanggal"></div>
+      <button type="button" id="arsipGoBtn" class="ledger-reset-btn" disabled><span>Arsipkan</span></button>
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc">
+        <strong>Pulihkan dari berkas arsip</strong>
+        <span>Pilih berkas arsip (.json) hasil Arsipkan; transaksinya kembali dan baris Arsip di Deposit dihapus.</span>
+      </div>
+      <input type="file" id="arsipRestoreInput" class="file-hidden" accept=".json,application/json" tabindex="-1" aria-hidden="true">
+      <button type="button" id="arsipRestoreBtn" class="ledger-reset-btn"><span>Pilih berkas</span></button>
+    </div>
+    <div class="section-note" id="arsipNote" style="text-align:left;" role="status"></div>
+  </section>
+
   <section id="storageSection" data-sgroup="data">
     <div class="section-head">
       <h2>Penyimpanan &amp; pengaturan</h2>
@@ -1195,10 +1330,15 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
       <div class="calc-field ef-full"><label for="entryLaba">Laba aktual (¢, opsional)</label><input type="number" id="entryLaba" step="0.01" inputmode="decimal" placeholder="kosong = dihitung otomatis"></div>
       <div class="entry-preview ef-full" id="entryPreviewTrade" aria-live="polite"></div>
       <p class="ef-sec ef-full">Catatan psikologi <span>(opsional)</span></p>
+      <div class="ef-full ef-psy">
       <div class="calc-field"><label>Trigger Entry</label><div class="custom-select" id="csw_entryTrigger"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Trigger entry"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Trigger entry"></ul></div></div>
       <div class="calc-field"><label>Trigger Exit</label><div class="custom-select" id="csw_entryTriggerExit"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Trigger exit"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Trigger exit"></ul></div></div>
       <div class="calc-field"><label>Kondisi Emosi</label><div class="custom-select" id="csw_entryEmosi"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Kondisi emosi"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Kondisi emosi"></ul></div></div>
       <div class="calc-field"><label>Jenis Entry</label><div class="custom-select" id="csw_entryJenisEntry"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Jenis entry"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Jenis entry"></ul></div></div>
+      <div class="calc-field"><label>Setup / Strategi</label><div class="custom-select" id="csw_entrySetup"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Setup atau strategi"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Setup atau strategi"></ul></div></div>
+      <div class="calc-field ef-check"><label class="chk-line"><input type="checkbox" id="entryKonfirmasi"><span>Semua konfirmasi setup terpenuhi</span></label></div>
+      </div>
+      <div class="calc-field ef-full" id="entryLanggarWrap" hidden><label>Aturan yang dilanggar <span class="lg-opt">(opsional, dari kartu Aturan trading)</span></label><div class="langgar-box" id="entryLanggar"></div></div>
       <div class="calc-field ef-full"><label for="entryCatatan">Catatan bebas</label><textarea id="entryCatatan" rows="3" maxlength="1000" placeholder="Alasan entry, pelajaran, apa yang akan diubah (opsional)"></textarea></div>
     </div>
     <div id="entryFormDeposit" class="entry-form" style="display:none;">
@@ -1219,7 +1359,7 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
   <div class="modal-box entry-modal-box wide" id="detailModalBox">
     <p class="modal-title" id="detailModalTitle">Detail Transaksi</p>
     <div id="detailView" class="detail-grid">
-      <div class="detail-row"><span class="detail-lbl">ID</span><span class="detail-val" id="dvId"></span></div>
+      <div class="detail-row"><span class="detail-lbl">ID</span><span class="detail-val" id="dvId"></span><button type="button" class="detail-link-btn" id="detailLinkBtn">Salin tautan</button></div>
       <div class="detail-row"><span class="detail-lbl">Arah</span><span class="detail-val" id="dvArah"></span></div>
       <div class="detail-row"><span class="detail-lbl">Lot</span><span class="detail-val" id="dvLot"></span></div>
       <div class="detail-row"><span class="detail-lbl">Pips</span><span class="detail-val" id="dvPips"></span></div>
@@ -1236,7 +1376,10 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
       <div class="detail-row"><span class="detail-lbl">Trigger exit</span><span class="detail-val" id="dvTriggerExit"></span></div>
       <div class="detail-row"><span class="detail-lbl">Kondisi emosi</span><span class="detail-val" id="dvEmosi"></span></div>
       <div class="detail-row"><span class="detail-lbl">Jenis entry</span><span class="detail-val" id="dvJenisEntry"></span></div>
+      <div class="detail-row"><span class="detail-lbl">Setup</span><span class="detail-val" id="dvSetup"></span></div>
+      <div class="detail-row"><span class="detail-lbl">Aturan dilanggar</span><span class="detail-val" id="dvLanggar"></span></div>
       <div class="detail-row detail-row-note dg-full"><span class="detail-lbl">Catatan bebas</span><span class="detail-val detail-note" id="dvCatatan"></span></div>
+      <div class="detail-row detail-row-note dg-full" id="dvFotoRow"><span class="detail-lbl">Lampiran chart</span><div class="foto-wrap"><div class="foto-strip" id="dvFoto"></div><div class="foto-actions"><button type="button" class="ledger-reset-btn has-ic" id="fotoAddBtn"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 16l-5-5-8 8"/></svg><span>Tambah gambar</span></button><span class="foto-hint" id="fotoNote"></span></div><input type="file" id="fotoFile" accept="image/*" multiple class="file-hidden" tabindex="-1" aria-hidden="true"></div></div>
     </div>
     <div id="detailEdit" class="entry-form entry-grid" style="display:none;">
       <div class="calc-field"><label>Arah</label><div class="custom-select" id="csw_editArah"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Arah"><span class="cs-label">Beli</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Arah"></ul></div></div>
@@ -1248,10 +1391,15 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
       <div class="calc-field ef-full"><label for="editLaba">Laba aktual (¢)</label><input type="number" id="editLaba" step="0.01" inputmode="decimal"></div>
       <div class="entry-preview ef-full" id="editPreview" aria-live="polite"></div>
       <p class="ef-sec ef-full">Catatan psikologi</p>
+      <div class="ef-full ef-psy">
       <div class="calc-field"><label>Trigger Entry</label><div class="custom-select" id="csw_editTrigger"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Trigger entry"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Trigger entry"></ul></div></div>
       <div class="calc-field"><label>Trigger Exit</label><div class="custom-select" id="csw_editTriggerExit"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Trigger exit"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Trigger exit"></ul></div></div>
       <div class="calc-field"><label>Kondisi Emosi</label><div class="custom-select" id="csw_editEmosi"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Kondisi emosi"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Kondisi emosi"></ul></div></div>
       <div class="calc-field"><label>Jenis Entry</label><div class="custom-select" id="csw_editJenisEntry"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Jenis entry"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Jenis entry"></ul></div></div>
+      <div class="calc-field"><label>Setup / Strategi</label><div class="custom-select" id="csw_editSetup"><button type="button" class="custom-select-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Setup atau strategi"><span class="cs-label">- Pilih -</span><span class="custom-select-arrow"></span></button><ul class="custom-select-list" role="listbox" aria-label="Setup atau strategi"></ul></div></div>
+      <div class="calc-field ef-check"><label class="chk-line"><input type="checkbox" id="editKonfirmasi"><span>Semua konfirmasi setup terpenuhi</span></label></div>
+      </div>
+      <div class="calc-field ef-full" id="editLanggarWrap" hidden><label>Aturan yang dilanggar <span class="lg-opt">(opsional, dari kartu Aturan trading)</span></label><div class="langgar-box" id="editLanggar"></div></div>
       <div class="calc-field ef-full"><label for="editCatatan">Catatan bebas</label><textarea id="editCatatan" rows="3" maxlength="1000" placeholder="Alasan entry, pelajaran, apa yang akan diubah (opsional)"></textarea></div>
     </div>
     <p class="modal-message" id="detailModalError" style="display:none;color:var(--loss);margin:10px 0 0;"></p>
@@ -1359,11 +1507,11 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
 </div>
 
 <script id="journal-data" type="application/json">{"summary": {"total": 0, "win": 0, "loss": 0, "winrate": 0, "pl_cent": 0, "pl_rp": 0, "saldo_akhir": 0, "pct_pl": null}, "periods": [], "kurs": 0, "dashboard": {"update": "Update terakhir: -", "saldo": 0, "stats": {"total": 0, "winrate": 0, "pf": 0, "maxdd": 0, "expectancy": 0}, "top_win": [], "top_loss": [], "mm": {"equity": 0, "risk": 0.01, "sl": 150, "pipval": 10, "lot": 0, "tp_pips": 0, "tp_cent": 0}}, "maxdd_note": "", "equity": [], "months": [], "weeks": [], "trades": [], "deposit": {"total_deposit": 0, "total_penarikan": 0, "total_mc": 0, "modal_bersih": 0, "log": []}, "period_ranges": [], "modal_kumulatif": []}</script>
-<script src="config.js?v=1.1.196"></script>
-<script src="app.js?v=1.1.196"></script>
-<script src="kalender.js?v=1.1.196"></script>
-<script src="broker.js?v=1.1.196"></script>
-<script src="sync.js?v=1.1.196"></script>
-<script src="pwa.js?v=1.1.196"></script>
+<script src="config.js?v=1.1.215"></script>
+<script src="app.js?v=1.1.215"></script>
+<script src="kalender.js?v=1.1.215"></script>
+<script src="broker.js?v=1.1.215"></script>
+<script src="sync.js?v=1.1.215"></script>
+<script src="pwa.js?v=1.1.215"></script>
 </body>
 </html>

@@ -12,6 +12,11 @@ create table if not exists trades (
 );
 -- v1.1.129: untuk tabel trades yang sudah ada sebelum kolom catatan (catatan bebas per transaksi). Aman dijalankan ulang.
 alter table trades add column if not exists catatan text;
+-- v1.1.204: setup/strategi dan konfirmasi setup per transaksi. Aman dijalankan ulang.
+alter table trades add column if not exists setup text;
+alter table trades add column if not exists konfirmasi boolean default false;
+-- v1.1.205: pelanggaran aturan trading per transaksi (teks JSON). Aman dijalankan ulang.
+alter table trades add column if not exists langgar text;
 
 create table if not exists deposit_log (
   user_id uuid not null default auth.uid() references auth.users,
@@ -23,6 +28,7 @@ create table if not exists deposit_log (
 create table if not exists pengaturan (
   user_id uuid not null default auth.uid() references auth.users,
   kurs numeric,
+  setelan text,
   account_id text not null default 'utama',
   primary key (user_id, account_id)
 );
@@ -49,3 +55,5 @@ create policy "own deposit" on deposit_log for all
   using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "own pengaturan" on pengaturan for all
   using (user_id = auth.uid()) with check (user_id = auth.uid());
+-- v1.1.206: untuk proyek yang sudah ada, tambah kolom setelan (pengaturan trading). Aman dijalankan ulang.
+alter table pengaturan add column if not exists setelan text;

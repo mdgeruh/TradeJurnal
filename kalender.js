@@ -33,7 +33,23 @@
     { id: "jc-2026-12-10", t: "2026-12-10T13:30:00Z", cur: "USD", name: "Klaim Pengangguran Mingguan", impact: 1, status: "est", gold: "Rilis rutin tiap Kamis. Pengaruh kecil kecuali angkanya jauh dari ekspektasi." },
     { id: "ppi-2026-12", t: "2026-12-15T13:30:00Z", cur: "USD", name: "PPI Inflasi Produsen (data November)", impact: 2, status: "est", gold: "Dilihat sebagai petunjuk tekanan harga di hulu setelah CPI." },
     { id: "jc-2026-12-17", t: "2026-12-17T13:30:00Z", cur: "USD", name: "Klaim Pengangguran Mingguan", impact: 1, status: "est", gold: "Rilis rutin tiap Kamis. Pengaruh kecil kecuali angkanya jauh dari ekspektasi." },
-    { id: "fomc-min-2026-12", t: "2026-12-30T19:00:00Z", cur: "USD", name: "Risalah Rapat FOMC (rapat Desember)", impact: 2, status: "est", gold: "Risalah menunjukkan arah pembahasan suku bunga. Nada hawkish menekan emas, nada dovish mendukungnya." }
+    { id: "ism-svc-2026-11", t: "2026-11-04T15:00:00Z", cur: "USD", name: "ISM PMI Jasa", impact: 2, status: "est", gold: "Sektor jasa adalah porsi terbesar ekonomi AS; di bawah 50 berarti kontraksi. Komponen harga ikut diperhatikan." },
+    { id: "ret-2026-11", t: "2026-11-17T13:30:00Z", cur: "USD", name: "Penjualan Ritel (data Oktober)", impact: 2, status: "est", gold: "Ukuran belanja konsumen. Angka kuat mendukung USD, angka lemah mendukung emas." },
+    { id: "gdp-2026-11", t: "2026-11-25T13:30:00Z", cur: "USD", name: "PDB Kuartal III, estimasi kedua", impact: 2, status: "ok", gold: "Revisi atas estimasi awal. Pengaruh lebih kecil dari estimasi pertama kecuali revisinya besar." },
+    { id: "pce-2026-11", t: "2026-11-25T13:30:00Z", cur: "USD", name: "PCE Inti dan Belanja Pribadi (data Oktober)", impact: 3, status: "ok", gold: "Ukuran inflasi yang diacu Fed. Reaksinya mirip CPI." },
+    { id: "jc-2026-11-25", t: "2026-11-25T13:30:00Z", cur: "USD", name: "Klaim Pengangguran Mingguan (dimajukan karena Thanksgiving)", impact: 1, status: "est", gold: "Rilis rutin tiap Kamis. Pengaruh kecil kecuali angkanya jauh dari ekspektasi." },
+    { id: "ism-2026-12", t: "2026-12-01T15:00:00Z", cur: "USD", name: "ISM PMI Manufaktur", impact: 2, status: "est", gold: "Di bawah 50 berarti kontraksi sektor manufaktur." },
+    { id: "ism-svc-2026-12", t: "2026-12-03T15:00:00Z", cur: "USD", name: "ISM PMI Jasa", impact: 2, status: "est", gold: "Sektor jasa adalah porsi terbesar ekonomi AS; di bawah 50 berarti kontraksi. Komponen harga ikut diperhatikan." },
+    { id: "ret-2026-12", t: "2026-12-16T13:30:00Z", cur: "USD", name: "Penjualan Ritel (data November)", impact: 2, status: "est", gold: "Ukuran belanja konsumen. Angka kuat mendukung USD, angka lemah mendukung emas." },
+    { id: "gdp-2026-12", t: "2026-12-23T13:30:00Z", cur: "USD", name: "PDB Kuartal III, estimasi ketiga", impact: 1, status: "ok", gold: "Revisi akhir; biasanya berpengaruh kecil." },
+    { id: "pce-2026-12", t: "2026-12-23T13:30:00Z", cur: "USD", name: "PCE Inti dan Belanja Pribadi (data November)", impact: 3, status: "ok", gold: "Ukuran inflasi yang diacu Fed. Reaksinya mirip CPI." },
+    { id: "fomc-min-2026-12", t: "2026-12-30T19:00:00Z", cur: "USD", name: "Risalah Rapat FOMC (rapat Desember)", impact: 2, status: "est", gold: "Risalah menunjukkan arah pembahasan suku bunga. Nada hawkish menekan emas, nada dovish mendukungnya." },
+    { id: "ecb-2026-10", t: "2026-10-29T13:15:00Z", cur: "EUR", name: "Keputusan Suku Bunga ECB (rapat 28-29 Okt)", impact: 2, status: "ok", gold: "Keputusan ECB menggerakkan EUR, yang bobotnya besar di indeks dolar. Nada hawkish menguatkan EUR dan cenderung menekan USD (mendukung emas); konferensi pers sekitar 30 menit kemudian sering membuat harga bergerak liar." },
+    { id: "boj-2026-10", t: "2026-10-30T03:00:00Z", cur: "JPY", name: "Keputusan Suku Bunga BoJ (rapat 29-30 Okt)", impact: 2, status: "est", gold: "Jam pengumuman BoJ tidak dijadwalkan pasti (biasanya sekitar tengah hari waktu Tokyo, 03:00 UTC); tanggal rapat sudah resmi. Kenaikan suku bunga atau nada hawkish menguatkan yen dan bisa melemahkan USD." },
+    { id: "boe-2026-11", t: "2026-11-05T12:00:00Z", cur: "GBP", name: "Keputusan Suku Bunga BoE (MPC) dan Laporan Kebijakan Moneter", impact: 2, status: "ok", gold: "Keputusan MPC dan pemungutan suara internal menggerakkan GBP dan indeks dolar. Laporan Kebijakan Moneter terbit bersamaan sehingga volatilitas biasanya tinggi di sekitar pengumuman." },
+    { id: "ecb-2026-12", t: "2026-12-17T13:15:00Z", cur: "EUR", name: "Keputusan Suku Bunga ECB (rapat 16-17 Des)", impact: 2, status: "ok", gold: "Keputusan ECB menggerakkan EUR dan indeks dolar; proyeksi staf baru terbit pada rapat Desember. Konferensi pers sekitar 30 menit setelah keputusan." },
+    { id: "boe-2026-12", t: "2026-12-17T12:00:00Z", cur: "GBP", name: "Keputusan Suku Bunga BoE (MPC)", impact: 2, status: "ok", gold: "Keputusan MPC dan pemungutan suara internal menggerakkan GBP dan indeks dolar." },
+    { id: "boj-2026-12", t: "2026-12-18T03:00:00Z", cur: "JPY", name: "Keputusan Suku Bunga BoJ (rapat 17-18 Des)", impact: 2, status: "est", gold: "Jam pengumuman BoJ tidak dijadwalkan pasti (sekitar 03:00 UTC); tanggal rapat sudah resmi. Kenaikan suku bunga atau nada hawkish menguatkan yen dan bisa melemahkan USD." },
   ];
 
   // Zona waktu awal mengikuti Setelan jurnal (jurnalTzOffset, menit) bila belum ada pilihan tersimpan.
@@ -42,6 +58,7 @@
     return { 180: "Etc/GMT-3", 420: "Asia/Jakarta", 480: "Asia/Makassar", 540: "Asia/Jayapura" }[o] || "Asia/Makassar";
   }
   var IMPACT_LABEL = { 3: "Tinggi", 2: "Sedang", 1: "Rendah" };
+  var REACT = { naik: "\u2191", turun: "\u2193", datar: "\u2192" };   // catatan reaksi emas per event (kal-notes: r = arah, c = catatan)
   var RANGES = [{ k: 7, l: "7 hari" }, { k: 30, l: "30 hari" }, { k: 0, l: "Semua" }];
   var state = { tz: defaultTz(), imp: { 1: true, 2: true, 3: true }, range: 30, past: false, view: "daftar" };
   var weekOff = 0, selEv = null;   // pergeseran minggu (0 = minggu ini) dan event terpilih di tampilan mingguan
@@ -250,6 +267,7 @@
     meta.appendChild(h("span", "", IMPACT_LABEL[e.impact]));
     meta.appendChild(h("span", "kal-badge" + (e.status === "est" ? " kal-est" : ""), e.status === "ok" ? "Terkonfirmasi" : e.status === "est" ? "Perkiraan" : "Manual"));
     if (e.status === "est" && e.ts > now && e.ts - now < 7 * 86400000) meta.appendChild(h("span", "kal-badge kal-check", "Perlu dicek"));
+    { var rn = notes[e.id] && notes[e.id].r; if (rn && REACT[rn]) meta.appendChild(h("span", "kal-badge kal-react-b " + rn, "Emas " + REACT[rn])); }
     main.appendChild(meta);
     var vl = valsLine(e.id); if (vl) main.appendChild(h("div", "kal-vals", vl));
     var imp = h("div", "kal-imp l" + e.impact); imp.setAttribute("aria-hidden", "true");
@@ -271,6 +289,24 @@
         lab.appendChild(inp); f.appendChild(lab);
       });
       d.appendChild(f);
+      var rx = h("div", "kal-react"); rx.appendChild(h("span", "kal-lbl", "Reaksi emas (catatan Anda)"));
+      var rb = h("div", "kal-react-btns");
+      Object.keys(REACT).forEach(function (rk) {
+        var b = h("button", "kal-chip", REACT[rk] + " " + rk); b.type = "button"; b.dataset.r = rk;
+        var cur = notes[e.id] && notes[e.id].r; b.setAttribute("aria-pressed", String(cur === rk));
+        b.addEventListener("click", function (ev) {
+          ev.stopPropagation(); notes[e.id] = notes[e.id] || {};
+          if (notes[e.id].r === rk) delete notes[e.id].r; else notes[e.id].r = rk;
+          save("kal-notes", notes); render();
+        });
+        rb.appendChild(b);
+      });
+      rx.appendChild(rb);
+      var ci = h("input", "settings-input"); ci.type = "text"; ci.id = "kal-in-c-" + e.id; ci.maxLength = 60; ci.autocomplete = "off";
+      ci.placeholder = "Catatan reaksi harga (maks. 60 huruf), mis. naik 12 USD lalu balik"; ci.value = (notes[e.id] && notes[e.id].c) || "";
+      ci.addEventListener("change", function () { notes[e.id] = notes[e.id] || {}; var v = ci.value.trim().slice(0, 60); if (v) notes[e.id].c = v; else delete notes[e.id].c; save("kal-notes", notes); render(); });
+      ci.addEventListener("click", function (ev) { ev.stopPropagation(); });
+      rx.appendChild(ci); d.appendChild(rx);
       if (e.manual) {
         var del = h("button", "kal-del", "Hapus event"); del.type = "button";
         del.addEventListener("click", function () { manual = manual.filter(function (m) { return m.id !== e.id; }); save("kal-manual", manual); render(); tick(); });

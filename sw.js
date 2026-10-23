@@ -1,9 +1,9 @@
 // Service worker: cache-dulu (stale-while-revalidate) untuk berkas statis supaya aplikasi tampil instan; cache diperbarui di latar
 // dan versi baru dipakai pada pembukaan berikutnya (CACHE dinaikkan tiap rilis, cache lama dihapus saat aktif).
-// Anti campur-versi (v1.1.196): berkas CSS/JS dipanggil index.html dengan ?v=<versi> dan di-precache dengan nama bertanda itu;
+// Anti campur-versi (v1.1.170): berkas CSS/JS dipanggil index.html dengan ?v=<versi> dan di-precache dengan nama bertanda itu;
 // halaman (navigasi) diambil jaringan-dulu agar index.html selalu yang terbaru, baru jatuh ke cache bila offline.
 // Panggilan ke Supabase (domain lain) tidak pernah di-cache.
-const V = '1.1.196';
+const V = '1.1.215';
 const CACHE = 'jurnal-v' + V;
 const SHELL = ['./', 'index.html',
   ...['style.css', 'app.js', 'kalender.js', 'broker.js', 'sync.js', 'config.js', 'pwa.js'].map(f => f + '?v=' + V),
@@ -43,5 +43,14 @@ self.addEventListener('fetch', e => {
     });
     if(hit){ net.catch(() => {}); return hit; }
     return net.catch(() => Response.error());
+  }));
+});
+
+// Ketuk notifikasi pengingat (v1.1.215): fokuskan jendela aplikasi yang sudah terbuka, atau buka yang baru.
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cs => {
+    const c = cs.find(x => 'focus' in x);
+    return c ? c.focus() : self.clients.openWindow('./');
   }));
 });

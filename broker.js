@@ -10,7 +10,7 @@
   var BROKER_OFFSET_H = 5; // jam broker (GMT+3) -> GMT+8
 
   function r2(n) { return Math.round((n + Number.EPSILON) * 100) / 100; }
-  function fc(n) { var u = typeof ACCT_UNIT === "string" ? ACCT_UNIT : "¢", v = typeof centToAmt === "function" ? centToAmt(n) : n; var s = v.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); return u === "¢" ? s + "¢" : u + (u === "Rp" ? " " : "") + s; }
+  function fc(n) { var u = typeof ACCT_UNIT === "string" ? ACCT_UNIT : "¢", v = typeof centToAmt === "function" ? centToAmt(n) : n; var s = v.toLocaleString(typeof NUM_LOCALE === "string" ? NUM_LOCALE : "id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); return u === "¢" ? s + "¢" : u + (u === "Rp" ? " " : "") + s; }
   function sgn(n) { return (n > 0 ? "+" : n < 0 ? "−" : "") + fc(Math.abs(n)); }
   function pad(n) { return String(n).padStart(2, "0"); }
   function isoOf(d) { return d.getUTCFullYear() + "-" + pad(d.getUTCMonth() + 1) + "-" + pad(d.getUTCDate()) + "T" + pad(d.getUTCHours()) + ":" + pad(d.getUTCMinutes()) + ":" + pad(d.getUTCSeconds()); }
@@ -130,7 +130,7 @@
     if (hi < 0) return { error: "Kolom riwayat broker tidak ditemukan. Gunakan laporan \"Trading activity\" MT5 (kolom Open Date, Close Date, Position ID, Simbol, Tindakan, Banyak, Harga Pembukaan, Harga Penutupan, Laba)." };
     var need = ["open", "close", "id", "act", "lot", "po", "pc", "laba"], miss = need.filter(function (k) { return map[k] == null; });
     if (miss.length) return { error: "Kolom wajib tidak ditemukan: " + miss.join(", ") + "." };
-    var by = {}, order = [], openIds = {}, skipped = { bukanXau: 0, bukanCent: 0, tidakValid: 0 };
+    var by = {}, order = [], openIds = {}, skipped = { bukanXau: 0, bukanCent: 0, tidakValid: 0 }, problems = [];
     for (var r = hi + 1; r < rows.length; r++) {
       var row = rows[r] || [], id = String(row[map.id] == null ? "" : row[map.id]).trim();
       if (!id) continue;
@@ -142,8 +142,9 @@
       if (!close) { openIds[id] = true; continue; }
       var open = dateIso(row[map.open]), act = String(row[map.act] || "").trim().toLowerCase(),
           lot = num(row[map.lot]), po = num(row[map.po]), pc = num(row[map.pc]), laba = num(row[map.laba]);
-      if (!open || !(act === "buy" || act === "sell" || act === "beli" || act === "jual") || !(lot > 0) || !isFinite(po) || !isFinite(pc) || !isFinite(laba)) { skipped.tidakValid++; continue; }
-      laba = toCent(laba); if (!isFinite(laba)) { skipped.tidakValid++; continue; }
+      var why = !open ? "waktu buka tidak terbaca" : !(act === "buy" || act === "sell" || act === "beli" || act === "jual") ? "tindakan \"" + act + "\" tidak dikenal" : !(lot > 0) ? "lot tidak valid" : (!isFinite(po) || !isFinite(pc)) ? "harga buka/tutup tidak valid" : !isFinite(laba) ? "laba tidak valid" : "";
+      if (why) { skipped.tidakValid++; if (problems.length < 200) problems.push({ baris: r + 1, id: id, alasan: why }); continue; }
+      laba = toCent(laba); if (!isFinite(laba)) { skipped.tidakValid++; if (problems.length < 200) problems.push({ baris: r + 1, id: id, alasan: "laba tidak bisa dikonversi" }); continue; }
       var closeBuy = act === "buy" || act === "beli"; // baris penutupan: aksi penutupnya kebalikan arah posisi
       var part = { id: id, arah: closeBuy ? "Jual" : "Beli", lot: Math.round(lot * CENT * 10000) / 10000, buka: po, tutup: pc, pips: 0, laba: r2(laba),
                    tanggal: close, tanggal_gmt8: plus5(close), waktu_buka: plus5(open) };
@@ -152,7 +153,7 @@
     }
     var positions = order.map(function (id) { return by[id].length > 1 ? combinePartialTrades(by[id]) : finish(by[id][0]); });
     var openOnly = Object.keys(openIds).filter(function (id) { return !by[id]; }).length;
-    return { positions: positions, openOnly: openOnly, skipped: skipped };
+    return { positions: positions, openOnly: openOnly, skipped: skipped, problems: problems };
   }
   function finish(t) { t.pips = Math.round(t.laba / (t.lot * LK) * 10) / 10; return t; }
 
@@ -263,6 +264,49 @@
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   function note(text, kind) { var n = $("brokerNote"); n.textContent = text || ""; n.style.color = kind === "err" ? "var(--loss)" : kind === "ok" ? "var(--gain)" : ""; }
 
+  // Pratinjau impor (v1.1.208): daftar baru / berbeda / sama / bermasalah, tiap baris baru dan koreksi bisa dicentang sebelum disimpan.
+  function brokerPreview(o) {
+    return new Promise(function (resolve) {
+      var ov = $("brokerPvOverlay");
+      if (!ov) { ov = document.createElement("div"); ov.className = "modal-overlay"; ov.id = "brokerPvOverlay"; ov.setAttribute("role", "dialog"); ov.setAttribute("aria-modal", "true"); ov.setAttribute("aria-labelledby", "brokerPvTitle"); document.body.appendChild(ov); }
+      var cmp = o.cmp, items = cmp.diff.concat(cmp.bagian), probs = o.g.problems || [], extra = o.skipTxt.slice();
+      var selF = {}, selD = {}, tab = cmp.fresh.length ? "baru" : items.length ? "beda" : "masalah";
+      cmp.fresh.forEach(function (_, i) { selF[i] = true; }); items.forEach(function (_, i) { selD[i] = true; });
+      var probCount = probs.length + extra.length;
+      var short = function (v) { v = String(v == null ? "" : v).replace("T", " "); return v.length > 22 ? v.slice(0, 21) + "…" : v; };
+      var val = function (k, x) { return k === "laba" ? fc(x.laba) : short(x[k]); };
+      function plOf() { var n = 0, f = 0, nf = 0, nd = 0; cmp.fresh.forEach(function (p, i) { if (selF[i]) { n += p.laba; nf++; } }); items.forEach(function (d, i) { if (selD[i]) { nd++; if (d.fields && d.fields.indexOf("laba") >= 0) f += d.nw.laba - d.old.laba; } }); return { n: r2(n), f: r2(f), nf: nf, nd: nd }; }
+      function draw() {
+        var s = plOf(), saldo = r2((DATA.dashboard && DATA.dashboard.saldo || 0) + s.n + s.f);
+        var tabs = [["baru", "Baru", cmp.fresh.length], ["beda", "Berbeda", items.length], ["sama", "Sama", cmp.same], ["masalah", "Bermasalah", probCount]];
+        var body = "";
+        if (tab === "baru") body = cmp.fresh.length ? cmp.fresh.map(function (p, i) { return "<label class=\"bk-pv-row\"><input type=\"checkbox\" data-k=\"f\" data-i=\"" + i + "\"" + (selF[i] ? " checked" : "") + "><span class=\"bk-pv-id\">" + esc(p.id) + "</span><span>" + esc(p.arah) + " " + esc(p.lot) + " lot</span><span>" + esc(p.buka) + " → " + esc(p.tutup) + "</span><span>" + esc(short(p.tanggal_gmt8)) + "</span><span class=\"" + (p.laba >= 0 ? "up" : "down") + "\">" + sgn(p.laba) + "</span></label>"; }).join("") : "<p class=\"bk-pv-empty\">Tidak ada posisi baru.</p>";
+        else if (tab === "beda") body = items.length ? items.map(function (d, i) { var chg = d.fields && d.fields.length ? d.fields.map(function (k) { return "<span class=\"bk-pv-chg\">" + esc(k) + ": " + esc(val(k, d.old)) + " → <b>" + esc(val(k, d.nw)) + "</b></span>"; }).join("") : "<span class=\"bk-pv-chg\">ditutup bertahap (" + esc(d.nw.bagian) + " bagian)</span>"; return "<label class=\"bk-pv-row\"><input type=\"checkbox\" data-k=\"d\" data-i=\"" + i + "\"" + (selD[i] ? " checked" : "") + "><span class=\"bk-pv-id\">" + esc(d.id) + "</span>" + chg + "</label>"; }).join("") : "<p class=\"bk-pv-empty\">Tidak ada posisi yang berbeda dari jurnal.</p>";
+        else if (tab === "sama") body = "<p class=\"bk-pv-empty\">" + cmp.same + " posisi sudah cocok dengan jurnal dan tidak diubah.</p>";
+        else body = (probs.length ? probs.map(function (x) { return "<div class=\"bk-pv-row bk-pv-bad\"><span>baris " + esc(x.baris) + "</span><span class=\"bk-pv-id\">" + esc(x.id) + "</span><span>" + esc(x.alasan) + "</span></div>"; }).join("") : "") + extra.map(function (t) { return "<div class=\"bk-pv-row\"><span>" + esc(t) + "</span></div>"; }).join("") || "<p class=\"bk-pv-empty\">Tidak ada baris bermasalah.</p>";
+        ov.innerHTML = "<div class=\"modal-box bk-pv-box\"><p class=\"modal-title\" id=\"brokerPvTitle\">Pratinjau impor broker</p>" +
+          "<p class=\"bk-pv-sum\" id=\"brokerPvSummary\">" + esc(o.file) + ": " + o.g.positions.length + " posisi tertutup" + (o.multi ? " (" + o.multi + " ditutup bertahap)" : "") + ". Dipilih: " + s.nf + " baru (" + sgn(s.n) + "), " + s.nd + " koreksi (" + sgn(s.f) + "). Saldo jurnal bila diterapkan: " + fc(saldo) + ". Cadangan otomatis disimpan; bisa diurungkan.</p>" +
+          "<div class=\"bk-pv-tabs\" role=\"tablist\">" + tabs.map(function (t) { return "<button type=\"button\" role=\"tab\" class=\"quick-chip" + (t[0] === tab ? " active" : "") + "\" data-tab=\"" + t[0] + "\" aria-selected=\"" + (t[0] === tab) + "\">" + t[1] + " <b>" + t[2] + "</b></button>"; }).join("") + "</div>" +
+          "<div class=\"bk-pv-list\" id=\"brokerPvList\">" + body + "</div>" +
+          "<div class=\"modal-actions\"><button type=\"button\" class=\"ledger-reset-btn\" id=\"brokerPvCancel\">Batal</button>" + (cmp.fresh.length && items.length ? "<button type=\"button\" class=\"ledger-reset-btn\" id=\"brokerPvNew\">Hanya yang baru</button>" : "") + "<button type=\"button\" class=\"ledger-reset-btn modal-btn-primary\" id=\"brokerPvApply\"" + (s.nf + s.nd ? "" : " disabled") + ">Terapkan terpilih (" + (s.nf + s.nd) + ")</button></div></div>";
+      }
+      function done(res) { ov.classList.remove("show"); ov.removeEventListener("click", onClick); ov.removeEventListener("change", onChange); resolve(res); }
+      function onChange(e) { var c = e.target.closest("input[data-k]"); if (!c) return; (c.dataset.k === "f" ? selF : selD)[c.dataset.i] = c.checked; var st = ov.querySelector(".bk-pv-list").scrollTop; draw(); ov.querySelector(".bk-pv-list").scrollTop = st; }
+      function onClick(e) {
+        if (e.target === ov || e.target.closest("#brokerPvCancel")) return done(null);
+        var tb = e.target.closest("[data-tab]"); if (tb) { tab = tb.dataset.tab; draw(); return; }
+        if (e.target.closest("#brokerPvNew")) { items.forEach(function (_, i) { selD[i] = false; }); draw(); return; }
+        if (e.target.closest("#brokerPvApply")) {
+          var ff = cmp.fresh.filter(function (_, i) { return selF[i]; }), it = items.filter(function (_, i) { return selD[i]; });
+          done({ fresh: ff, diff: it.filter(function (d) { return d.fields; }), bagian: it.filter(function (d) { return !d.fields; }) });
+        }
+      }
+      ov.addEventListener("click", onClick); ov.addEventListener("change", onChange);
+      draw(); ov.classList.add("show");
+      var first = ov.querySelector("#brokerPvApply"); if (first) first.focus();
+    });
+  }
+
   // Impor riwayat broker
   $("brokerImportBtn").addEventListener("click", function () { $("brokerFileInput").click(); });
   $("brokerFileInput").addEventListener("change", async function (e) {
@@ -284,15 +328,10 @@
     if (!cmp.fresh.length && !cmp.diff.length && !cmp.bagian.length) {
       note("Jurnal sudah cocok dengan file: " + g.positions.length + " posisi, tidak ada yang perlu diubah." + (skipTxt.length ? " Dilewati: " + skipTxt.join(", ") + "." : ""), "ok"); return;
     }
-    var lines = ["File berisi " + g.positions.length + " posisi tertutup" + (multi ? " (" + multi + " ditutup bertahap)" : "") + ".",
-      "Baru: " + cmp.fresh.length + " (" + sgn(cmp.plNew) + "). Berbeda dari jurnal: " + cmp.diff.length + " (koreksi laba " + sgn(cmp.plFix) + "). Sama: " + cmp.same + "."];
-    if (cmp.diff.length) lines.push("Contoh beda: " + cmp.diff.slice(0, 6).map(function (d) { return d.id + " (" + d.fields.join(", ") + ")"; }).join("; ") + (cmp.diff.length > 6 ? "; ..." : ""));
-    if (skipTxt.length) lines.push("Dilewati: " + skipTxt.join(", ") + ".");
-    lines.push("Saldo jurnal bila diterapkan: " + fc(r2((DATA.dashboard && DATA.dashboard.saldo || 0) + cmp.plNew + cmp.plFix)) + ". Cadangan otomatis disimpan; bisa diurungkan di sini.");
-    var both = cmp.fresh.length && (cmp.diff.length || cmp.bagian.length);
-    var choice = await showConfirmModal(lines.join("\n\n"), both ? { yes: "Terapkan semua", alt: "Hanya yang baru", no: "Batal" } : { yes: cmp.fresh.length ? "Tambahkan" : "Terapkan koreksi", no: "Batal" });
-    if (!choice) { note(""); return; }
-    var list = buildApplyList(cmp, choice === "alt");
+    var sel = await brokerPreview({ file: file.name, g: g, cmp: cmp, multi: multi, skipTxt: skipTxt });
+    if (!sel) { note(""); return; }
+    var choice = sel;
+    var list = buildApplyList(sel, false);
     snapshot("Impor riwayat broker (" + file.name + ")");
     var r = mergeImportedData({ trades: list, deposit: { log: [] } });
     if (r.error) { note(r.error, "err"); return; }

@@ -459,15 +459,16 @@
 
   /* Beli/Jual split */
   .split-pie-wrap{display:flex;align-items:center;gap:32px;flex-wrap:wrap;padding:22px 20px;}
-  .split-pie-box{position:relative;flex:0 0 auto;width:160px;height:160px;}
-  .split-pie-box svg{transform:rotate(0deg);}
+  .split-pie-box{position:relative;flex:0 0 auto;width:200px;height:200px;max-width:100%;}
+  .split-pie-box svg{display:block;width:100%;height:100%;}
   #splitPieBeli, #splitPieJual{cursor:pointer;pointer-events:stroke;transition:stroke-width .15s ease, opacity .15s ease;}
   #splitPieBeli.dim, #splitPieJual.dim{opacity:0.35;}
   #splitPieBeli.active, #splitPieJual.active{stroke-width:24;}
-  .split-pie-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none;padding:0 10px;}
+  .split-pie-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none;padding:0 34px;}
   .split-pie-center .spc-num{font-family:'Fraunces',serif;font-size:24px;color:var(--paper);line-height:1;}
   .split-pie-center .spc-lbl{font-size:9px;color:var(--paper-faint);text-transform:uppercase;letter-spacing:.05em;margin-top:3px;}
-  .split-pie-center .spc-sub{font-size:10px;color:var(--paper-dim);margin-top:5px;line-height:1.5;}
+  .split-pie-center .spc-sub{font-size:10px;color:var(--paper-dim);margin-top:5px;line-height:1.45;white-space:nowrap;}
+  .split-pie-center .spc-lbl{white-space:nowrap;}
   .split-pie-legend{flex:1;min-width:230px;display:flex;flex-direction:column;gap:16px;}
   .spl-row{display:flex;align-items:center;gap:10px;cursor:pointer;transition:opacity .15s ease;border-radius:4px;}
   .spl-row.dim{opacity:0.4;}
@@ -1533,3 +1534,110 @@ button.yh-cell:hover,button.yh-cell:focus-visible{outline:2px solid var(--gold);
 .total-banner{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:8px 0 12px;padding:8px 12px;border:1px solid #c9a24a;border-radius:10px;background:rgba(201,162,74,.1);font-size:12.5px}
 .total-banner[hidden]{display:none}
 body.ro-total #fabWrap,body.ro-total #detailEditBtn,body.ro-total #detailDeleteBtn,body.ro-total #ledgerImportBtn,body.ro-total #ledgerSelectBtn,body.ro-total #backupNudge,body.ro-total #brokerSection,body.ro-total #syncSection,body.ro-total #rulesEditBtn,body.ro-total #undoDeleteBar{display:none!important}
+
+/* Metrik risiko Performa (v1.1.197): kisi yang membungkus, sub-teks boleh turun baris */
+#perfRisk{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));}
+#perfRisk .stat{padding:14px 14px 14px 0;border-left:none;border-top:1px solid var(--line-soft);}
+#perfRisk .stat:first-child{padding-left:0;}
+#perfRisk .stat:last-child{grid-column:auto;}
+#perfRisk .stat-val{font-size:18px;}
+#perfRisk .approx-rp{white-space:normal;line-height:1.35;}
+@media(max-width:720px){#perfRisk{grid-template-columns:repeat(2,1fr);}#perfRisk .stat{padding:12px 10px 12px 0;}#perfRisk .stat:first-child{padding-left:0;}#perfRisk .stat-lbl{font-size:9.5px;}}
+
+/* Kartu Split arah (v1.1.200): tabel perbandingan, sisi yang lebih baik ditandai */
+#splitRange{margin-bottom:12px;}
+.split-cmp-tbl td.best{color:var(--gain);font-weight:600;}
+.split-cmp-tbl td.best::after{content:" \25B2";font-size:8px;vertical-align:middle;}
+.split-open{background:none;border:none;border-bottom:1px dashed var(--paper-faint);color:inherit;font:inherit;text-transform:inherit;letter-spacing:inherit;padding:0;cursor:pointer;}
+.split-open:hover,.split-open:focus-visible{color:var(--gold);border-bottom-color:var(--gold);}
+#splitTbl{margin-top:4px;}
+
+/* Ringkasan mingguan (v1.1.202) */
+.wr-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;}
+.wr-nav .ledger-reset-btn{min-width:40px;}
+.wr-nav .ledger-reset-btn:disabled{opacity:.35;cursor:default;}
+.wr-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));}
+.wr-stats .stat{padding:12px 12px 12px 0;border-left:none;border-top:1px solid var(--line-soft);}
+.wr-stats .stat:last-child{grid-column:auto;}
+.wr-stats .approx-rp{white-space:normal;}
+.wr-list{margin:10px 0 14px;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--paper-dim);}
+.wr-refl{display:flex;flex-direction:column;gap:12px;}
+.wr-q{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--paper-dim);}
+.wr-q textarea{width:100%;box-sizing:border-box;font:inherit;font-size:13px;color:var(--paper);background:var(--ink-raised);border:1px solid var(--line-soft);padding:8px 10px;resize:vertical;min-height:52px;}
+.wr-q textarea:focus-visible{outline:2px solid var(--gold);outline-offset:1px;}
+@media(max-width:720px){.wr-stats{grid-template-columns:repeat(2,1fr);}}
+
+/* Salin tautan transaksi (v1.1.203) */
+.detail-link-btn{margin-left:auto;background:none;border:none;border-bottom:1px dashed var(--paper-faint);color:var(--paper-dim);font:inherit;font-size:11px;padding:0;cursor:pointer;white-space:normal;text-align:right;max-width:70%;word-break:break-all;}
+.detail-link-btn:hover,.detail-link-btn:focus-visible{color:var(--gold);border-bottom-color:var(--gold);}
+
+/* Setup per transaksi (v1.1.204): kotak centang konfirmasi di form tambah/edit */
+.ef-check{display:flex;align-items:flex-end;}
+.chk-line{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--paper-dim);cursor:pointer;text-transform:none;letter-spacing:0;min-height:36px;}
+.chk-line input{width:18px;height:18px;accent-color:var(--gold);flex:0 0 auto;margin:0;}
+
+/* Catatan psikologi + setup: 3 kolom di layar lebar supaya modal tetap muat tanpa scroll (v1.1.204) */
+.ef-psy{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 10px;}
+.ef-psy > *{min-width:0;}
+@media(max-width:720px){.ef-psy{grid-template-columns:1fr 1fr;}}
+.calc-field .chk-line{flex-direction:row;align-items:center;text-transform:none;letter-spacing:0;font-size:12px;line-height:1.25;margin:0;min-height:42px;}
+.calc-field.ef-check{align-self:end;}
+.entry-form .calc-field .chk-line,.calc-field .chk-line{display:flex;flex-direction:row;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:12px;line-height:1.25;margin:0;min-height:42px;color:var(--paper-dim);}
+.calc-field .chk-line input[type=checkbox]{width:18px;min-width:18px;height:18px;flex:0 0 18px;padding:0;margin:0;}
+.calc-field .chk-line span{flex:1 1 auto;min-width:0;}
+.ef-psy{gap:8px 10px;}
+.ef-psy .calc-field label{margin-bottom:2px;}
+.ef-note[hidden]{display:none !important;}
+
+/* v1.1.205: checklist aturan yang dilanggar */
+.langgar-box{display:flex;flex-wrap:wrap;gap:6px}
+.langgar-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;font-size:12px;cursor:pointer;line-height:1.3;background:transparent}
+.langgar-chip input{width:auto;margin:0;accent-color:var(--loss)}
+.langgar-chip:has(input:checked){border-color:var(--loss);color:var(--loss)}
+.lg-opt{font-weight:400;opacity:.7}
+.ef-full[hidden]{display:none !important}
+
+/* v1.1.208: pratinjau impor broker */
+.bk-pv-box{max-width:720px;width:calc(100% - 24px);max-height:88vh;display:flex;flex-direction:column;gap:10px;text-align:left}
+.bk-pv-sum{font-size:13px;line-height:1.5;margin:0;color:var(--paper-dim)}
+.bk-pv-tabs{display:flex;flex-wrap:wrap;gap:6px}
+.bk-pv-list{overflow:auto;border:1px solid var(--line);border-radius:6px;min-height:120px;max-height:46vh}
+.bk-pv-row{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;padding:7px 10px;border-bottom:1px solid var(--line-soft);font-size:12.5px;cursor:pointer}
+.bk-pv-row:last-child{border-bottom:0}
+.bk-pv-row input{width:auto;margin:0}
+.bk-pv-id{font-weight:600;font-variant-numeric:tabular-nums}
+.bk-pv-chg{color:var(--paper-dim)}
+.bk-pv-bad{color:var(--loss);cursor:default}
+.bk-pv-empty{padding:16px 10px;margin:0;color:var(--paper-dim);font-size:13px}
+@media(max-width:720px){.bk-pv-box{max-height:94vh}.bk-pv-list{max-height:52vh}}
+
+/* v1.1.209: lampiran gambar chart */
+.foto-wrap{display:flex;flex-direction:column;gap:8px;min-width:0}
+.foto-strip{display:flex;flex-wrap:wrap;gap:8px}
+.foto-strip:empty{display:none}
+.foto-item{position:relative;width:96px;height:72px}
+.foto-thumb{display:block;width:100%;height:100%;padding:0;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--ink-raised);cursor:zoom-in}
+.foto-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.foto-del{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:1px solid var(--line);background:var(--ink);color:var(--paper);font-size:15px;line-height:1;cursor:pointer;padding:0}
+.foto-actions{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
+.foto-hint{font-size:11.5px;color:var(--paper-dim);flex:1 1 220px;min-width:0}
+.foto-hint.bad{color:var(--loss)}
+.foto-lb{position:relative;max-width:96vw;max-height:94vh;display:flex;flex-direction:column;gap:8px;align-items:center}
+.foto-lb img{max-width:96vw;max-height:80vh;object-fit:contain;border-radius:6px;background:#fff}
+.foto-lb-bar{display:flex;gap:8px;align-items:center;color:var(--paper)}
+
+/* v1.1.211: reaksi emas per event kalender */
+.kal-react{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.kal-react-btns{display:flex;flex-wrap:wrap;gap:6px}
+.kal-react-b.naik{color:var(--gain);border-color:var(--gain)}
+.kal-react-b.turun{color:var(--loss);border-color:var(--loss)}
+
+/* v1.1.212: sumbu-Y dan nilai batang mingguan */
+.week-chart{display:flex;align-items:flex-start;gap:4px;}
+.week-chart .week-strip-scroll{flex:1;min-width:0;}
+.week-axis{position:relative;flex:0 0 auto;min-width:34px;height:92px;margin-bottom:10px;font-size:9px;color:var(--paper-faint);font-variant-numeric:tabular-nums;}
+.week-axis span{position:absolute;right:0;transform:translateY(50%);line-height:1;white-space:nowrap;}
+.week-grid{position:absolute;left:0;right:0;height:0;border-top:1px dotted var(--line);z-index:0;pointer-events:none;}
+.week-val{position:absolute;left:-4px;right:-4px;text-align:center;font-size:8.5px;line-height:1;white-space:nowrap;pointer-events:none;font-variant-numeric:tabular-nums;color:var(--paper-dim);}
+.week-val.up{color:var(--gain);}
+.week-val.down{color:var(--loss);}

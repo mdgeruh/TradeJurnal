@@ -2,7 +2,26 @@
 
 Satu-satunya daftar rencana dan todo proyek (dulu ada di `SUMMARY.md`). Prioritas: **P1** tinggi, **P2** sedang, **P3** rendah. Tidak ada tanggal tetap. Setiap butir yang mengubah kode mengikuti **Alur rilis** di `README.md`; saat selesai, hapus dari sini (centang bila perlu satu rilis), pindahkan tema barunya ke tabel "Sudah selesai", dan catat di `release_note.md` dan `CHANGELOG.md`. Jebakan bug tiap area ada di `SUMMARY.md`.
 
-## Sudah selesai (v1.1.196)
+## Sudah selesai (v1.1.215)
+- Notifikasi pengingat berita dampak tinggi, batas harian, dan catatan psikologi (v1.1.215).
+- Format angka Indonesia/Internasional di Setelan (terjemahan teks UI belum) (v1.1.214).
+- Kinerja: cache pemformat angka; diukur, memo dan render bertahap tidak diperlukan (v1.1.213).
+- Performa mingguan: sumbu-Y tetap dan nilai di ujung batang (v1.1.212).
+- Kalender: event ECB/BoE/BoJ dan catatan reaksi emas per event (v1.1.211).
+- Arsipkan riwayat lama: ekspor lalu hapus dengan baris saldo awal (tipe Arsip) (v1.1.210).
+- Lampiran gambar chart per transaksi (IndexedDB lokal) (v1.1.209).
+- Impor laporan broker dengan pratinjau (centang per posisi, baris bermasalah) (v1.1.208).
+- Deep link ke periode dan filter Laporan/Transaksi (query di hash) (v1.1.207).
+- Sinkron pengaturan trading ke Supabase (jalankan migrasi-pengaturan.sql); roadmap Supabase asli ditandai selesai (v1.1.206).
+- Pelanggaran aturan trading per transaksi + biaya melanggar aturan di Laporan (jalankan migrasi-aturan.sql di Supabase) (v1.1.205).
+- Tag setup/strategi per transaksi dengan centang konfirmasi (jalankan migrasi-setup.sql di Supabase) (v1.1.204).
+- Deep link ke transaksi (#transaksi-ID, tombol Salin tautan) (v1.1.203).
+- Ringkasan mingguan otomatis di Performa; kalender Nov-Des (ISM, ritel, PDB, PCE) (v1.1.202).
+- Perbaikan teks donut Split arah yang terpotong (v1.1.201).
+- Kartu Split arah: tabel perbandingan, rentang, kesimpulan, filter Performa (v1.1.200).
+- Performa: heatmap Jam & hari buka (v1.1.199). Semua tahapan perbaikan Performa (v1.1.197–199) selesai.
+- Performa: Bandingkan dua periode dan Rincian per akun di Total (v1.1.198).
+- Performa: filter Emosi/Trigger/Jenis entry dan blok Metrik risiko (v1.1.197).
 - Detail Transaksi: tombol X di baris aksi bawah (v1.1.190).
 - Detail dan Edit Transaksi disamakan dengan modal Tambah (v1.1.189): kisi dua kolom, pratinjau, durasi, pelindung isian.
 - Optimalisasi modal Tambah Transaksi (v1.1.188): grid dua kolom, pratinjau hasil, peringatan, isian terakhir, simpan & tambah lagi, pelindung isian.
@@ -18,11 +37,16 @@ Satu-satunya daftar rencana dan todo proyek (dulu ada di `SUMMARY.md`). Priorita
 
 ## 1. Verifikasi dulu (P1)
 Hampir semua fitur baru hanya diuji di Chromium dengan data sintetis dan Supabase tiruan. Sebelum menambah fitur besar:
-- [ ] **Supabase asli:** halaman login (Daftar, Masuk, Keluar, sesi kedaluwarsa), sinkron termasuk kolom `catatan`, email reset password dan Redirect URLs, ganti password.
+- [x] **Supabase asli (dikonfirmasi pengguna, 23 Okt 2026):** halaman login (Daftar, Masuk, Keluar, sesi kedaluwarsa), sinkron termasuk kolom `catatan`, email reset password dan Redirect URLs, ganti password.
 - [ ] **Perangkat asli (Android/iOS):** sentuhan, PWA terpasang (pembaruan, banner versi baru, Periksa pembaruan, tombol Instal aplikasi), sidebar, mode Otomatis dan terang, tooltip kurva ekuitas (termasuk "Kustom…") dan grafik Tren, kartu HP Transaksi (mode terang, mode Pilih), halaman login dengan keyboard layar.
 - [ ] **Cetak PDF** data asli (terakhir v1.1.83; cek margin nomor halaman) dan cetak per skema; heatmap, blok sesi pasar, KPI Max DD % dengan data asli.
 - [ ] Salinan HTML mandiri dibuka dari `file://` di perangkat asli; pengingat cadangan (mode terang, 1280px); aksen custom di grafik/heatmap; font tanpa kedip.
-- [ ] **Tindakan manual Supabase:** daftarkan alamat aplikasi di **Redirect URLs** dan **Site URL**; jalankan `migrasi-catatan.sql` sekali (tanpa itu catatan tidak ikut ke cloud).
+- [x] **Tindakan manual Supabase (dikonfirmasi pengguna, 23 Okt 2026):** daftarkan alamat aplikasi di **Redirect URLs** dan **Site URL**; jalankan `migrasi-catatan.sql` sekali (tanpa itu catatan tidak ikut ke cloud).
+
+## 2a. Tahapan perbaikan Performa (P2, usulan 22 Okt 2026)
+- [x] **v1.1.197** Filter emosi/trigger/jenis entry di Performa; blok Metrik risiko (R:R aktual, win rate impas, expectancy, rugi terbesar, lot naik setelah rugi). Kartu bulanan ternyata sudah lengkap (PF, rata² untung/rugi, DD, hari terbaik/terburuk).
+- [x] **v1.1.198** Tabel rincian per akun di tampilan Total (laba, win rate, PF, drawdown per akun) + perbandingan dua periode di Performa (seperti Laporan).
+- [x] **v1.1.199** Heatmap jam × hari di Performa (data sudah ada di Laporan → Lanjutan).
 
 ## 2. Berikutnya (P2)
 **Rekonsiliasi dengan broker** (usulan 8 Okt 2026, setelah selisih saldo 23,05¢ karena 4 posisi ditutup bertahap dan beberapa jam meleset 5 jam; urutan prioritas)
@@ -36,59 +60,59 @@ Hampir semua fitur baru hanya diuji di Chromium dengan data sintetis dan Supabas
 - [ ] **P3 #8 Penanda entri/SL/TP di chart** (Lightweight Charts + sumber data harga sendiri; widget TradingView gratis tidak mendukung).
 - [ ] **P3 #9 Kalender lanjutan:** lihat daftar di bagian Kalender ekonomi (ekspor `kal-*`, mingguan, aktual vs prakiraan).
 - [x] **P3 #10 Rapikan tablet (±768 px):** angka kartu statistik dan teks "≈ Rp" terpotong; mode rapat baru aktif di bawah 720 px. (v1.1.175)
-- [ ] **P1 #11 Uji di perangkat dan Supabase sungguhan** (lihat bagian 1).
+- [~] **P1 #11 Uji di perangkat dan Supabase sungguhan** (Supabase selesai; sisa perangkat asli) (lihat bagian 1).
 
 **Data & akun**
-- [ ] **Ekspor lalu hapus riwayat lama.** (Ekspor JSON per periode sudah ada sejak v1.1.162; tinggal langkah hapus.) Perlu rancangan: menghapus transaksi mengubah kurva ekuitas, saldo, Max DD, dan Laporan (opsi: diganti satu baris saldo awal).
+- [x] **Ekspor lalu hapus riwayat lama (v1.1.210).** (Ekspor JSON per periode sudah ada sejak v1.1.162; tinggal langkah hapus.) Perlu rancangan: menghapus transaksi mengubah kurva ekuitas, saldo, Max DD, dan Laporan (opsi: diganti satu baris saldo awal).
 3b. **Chart XAUUSD** (v1.1.173): kartu di Ringkasan (`#chartCard`) memuat widget TradingView Advanced Chart (`OANDA:XAUUSD`, H4) saat ditekan Tampilkan; tema dan zona waktu mengikuti Setelan; butuh internet; kunci `jurnalChartOpen`. Belum menggambar entri/SL/TP jurnal (opsi: Lightweight Charts + sumber data harga).
 3c. **Impor JSON Gabungkan/Timpa** (v1.1.174): dialog impor menawarkan Gabungkan (per ID, tanpa menghapus; catatan lokal dipertahankan) atau Timpa semua. Berguna untuk file ekspor per periode.
-- [ ] **Sinkron pengaturan ke Supabase:** parameter kalkulator dan pengaturan lain ke tabel `pengaturan` (kini hanya `kurs`; perlu kolom baru + migrasi).
+- [x] **Sinkron pengaturan ke Supabase (v1.1.206):** parameter kalkulator dan pengaturan lain ke tabel `pengaturan` (kini hanya `kurs`; perlu kolom baru + migrasi).
 
 **Optimalisasi** (audit v1.1.131; gzip: `app.js` ±79 KB, `style.css` ±14 KB, `index.html` ±13 KB; muat ±175 ms dengan 439 transaksi)
-- [ ] Kurangi `location.reload()` setelah simpan/hapus/impor (±11 tempat): render ulang komponen terdampak. Prasyarat: `allTrades` (kini `const`) jadi sumber tunggal yang bisa dihitung ulang (`recomputeAll()` + `renderAll()`).
-- [ ] Memo hitung ulang berat (`computeLapDD`, `eqDrawdownAllTime`, agregat Laporan) per kunci (versi `DATA` + filter); ukur dulu dengan `performance.measure`.
+- [ ] (v1.1.213: sengaja ditunda; semua tab dibangun dari `DATA` saat dibuka, render ulang parsial berisiko tinggi tanpa manfaat terukur) Kurangi `location.reload()` setelah simpan/hapus/impor (±11 tempat): render ulang komponen terdampak. Prasyarat: `allTrades` (kini `const`) jadi sumber tunggal yang bisa dihitung ulang (`recomputeAll()` + `renderAll()`).
+- [x] (diukur v1.1.213: tidak perlu, `renderTrades` ±20 ms dan ekuitas ±60 ms pada 8.000 transaksi; yang lambat adalah pemformat angka, sudah di-cache) Memo hitung ulang berat (`computeLapDD`, `eqDrawdownAllTime`, agregat Laporan) per kunci (versi `DATA` + filter); ukur dulu dengan `performance.measure`.
 - [ ] `Content-Security-Policy` di `vercel.json` (self, jsDelivr, Google Fonts, `*.supabase.co`; perlu `unsafe-inline` selama ada skrip inline di `<head>`/`journal-data`, atau pindahkan ke berkas). Wajib uji browser.
-- [ ] Render bertahap buku transaksi (kini `innerHTML` dibangun ulang tiap `renderTrades()`); tinjau bila data > ±2.000 transaksi.
+- [x] (sudah bertahap lewat `ledgerLimit`/`LEDGER_STEP` "Tampilkan lagi"; v1.1.213 memverifikasi) Render bertahap buku transaksi (kini `innerHTML` dibangun ulang tiap `renderTrades()`); tinjau bila data > ±2.000 transaksi.
 - [ ] Pisah `app.js` per tab (ES module/beberapa berkas) bila `app.js` > ±400 KB (kini ±300 KB); minify hanya di build produksi terpisah, sumber tetap terbaca.
 
 **Analisis & disiplin** (usulan 3 Okt 2026, urutan prioritas; belum dikerjakan)
-- [ ] **Tag setup/strategi per transaksi** (mis. CRT H4, RSI divergence, tanpa setup) dengan centang konfirmasi; Laporan menampilkan win rate, expectancy, dan PNL per setup. Perlu bidang baru pada transaksi, filter, impor/ekspor, dan sinkron (kolom Supabase + migrasi).
-- [ ] **Pelanggaran Aturan trading per transaksi:** centang aturan yang dilanggar saat mencatat; Laporan menghitung "biaya melanggar aturan" (PNL melanggar vs patuh). Menyambung kartu Aturan trading; perlu ID aturan yang stabil (kini hanya teks).
-- [ ] **Ringkasan mingguan otomatis:** PNL minggu ini vs lalu, emosi dan trigger paling merugikan, kepatuhan batas harian, plus 2-3 pertanyaan refleksi dengan kolom catatan.
+- [x] **Tag setup/strategi per transaksi (v1.1.204)** (mis. CRT H4, RSI divergence, tanpa setup) dengan centang konfirmasi; Laporan menampilkan win rate, expectancy, dan PNL per setup. Perlu bidang baru pada transaksi, filter, impor/ekspor, dan sinkron (kolom Supabase + migrasi).
+- [x] **Pelanggaran Aturan trading per transaksi (v1.1.205):** centang aturan yang dilanggar saat mencatat; Laporan menghitung "biaya melanggar aturan" (PNL melanggar vs patuh). Menyambung kartu Aturan trading; perlu ID aturan yang stabil (kini hanya teks).
+- [x] **Ringkasan mingguan otomatis (v1.1.202):** PNL minggu ini vs lalu, emosi dan trigger paling merugikan, kepatuhan batas harian, plus 2-3 pertanyaan refleksi dengan kolom catatan.
 - Saran urutan: selesaikan **P1 (Supabase asli)** dulu, lalu paket tag setup + pelanggaran aturan.
 
 ## 3. Nanti (P3)
 **Rute**
 - [ ] **Path bersih** (`/kalender`, `/laporan/lanjutan`) bila hosting tetap Vercel: `rewrites` ke `index.html` + `<base href="/">`, path aset mutlak, dan `sw.js` menyesuaikan; kini cukup rute hash.
-- [ ] **Deep link ke transaksi/periode** (mis. `#transaksi-123456`, `#laporan-tren?periode=...`) dan penyimpanan filter di URL.
+- [x] **Deep link ke periode/filter (v1.1.207)** (deep link ke transaksi selesai v1.1.203; sisa periode dan filter di URL) (mis. `#transaksi-123456`, `#laporan-tren?periode=...`) dan penyimpanan filter di URL.
 
 **Kalender ekonomi** (tab baru v1.1.167; kartu Ringkasan, peringatan jendela berita, Laporan Saat rilis, banner jadwal habis selesai v1.1.169)
 - [ ] **Isi `f`/`p` di `EVENTS`** untuk event lain begitu konsensus terbit (kini baru klaim 8 Okt dan CPI); sumber sering beda angka, cek ulang.
-- [ ] **Perbarui `EVENTS`** tiap bulan (kini 2 Okt – 30 Des 2026, hanya USD); cek ulang tanggal ke BLS/BEA/Fed. Berikutnya: event non-USD (ECB, BoE, BoJ), data China/Eropa yang menggerakkan emas.
+- [ ] **Perbarui `EVENTS`** tiap bulan (kini 2 Okt – 30 Des 2026: USD plus ECB/BoE/BoJ sejak v1.1.211); cek ulang tanggal ke BLS/BEA/Fed. Berikutnya: event non-USD (ECB, BoE, BoJ), data China/Eropa yang menggerakkan emas.
 - [x] **Kunci `kal-manual`/`kal-notes`/`kal-prefs` ikut ekspor pengaturan** (v1.1.177). Sisa: sinkron cloud bila perlu.
 - [ ] **Hubungkan ke jurnal (lanjutan):** filter Transaksi "dekat rilis" (selesai v1.1.185; Laporan sudah punya tampilan "Saat rilis"); jendela rilis bisa diatur 15/30/60 menit di Setelan (selesai v1.1.186); event dampak Sedang bisa ikut dinilai (selesai v1.1.187).
 - [x] **Impor/ekspor jadwal** (JSON, v1.1.181). Sisa: format CSV dan memperluas cakupan Laporan "Saat rilis" (`KAL.cover`) ke event impor.
 - [x] **Tampilan kalender mingguan** (v1.1.182).
-- [ ] **Aktual vs Prakiraan:** panah lebih tinggi/rendah sudah ada (v1.1.177); sisa catatan arah reaksi emas dan catatan reaksi harga per event.
+- [x] **Aktual vs Prakiraan (catatan reaksi emas selesai v1.1.211):** panah lebih tinggi/rendah sudah ada (v1.1.177); sisa catatan arah reaksi emas dan catatan reaksi harga per event.
 - [x] **Penanda "Perlu dicek"** (v1.1.177) untuk event berstatus Perkiraan yang tanggalnya sudah dekat.
 - [ ] **Peringatan** (PWA) 15 menit sebelum event dampak tinggi.
 
 **Performa**
-- [ ] **Performa lanjutan** (saran 5–9, 6 Okt): (saran 5+6 selesai v1.1.166; garis target pada batang bulanan selesai v1.1.183) heatmap kalender tahunan selesai v1.1.184; rentang 12/26 minggu dan garis rata-rata batang mingguan sudah ada (v1.1.180), sisa sumbu dan nilai pada batang; filter Arah (v1.1.178) dan Sesi (v1.1.179) di Performa sudah ada.
+- [ ] **Performa lanjutan** (saran 5–9, 6 Okt): (saran 5+6 selesai v1.1.166; garis target pada batang bulanan selesai v1.1.183) heatmap kalender tahunan selesai v1.1.184; rentang 12/26 minggu dan garis rata-rata batang mingguan sudah ada (v1.1.180), sumbu dan nilai pada batang selesai v1.1.212; filter Arah (v1.1.178) dan Sesi (v1.1.179) di Performa sudah ada.
 
 **Transaksi**
-- [ ] **Lampiran gambar chart per transaksi** (usulan 3 Okt): foto setup disimpan lokal (IndexedDB) dan dikompres; tidak ikut sinkron cloud/ekspor JSON agar data tetap kecil; tampil di detail transaksi.
-- [ ] **Impor laporan broker dengan pratinjau** (baru/duplikat/error sebelum disimpan); lihat juga Ide lanjutan: Impor CSV.
+- [x] **Lampiran gambar chart per transaksi (v1.1.209)** (usulan 3 Okt): foto setup disimpan lokal (IndexedDB) dan dikompres; tidak ikut sinkron cloud/ekspor JSON agar data tetap kecil; tampil di detail transaksi.
+- [x] **Impor laporan broker dengan pratinjau (v1.1.208)** (baru/duplikat/error sebelum disimpan); lihat juga Ide lanjutan: Impor CSV.
 
 **Setelan**
 - [ ] Tentang: tautan panduan/README (menunggu alamat dokumentasi publik; tanggal build, Periksa pembaruan, dan Instal aplikasi selesai v1.1.147).
-- [ ] Bahasa dan format angka (Indonesia/Inggris). (Ukuran tampilan selesai v1.1.159.)
-- [ ] Notifikasi pengingat isi catatan psikologi atau batas harian (izin Notification; PWA saja).
+- [x] Format angka (Indonesia/Internasional) selesai v1.1.214. Terjemahan teks UI ke bahasa Inggris tidak dikerjakan (ribuan teks tetap di `index.html`/`app.js`; butuh pemisahan teks ke kamus). (Ukuran tampilan selesai v1.1.159.)
+- [x] Notifikasi pengingat (v1.1.215): berita dampak tinggi, batas harian, catatan psikologi; berjalan saat aplikasi terbuka. Push saat aplikasi tertutup butuh server (belum ada).
 
 **Ringkasan**
 
 **Optimalisasi**
-- [ ] Host sendiri font (Fraunces, IBM Plex Mono) sebagai `woff2` subset Latin + tambah ke `SHELL` di `sw.js` (offline penuh tanpa dependensi luar).
+- [ ] (Terblokir: jaringan sesi tidak bisa mengunduh font; kerjakan dari mesin dengan akses npm/CDN) Host sendiri font (Fraunces, IBM Plex Mono) sebagai `woff2` subset Latin + tambah ke `SHELL` di `sw.js` (offline penuh tanpa dependensi luar).
 - [ ] Render tab Laporan secara malas: `renderLap2` hanya ±12 ms dari muat ±175 ms, risikonya (lebar 0 saat tersembunyi, urutan `CS`/`DTP`, Drawdown L7) lebih besar dari manfaat; kerjakan bila ukur ulang menunjukkan Laporan dominan atau data > ±2.000 transaksi.
 - [ ] Ubah `journal-data` (fallback kosong sejak v1.1.15) jadi berkas kecil atau hapus; kini dipakai `buildFullHtmlString()` untuk menaruh data pada salinan HTML mandiri, jadi ekspor perlu mekanisme lain.
 - [ ] Lighthouse (mobile, throttling 4G) sebelum/sesudah; catat LCP/TBT di sini.
@@ -109,6 +133,6 @@ Hampir semua fitur baru hanya diuji di Chromium dengan data sintetis dan Supabas
 - [x] v1.1.193 tab Total gabungan
 - [x] v1.1.194 Supabase per akun (SQL migrasi)
 
-- [ ] Uji nyata: jalankan migrasi-multi-akun.sql di Supabase sungguhan lalu sinkronkan dua akun dari dua perangkat.
+- [x] Uji nyata migrasi-multi-akun.sql di Supabase sungguhan: berjalan baik (dikonfirmasi pengguna, 22 Okt 2026). Sisa: sinkron dua akun dari dua perangkat.
 
-- [ ] Kalender: tambah PCE, PDB, penjualan ritel, ISM Nov-Des setelah tanggalnya terverifikasi; kalender bawaan berakhir 30 Des 2026, perpanjang menjelang Desember.
+- [x] Kalender: PCE, PDB, penjualan ritel, ISM Nov-Des ditambahkan v1.1.202 (PDB/PCE dari jadwal BEA); kalender bawaan berakhir 30 Des 2026, perpanjang menjelang Desember.

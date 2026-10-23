@@ -107,7 +107,21 @@
     return { user_id: uid, id: str(t.id), arah: str(t.arah), lot: num(t.lot), buka: num(t.buka), tutup: num(t.tutup),
       pips: num(t.pips), laba: num(t.laba), tanggal: str(t.tanggal), tanggal_gmt8: str(t.tanggal_gmt8),
       waktu_buka: str(t.waktu_buka), trigger: str(t.trigger), trigger_exit: str(t.trigger_exit),
-      emosi: str(t.emosi), jenis_entry: str(t.jenis_entry), catatan: str(t.catatan) };
+      emosi: str(t.emosi), jenis_entry: str(t.jenis_entry), catatan: str(t.catatan), setup: str(t.setup), konfirmasi: !!t.konfirmasi, langgar: (t.langgar && t.langgar.length) ? JSON.stringify(t.langgar) : '' };
+  }
+  // Pengaturan trading ikut cloud (kolom pengaturan.setelan, teks JSON). Pengaturan tampilan khas perangkat tidak ikut.
+  const SETELAN_SKIP = ['jurnalTheme','jurnalScheme','jurnalAccent','jurnalCB','jurnalSidebar','jurnalFontSize','jurnalHideNum','jurnalNumFmt','jurnalNotif'];
+  function collectSetelan(){
+    const o = {};
+    try{ Object.keys(SETTINGS_VALIDATORS).forEach(k => { if(SETELAN_SKIP.includes(k)) return; const v = localStorage.getItem(k); if(v !== null && v.length <= 2000 && SETTINGS_VALIDATORS[k](v)) o[k] = v; }); }catch(e){}
+    return o;
+  }
+  function applySetelan(raw){
+    let o; try{ o = JSON.parse(raw || '{}'); }catch(e){ return 0; }
+    if(!o || typeof o !== 'object' || Array.isArray(o)) return 0;
+    let n = 0;
+    Object.entries(o).forEach(([k, v]) => { if(!SETELAN_SKIP.includes(k) && SETTINGS_VALIDATORS[k] && typeof v === 'string' && v.length <= 2000 && SETTINGS_VALIDATORS[k](v)){ try{ localStorage.setItem(k, v); n++; }catch(e){} } });
+    return n;
   }
   function depRow(l, uid){
     return { user_id: uid, tanggal: str(l.tanggal), tipe: str(l.tipe), jenis: str(l.jenis), usd: num(l.usd), cent: num(l.cent) };
@@ -196,16 +210,26 @@
     if(!await showConfirmModal(`Sinkronkan akun "${ACCT.name}": ${trades.length} transaksi & ${deps.length} deposit ke cloud? Data akun ini di cloud yang tidak ada di browser ini akan dihapus.${warn}`)) return;
     setBusy(true); say('Mengirim…');
     try{
-      // Bila kolom `catatan` belum ada di Supabase (migrasi belum dijalankan), kirim ulang tanpa kolom itu supaya sinkron tetap jalan.
-      let noCatatan = false;
-      const stripCat = rows => rows.map(({ catatan, ...r }) => r);
+      // Kolom tambahan (catatan, setup, konfirmasi) bisa belum ada di Supabase (migrasi belum dijalankan): kirim ulang tanpa kolom yang hilang supaya sinkron tetap jalan.
+      const XCOLS = ['catatan','setup','konfirmasi','langgar'], dropped = new Set();
+      const strip = rows => dropped.size ? rows.map(r => { const o = Object.assign({}, r); dropped.forEach(k => delete o[k]); return o; }) : rows;
       for(const c of chunks(trades, 500)){
-        let res = await sb.from('trades').upsert(noCatatan ? stripCat(c) : c, { onConflict: conflict.trades() });
-        if(res.error && !noCatatan && /catatan/i.test(res.error.message)){ noCatatan = true; res = await sb.from('trades').upsert(stripCat(c), { onConflict: conflict.trades() }); }
+        let res;
+        for(let tries = 0; tries <= XCOLS.length; tries++){
+          res = await sb.from('trades').upsert(strip(c), { onConflict: conflict.trades() });
+          if(!res.error) break;
+          const miss = XCOLS.find(k => !dropped.has(k) && new RegExp('\\b' + k + '\\b', 'i').test(res.error.message));
+          if(!miss) break;
+          dropped.add(miss);
+        }
         must(res);
       }
       for(const c of chunks(deps, 500)) must(await sb.from('deposit_log').upsert(c, { onConflict: conflict.deposit_log() }));
-      must(await sb.from('pengaturan').upsert(withAcc({ user_id: uid, kurs: num(DATA.kurs) || 0 }), { onConflict: conflict.pengaturan() }));
+      let noSetelan = false;
+      { const setelan = collectSetelan(), base = { user_id: uid, kurs: num(DATA.kurs) || 0 };
+        const r1 = await sb.from('pengaturan').upsert(withAcc(Object.assign({ setelan: JSON.stringify(setelan) }, base)), { onConflict: conflict.pengaturan() });
+        if(r1.error && /\bsetelan\b/i.test(r1.error.message)){ noSetelan = true; must(await sb.from('pengaturan').upsert(withAcc(base), { onConflict: conflict.pengaturan() })); }
+        else must(r1); }
       if(multi) must(await sb.from('akun').upsert({ user_id: uid, id: AID, nama: ACCT.name, tipe: ACCT.type, kurs: num(DATA.kurs) || 0 }, { onConflict: 'user_id,id' }));
 
       const localIds = new Set(trades.map(t => t.id));
@@ -217,9 +241,13 @@
       for(const r of goneDep){ let q = sb.from('deposit_log').delete().eq('tanggal', r.tanggal).eq('tipe', r.tipe).eq('cent', r.cent); if(multi) q = q.eq('account_id', AID); must(await q); }
 
       markSync('push');
-      const lostCat = noCatatan ? trades.filter(t => t.catatan).length : 0;
+      const noCatatan = dropped.has('catatan'), noSetup = dropped.has('setup') || dropped.has('konfirmasi'), noLanggar = dropped.has('langgar');
+      const lostCat = noCatatan ? trades.filter(t => t.catatan).length : 0, lostSetup = noSetup ? trades.filter(t => t.setup || t.konfirmasi).length : 0, lostLg = noLanggar ? trades.filter(t => t.langgar && t.langgar.length).length : 0;
       say(`Tersinkron: ${trades.length} transaksi, ${deps.length} deposit. Dihapus dari cloud: ${gone.length + goneDep.length}.` +
-        (noCatatan ? ` Kolom "catatan" belum ada di Supabase, jadi catatan bebas${lostCat ? ` (${lostCat} transaksi)` : ''} belum ikut terkirim. Jalankan migrasi-catatan.sql di SQL Editor lalu sinkronkan lagi.` : ''), noCatatan ? false : true);
+        (noCatatan ? ` Kolom "catatan" belum ada di Supabase, jadi catatan bebas${lostCat ? ` (${lostCat} transaksi)` : ''} belum ikut terkirim. Jalankan migrasi-catatan.sql di SQL Editor lalu sinkronkan lagi.` : '') +
+        (noSetup ? ` Kolom setup belum ada di Supabase, jadi setup/konfirmasi${lostSetup ? ` (${lostSetup} transaksi)` : ''} belum ikut terkirim. Jalankan migrasi-setup.sql di SQL Editor lalu sinkronkan lagi.` : '') +
+        (noLanggar ? ` Kolom langgar belum ada di Supabase, jadi pelanggaran aturan${lostLg ? ` (${lostLg} transaksi)` : ''} belum ikut terkirim. Jalankan migrasi-aturan.sql di SQL Editor lalu sinkronkan lagi.` : '') +
+        (noSetelan ? ' Kolom setelan belum ada di Supabase, jadi pengaturan trading belum ikut terkirim. Jalankan migrasi-pengaturan.sql di SQL Editor lalu sinkronkan lagi.' : ''), (noCatatan || noSetup || noLanggar || noSetelan) ? false : true);
     }catch(e){ say('Gagal kirim: ' + e.message, false); }
     finally{ setBusy(false); }
   }
@@ -245,15 +273,23 @@
       // Bila cloud belum punya kolom `catatan`, jangan hapus catatan lokal: pertahankan per ID.
       const cloudHasCat = !tr.length || ('catatan' in tr[0]);
       const localCat = new Map(DATA.trades.filter(t => t.catatan).map(t => [String(t.id), t.catatan]));
+      const cloudHasSetup = !tr.length || ('setup' in tr[0]);
+      const localSetup = new Map(DATA.trades.filter(t => t.setup || t.konfirmasi).map(t => [String(t.id), { setup: t.setup, konfirmasi: t.konfirmasi }]));
+      const cloudHasLg = !tr.length || ('langgar' in tr[0]);
+      const localLg = new Map(DATA.trades.filter(t => t.langgar && t.langgar.length).map(t => [String(t.id), t.langgar]));
+      const parseLg = v => { try{ const a = JSON.parse(v || '[]'); return Array.isArray(a) ? a.filter(x => typeof x==='string' && x).slice(0,12) : []; }catch(e){ return []; } };
       DATA.trades = tr.map(r => { const t = { id: r.id }; ['arah','lot','buka','tutup','pips','laba','tanggal','tanggal_gmt8','waktu_buka','trigger','trigger_exit','emosi','jenis_entry']
         .forEach(k => { t[k] = strCols.includes(k) ? str(r[k]) : Number(r[k]); });
         const cat = cloudHasCat ? str(r.catatan) : (localCat.get(String(r.id)) || '');
         if(cat) t.catatan = cat;
+        { const su = cloudHasSetup ? { setup: str(r.setup), konfirmasi: !!r.konfirmasi } : (localSetup.get(String(r.id)) || {}); if(su.setup) t.setup = su.setup; if(su.konfirmasi) t.konfirmasi = true; }
+        { const lg = cloudHasLg ? parseLg(r.langgar) : (localLg.get(String(r.id)) || []); if(lg.length) t.langgar = lg; }
         return t; })
         .sort((a, b) => a.tanggal_gmt8 < b.tanggal_gmt8 ? -1 : a.tanggal_gmt8 > b.tanggal_gmt8 ? 1 : 0);
       DATA.deposit.log = dp.map(r => ({ tanggal: r.tanggal, jenis: str(r.jenis), tipe: r.tipe, usd: Number(r.usd), cent: Number(r.cent) }))
         .sort((a, b) => a.tanggal < b.tanggal ? -1 : a.tanggal > b.tanggal ? 1 : 0);
       if(cfgRows.length && cfgRows[0].kurs != null) DATA.kurs = Number(cfgRows[0].kurs);
+      const nSetelan = (cfgRows.length && cfgRows[0].setelan) ? applySetelan(cfgRows[0].setelan) : 0;
       // Akun yang ada di cloud tetapi belum ada di perangkat ini ikut didaftarkan (data masing-masing dipulihkan dari akunnya).
       let addedAcc = 0;
       cloudAccts.forEach(r => { const id = String(r.id || ''); if(/^[a-z0-9-]{1,24}$/.test(id) && !ACCOUNTS.some(x => x.id === id)){ ACCOUNTS.push({ id, name: String(r.nama || id).slice(0,30), type: ['cent','usd','idr'].includes(r.tipe) ? r.tipe : 'cent', created: '' }); addedAcc++; } });
@@ -262,7 +298,7 @@
       recomputeAll();
       if(!saveActiveData(DATA)){ say('Gagal menyimpan ke penyimpanan lokal browser (penuh atau diblokir).', false); return; }
       markSync('pull');
-      queueNotifyAfterReload(`Data dari cloud dimuat: ${tr.length} transaksi, ${dp.length} deposit.`, 'success');
+      queueNotifyAfterReload(`Data dari cloud dimuat: ${tr.length} transaksi, ${dp.length} deposit${nSetelan ? `, ${nSetelan} pengaturan` : ''}.`, 'success');
       try{ sessionStorage.setItem('jurnalPendingTab', 'setelan'); }catch(e){}
       say('Tersimpan, memuat ulang…', true);
       setTimeout(() => location.reload(), 500);

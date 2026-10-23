@@ -125,6 +125,57 @@ Tab Kalender → **Impor dan ekspor jadwal**. Ekspor menyimpan semua event (bawa
 ## Performa mingguan: rentang dan rata-rata (v1.1.180)
 Di bagian Performa mingguan pilih **12 minggu / 26 minggu / Semua**. Batang menampilkan garis putus-putus rata-rata per minggu, dengan ringkasan rata-rata dan jumlah minggu untung. Daftar mingguan mengikuti rentang, dan semuanya mengikuti filter arah/sesi. Pilihan diingat dan ikut ekspor pengaturan.
 
+## Notifikasi pengingat (v1.1.215)
+Setelan → Pengingat: berita dampak Tinggi 15 menit sebelum rilis, batas harian tercapai, catatan psikologi belum diisi. Mati bawaan, butuh izin notifikasi, berjalan saat aplikasi terbuka (tanpa server push). Tes: `tnotif.js`.
+
+## Format angka (v1.1.214)
+Setelan → Preferensi → Format angka: Indonesia (1.234,56) atau Internasional (1,234.56). Kunci `jurnalNumFmt`; teks UI tetap Indonesia. Tes: `tnumfmt.js`.
+
+## Kinerja angka (v1.1.213)
+Pemformat angka (`fmtCent`, `fmtPct`, `fmtRp`) memakai `Intl.NumberFormat` ter-cache (`nf`). Membuka 8.000 transaksi ±120 ms lebih cepat. Tes: `tfmt.js`.
+
+## Performa mingguan: sumbu dan nilai (v1.1.212)
+Sumbu-Y tetap (+maks, 0, -maks) dengan garis bantu, dan angka ringkas di ujung batang (semua sampai 12 minggu, selebihnya terbaik/terburuk). Tes: `tperf6.js`.
+
+## Kalender: non-USD dan reaksi emas (v1.1.211)
+Event ECB, BoE, BoJ (Okt–Des 2026, impak Sedang; jam BoJ perkiraan) serta catatan reaksi emas per event (Naik/Turun/Datar + catatan ≤ 60 huruf, disimpan di `kal-notes`). Tes: `tkal6.js`.
+
+## Arsipkan riwayat lama (v1.1.210)
+Setelan → Data → Arsipkan riwayat lama: pilih tanggal, unduh berkas arsip, lalu transaksi sampai tanggal itu dihapus. Baris deposit bertipe `Arsip` (PNL bersih yang diarsipkan) menjaga saldo dan kurva ekuitas; modal bersih tidak berubah. Pulihkan lewat berkas arsip atau Urungkan. Tes: `tarsip.js`.
+
+## Lampiran gambar chart (v1.1.209)
+Detail Transaksi → Lampiran chart: tambah gambar atau tempel dengan Ctrl+V (maks 4 per transaksi, dikompres JPEG ≤ 1280 px). Disimpan di IndexedDB perangkat (`jurnalFoto`), tidak ikut sinkron/ekspor JSON/HTML. Tes: `tfoto.js`.
+
+## Pratinjau impor broker (v1.1.208)
+Setelan → Data → Cocokkan dengan broker: setelah memilih file MT5, jendela pratinjau menampilkan tab Baru, Berbeda, Sama, dan Bermasalah; tiap posisi baru/koreksi bisa dicentang, lalu Terapkan terpilih (cadangan otomatis, bisa diurungkan). Tes: `tbroker.js`.
+
+## Deep link periode dan filter (v1.1.207)
+Hash menerima query, mis. `#laporan-tren?p=bulanan&o=-1&arah=Beli` (p: harian/mingguan/bulanan/3bulan/1tahun/all, o: offset ≤ 0, arah, sesi) dan `#transaksi?hasil=loss&emosi=Takut&dari=2026-10-01&sampai=2026-10-31&q=teks` (juga cat, trig, jenis, setup, lg, sesi, berita, lmin, lmax). URL diperbarui otomatis saat filter diganti. Tes: `tdeeplink2.js`.
+
+## Sinkron pengaturan (v1.1.206)
+Pengaturan trading (aturan, batas harian, opsi kustom, target, jendela berita, dll.) ikut Kirim/Ambil lewat kolom `pengaturan.setelan`. Pengaturan tampilan (tema, warna, huruf, sidebar) tetap per perangkat. Jalankan `migrasi-pengaturan.sql` sekali; sebelum itu sinkron tetap berhasil. Tes: `tsetelan.js`.
+
+## Pelanggaran aturan trading (v1.1.205)
+Field `langgar` (array teks aturan dari kartu Aturan trading) dipilih lewat chip di form tambah/edit; tampil di detail, filter Transaksi (Melanggar/Patuh), CSV (kolom 'Aturan dilanggar') dan Laporan (blok Pelanggaran aturan trading + aturan paling sering dilanggar). Cloud: jalankan `migrasi-aturan.sql` sekali (kolom `langgar text`); sebelum itu sinkron tetap berhasil. Tes: `tlangg.js`.
+
+## Setup / strategi per transaksi (v1.1.204)
+Field `setup` (CRT H4, CRT H4 + RSI divergence, RSI divergence, Tanpa setup, plus opsi kustom di Setelan → Trading → Opsi trigger, exit, dan setup) dan centang `konfirmasi` pada form tambah/edit; tampil di detail, filter Transaksi, isi massal, CSV, dan Laporan (blok Setup / strategi dan Konfirmasi setup). Cloud: jalankan `migrasi-setup.sql` sekali (menambah kolom `setup`, `konfirmasi`); sebelum itu sinkron tetap berhasil tanpa kolom tersebut. Tes: `tsetup.js`.
+
+## Performa: Ringkasan mingguan (v1.1.202)
+Bagian teratas tab Performa: tinjauan satu minggu ISO (panah ◀ ▶) berisi PNL, transaksi, win rate, PF dibanding minggu sebelumnya, emosi dan trigger paling merugikan (≥ 2 transaksi), kepatuhan batas harian, dan tiga pertanyaan refleksi (catatan lokal di `jurnalWeekRefl`). Tes: `tweekrev.js`.
+
+## Performa: kartu Split arah (v1.1.200)
+Donut Beli vs Jual kini disertai **tabel perbandingan** (transaksi, laba, win rate, PF, expectancy, rata² menang/rugi, untung/rugi terbesar, lot rata²) dengan sisi yang lebih baik ditandai ▲, **kesimpulan otomatis** (perlu ≥ 20 transaksi per arah), chip rentang **Semua / Tahun ini / 90 hari / 30 hari** (`jurnalSplitRange`), mengikuti filter sesi dan psikologi Performa. Ketuk judul kolom untuk daftar transaksi. Tes: `tsplit2.js`.
+
+## Performa: heatmap jam × hari (v1.1.199)
+Bagian **Jam & hari buka** di tab Performa: heatmap 7 hari × 12 bin 2 jam (waktu buka, GMT+8) dengan metrik PNL / Expectancy / Win rate / Jumlah, dari transaksi yang lolos filter Performa. Ketuk sel untuk ringkasan dan daftar transaksi. Memakai penggambar bersama `drawHeatGrid` (sama dengan Laporan). Tes: `tperf5.js`.
+
+## Performa: banding dua periode dan rincian per akun (v1.1.198)
+**Bandingkan dua periode** di tab Performa memakai tabel yang sama dengan Laporan (`cmpBuild`), pilihan periode tanpa "Kustom", disaring oleh filter Performa; pilihan tersimpan di `jurnalPerfCmpA/B`. Di tampilan **Total**, bagian **Rincian per akun** menampilkan transaksi, laba, win rate, PF, dan Max DD tiap akun. Tes: `tperf4.js`.
+
+## Performa: filter psikologi dan metrik risiko (v1.1.197)
+Baris ketiga filter Performa: **Emosi / Trigger entry / Jenis entry** (pilihan "Belum dicatat" menyaring transaksi tanpa catatan). Bisa digabung dengan arah dan sesi, tersimpan di `jurnalPerfEmosi`, `jurnalPerfTrigger`, `jurnalPerfJenis`. Blok **Metrik risiko** di bawahnya (`perfRiskData()`): risk:reward aktual, win rate impas = 1/(1+R:R), expectancy per transaksi, rugi terbesar (dan % dari saldo sebelum transaksi itu), serta persentase entri setelah rugi dengan lot ≥ 1,25× lot sebelumnya. Tes: `tperf3.js`.
+
 ## Performa: filter sesi (v1.1.179)
 Baris kedua filter Performa: **Semua sesi / Asia / London / New York** (menurut waktu buka, GMT+8; batas sesi sama dengan Laporan). Bisa digabung dengan filter arah. Transaksi tanpa waktu buka tidak ikut saat sesi dipilih.
 
