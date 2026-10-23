@@ -3,6 +3,76 @@
 Perubahan Jurnal XAUUSD, terbaru di atas. Semua rilis 22 Sep – 1 Okt 2026. Versi berbahasa pengguna akhir ada di aplikasi (Setelan → Tentang aplikasi). v1.1.144 ke atas dicatat per versi; sebelumnya diringkas per tema. Status dan jebakan bug: `SUMMARY.md`; rencana dan todo: `roadmap.md`.
 
 ## Rilis terbaru
+### 1.1.215 — 12 Nov
+- **Notifikasi pengingat.** `JNOTIF` (app.js): `check(now)` tiap 60 detik dan saat tab kembali terlihat; tiga jenis (`event` = `KAL.events()` dampak 3 dalam ≤ 15 menit, `limit` = `DAY_LIMITS` rugi kumulatif/jumlah transaksi hari GMT+8, `note` = transaksi hari ini tanpa `hasNote` ≥ 30 menit setelah yang terakhir); dedup lewat `jurnalNotifSeen` per akun (dibersihkan > 3 hari); pengiriman lewat `registration.showNotification` (jatuh ke `new Notification`); tanpa izin tidak mengirim dan tidak menandai. Konfigurasi `jurnalNotif` (`{event,limit,note}` 0/1) masuk `SETTINGS_VALIDATORS` dan dikecualikan dari sinkron cloud. `sw.js`: handler `notificationclick` (fokus atau buka jendela). UI: bagian Pengingat di Setelan → Trading. Batasan: tanpa server push, jadi hanya jalan saat aplikasi terbuka. Komentar `sw.js` 'Anti campur-versi' dikembalikan ke v1.1.170 (sempat ikut terganti otomatis tiap rilis). Tes: `tnotif.js`.
+
+### 1.1.214 — 11 Nov
+- **Format angka Indonesia/Internasional.** Kunci `jurnalNumFmt` (`en`; hilang = Indonesia) menentukan `NUM_LOCALE` ('id-ID' / 'en-US'); semua `toLocaleString('id-ID', …)` angka kini memakai `NUM_LOCALE` (cache `nf` ikut), 31 pemanggilan `.toFixed().replace('.', ',')` memakai `DEC()`; `broker.js` ikut. Pilihan di Setelan (`#prefNum`) memuat ulang halaman. Termasuk `SETTINGS_VALIDATORS` (ekspor/impor pengaturan) tetapi dikecualikan dari sinkron cloud (`SETELAN_SKIP`, seperti tema). Tanggal, nama bulan, dan teks UI tetap Indonesia; teks tersimpan di data (Rekor transaksi) tetap format Indonesia kecuali nilai ¢ yang dikonversi `convCentText`. Tes: `tnumfmt.js`.
+
+### 1.1.213 — 10 Nov
+- **Kinerja: cache pemformat angka.** `fmtCent`, `fmtPct`, `fmtRp` memakai `Intl.NumberFormat` ter-cache lewat `nf(min,maks)` (kunci per locale `NUM_LOCALE`); hasil identik dengan `toLocaleString('id-ID', …)` (diuji 6.000 nilai acak). Hasil ukur dengan 8.000 transaksi: `fmtCent` ±120 ms → ~0. Diukur juga: `renderTrades` ±15–20 ms, kurva ekuitas ±60 ms per gambar ulang, sehingga memo `computeLapDD`/`eqDrawdownAllTime` dan render bertahap tambahan tidak diperlukan (buku transaksi sudah bertahap lewat `ledgerLimit`/`LEDGER_STEP`). Tes: `tfmt.js`. Pengurangan `location.reload()` sengaja tidak dikerjakan: semua tab dibangun dari `DATA` saat dibuka sehingga render ulang parsial berisiko tinggi.
+
+### 1.1.212 — 9 Nov
+- **Performa mingguan: sumbu-Y dan nilai batang.** `renderWeeks` memakai tinggi efektif `USE_H = STRIP_H - 2*PAD` (PAD 12 px) agar angka di ujung batang tidak terpotong; sumbu `#weekAxis` di luar area geser (+maks, 0, -maks; nol disembunyikan bila <10 px dari tanda lain) dengan garis bantu `.week-grid`; nilai `.week-val` untuk semua batang bila ≤ 12 minggu, selain itu hanya terbaik/terburuk; pemformat `wkCompact` mengikuti `HERO_CURRENCY`. Tes: `tperf6.js`.
+
+### 1.1.211 — 8 Nov
+- **Kalender: event non-USD dan catatan reaksi emas.** `EVENTS` + 6 event (`ecb-2026-10/12` 13:15Z, `boe-2026-11/12` 12:00Z terkonfirmasi dari ecb.europa.eu dan bankofengland.co.uk; `boj-2026-10/12` 03:00Z perkiraan, tanggal dari boj.or.jp). Catatan per event di `kal-notes`: `r` (naik/turun/datar) dan `c` (≤ 60 huruf) lewat kontrol `kal-react`, lencana `kal-react-b` di baris; validator `kal-notes` tetap berlaku. Teks sumber di kaki kalender diperbarui. Tes: `tkal6.js`.
+
+### 1.1.210 — 7 Nov
+- **Ekspor lalu hapus riwayat lama.** Seksi `arsipSection`: pilih `arsipUntil` (GMT+8), ringkasan jumlah dan PNL, konfirmasi, berkas `jurnal-xauusd-arsip-<tanggal>-<stamp>.json` (`type:'arsip'`, `trades`, `saldo_awal`, `jenis`), snapshot undo (`JTB.snapshot`), transaksi dihapus, baris deposit baru `tipe:'Arsip'` (cent = PNL bersih; modalDelta 0 dan pnl 0 di `rebuildEquitySeries`) sehingga saldo/ekuitas identik; `DATA.deposit.total_arsip`, kartu Saldo awal arsip dan tag/filter Arsip di Deposit; lampiran gambar transaksi terkait dihapus. Pulihkan dari arsip: `mergeImportedData` lalu baris Arsip dengan `jenis` sama dihapus. Minimal satu transaksi tersisa. Tes: `tarsip.js`.
+
+### 1.1.209 — 6 Nov
+- **Lampiran gambar chart per transaksi.** Objek `JFOTO` (IndexedDB `jurnalFoto`, store `foto`, indeks `tid` dan `acct`): `add/list/remove/stats/clearAcct/purgeOrphans`, kompres kanvas JPEG maks 1280 px (kualitas 0,82, turun 0,65 bila > 350 KB), maks 4 per transaksi, kunci memuat id akun. UI: baris `dvFotoRow` di detail (strip thumbnail, hapus dengan konfirmasi, lightbox `fotoLbOverlay` dengan prev/next dan Esc), tempel gambar (paste), info ukuran di ringkasan penyimpanan, reset data perangkat ikut menghapus gambar akun aktif, gambar milik transaksi yang sudah terhapus dibersihkan setelah 2 hari (jendela Batalkan hapus tetap aman). Tidak masuk `DATA`, sinkron, atau ekspor. Tes: `tfoto.js`.
+
+### 1.1.208 — 5 Nov
+- **Pratinjau impor broker.** `brokerPreview()` di `broker.js` menggantikan dialog teks: tab Baru/Berbeda/Sama/Bermasalah, centang per posisi, ringkasan live (jumlah, laba, saldo bila diterapkan), tombol Hanya yang baru dan Terapkan terpilih; `groupBrokerRows` kini mengembalikan `problems` (baris, ID, alasan; maks 200). Esc menutup lewat `brokerPvOverlay` di daftar penutup. `tbroker.js` disesuaikan (35 pemeriksaan).
+
+### 1.1.207 — 4 Nov
+- **Deep link periode dan filter.** Hash route menerima query: Laporan `p` (granularitas), `o` (offset ≤ 0), `arah`, `sesi`; Transaksi `q`, `lmin`, `lmax`, `arah`, `hasil`, `cat`, `emosi`, `trig`, `jenis`, `setup`, `lg`, `sesi`, `berita`, `dari`, `sampai`. `queryFor()`, `parseQuery()`, `applyQuery()` (nilai divalidasi/whitelist), hash diperbarui (replaceState, debounce 200 ms, listener fase capture di panel Laporan dan Transaksi). Tanpa query = tidak mengubah keadaan. Tes: `tdeeplink2.js`.
+
+### 1.1.206 — 3 Nov
+- **Sinkron pengaturan ke Supabase.** Kolom `pengaturan.setelan` (teks JSON) berisi kunci `SETTINGS_VALIDATORS` kecuali `SETELAN_SKIP` (tema, skema, aksen, buta warna, sidebar, ukuran huruf, sembunyikan angka). `collectSetelan()` saat push (fallback otomatis bila kolom belum ada, pesan menyebut `migrasi-pengaturan.sql`), `applySetelan()` saat pull (tiap nilai divalidasi ulang; kunci asing diabaikan; pengaturan lokal yang tidak ada di cloud tidak dihapus). SQL: `migrasi-pengaturan.sql`, `schema.sql` diperbarui. Tes: `tsetelan.js`.
+
+### 1.1.205 — 2 Nov
+- **Pelanggaran aturan trading per transaksi.** Field baru `langgar` (array teks aturan, maks 12 x 120 karakter; tidak ada = patuh). Helper `getTradingRules`/`window.getTradingRules` (membaca `jurnalRules`), `renderLanggarBox`/`readLanggar`, `langgarGroups`, `isLanggar`. Chip checklist di form tambah/edit (`entryLanggar`, `editLanggar`; aturan yang sudah dipilih tetap tampil walau dihapus dari daftar), baris detail `dvLanggar`, filter Transaksi `csw_filterLanggar`, penutupan bertahap menyimpan pelanggaran bagian pertama, CSV kolom 'Aturan dilanggar' (dipisah ` | `) dan alias impor, ekspor laporan CSV (bagian Aturan, Aturan dilanggar), Laporan (`laporanLanggar`, `laporanLanggarCmp`, `laporanLanggarRule`).
+- Sinkron: kolom `langgar` (teks JSON) ditambahkan ke `tradeRow`, `XCOLS` dengan fallback bila kolom belum ada (pesan menyebut `migrasi-aturan.sql`), dan pull mempertahankan nilai lokal bila cloud belum punya kolom. SQL: `migrasi-aturan.sql`, `schema.sql` diperbarui.
+
+### 1.1.204 — 1 Nov
+- **Tag setup/strategi + konfirmasi per transaksi.** Field baru `setup` (string; opsi `SETUP_BASE` + kustom `CUSTOM_OPTS.setup` di Setelan) dan `konfirmasi` (true bila ada). Form tambah/edit (`csw_entrySetup/editSetup`, `entryKonfirmasi/editKonfirmasi`), detail (`dvSetup`), `hasNote`, filter Transaksi (`csw_filterSetup`), isi massal (`csw_bulkSetup`), penutupan bertahap menyimpan setup bagian pertama, ekspor CSV (kolom Setup, Konfirmasi setup) dan impor (alias `setup`/`strategi`, `konfirmasisetup`), ekspor laporan CSV (bagian Setup), Laporan (`laporanSetup`, `laporanKonfirmasi`).
+- **Sinkron Supabase:** `tradeRow` menambah `setup` dan `konfirmasi`; push memakai fallback generik `XCOLS = [catatan, setup, konfirmasi]` (kolom yang belum ada dibuang per percobaan, pesan menyebut `migrasi-setup.sql`); pull mempertahankan setup lokal per ID bila cloud belum punya kolomnya. Berkas baru `migrasi-setup.sql`; `schema.sql` diperbarui.
+- **Perbaikan tata letak modal Tambah/Edit:** enam isian psikologi + setup dalam kisi 3 kolom (`.ef-psy`) supaya modal tetap muat tanpa scroll di desktop; kotak centang konfirmasi (`.chk-line`); `.ef-note[hidden]` kini benar-benar tersembunyi (catatan "diisi dari transaksi manual terakhir" sebelumnya tampil terus walau tidak ada isian awal, menambah ±75px).
+- Tes baru `tsetup.js` (14 cek, termasuk server tiruan tanpa/dengan kolom). `APP_VERSION`, `V` (`sw.js`) dan `?v=` → 1.1.204.
+
+### 1.1.203 — 31 Okt
+- **Deep link ke transaksi.** Rute hash `parse()` menerima `#transaksi-<id>` (huruf kecil/angka; id harus ada di `DATA.trades`) dan `apply()` memanggil `openTradeDetail(id)` (juga saat `hashchange`). Tombol `#detailLinkBtn` "Salin tautan" di modal detail menyalin `location.href#transaksi-<id>` (fallback: tampilkan tautan untuk disalin manual). ID dengan karakter lain (mis. akun Total `id@akun`) menampilkan "Tautan tidak tersedia".
+- Tes baru `tdeeplink.js` (20 cek). `APP_VERSION`, `V` (`sw.js`) dan `?v=` → 1.1.203.
+
+### 1.1.202 — 30 Okt
+- **Performa: Ringkasan mingguan otomatis** (`renderWeekReview()`, `#weekReview`): minggu terpilih dari `DATA.weeks` (panah ◀ ▶, default terbaru) vs minggu sebelumnya (PNL, transaksi, WR, PF); `weekWorstGroup()` (emosi/trigger dengan P/L negatif terbesar, minimal 2 transaksi); `weekDayCompliance()` (hari melewati `DAY_LIMITS.maxLoss`/`maxTrades`); tiga pertanyaan refleksi disimpan di `jurnalWeekRefl` {awalMinggu: [a,b,c]}, lokal saja.
+- **Kalender bawaan +10 event** (`kalender.js`): ISM Jasa 4 Nov dan 3 Des, ISM Manufaktur 1 Des, Penjualan Ritel 17 Nov dan 16 Des (Census, status est), PDB estimasi kedua 25 Nov dan ketiga 23 Des, PCE 25 Nov dan 23 Des (BEA, status ok), klaim 25 Nov (dimajukan karena Thanksgiving). `KAL.cover` tetap sampai 30 Des 2026.
+- Tes baru `tweekrev.js` (24 cek); tes kalender lulus. `APP_VERSION`, `V` (`sw.js`) dan `?v=` → 1.1.202.
+
+### 1.1.201 — 29 Okt
+- **Perbaikan teks donut Split arah.** `.split-pie-box` 160 → 200px (SVG `width/height:100%`), padding tengah 34px, `.spc-sub` `white-space:nowrap`, rincian `showDetailCenter` jadi tiga baris (P/L, WR, W/L) agar muat di lubang donut (±67% diameter). Tes baru `tsplit3.js` (15 cek: lebar/tinggi teks vs lubang pada 390/1280px dan font besar). `APP_VERSION`, `V` (`sw.js`) dan `?v=` → 1.1.201.
+
+### 1.1.200 — 28 Okt
+- **Kartu Split arah dioptimalkan.** `renderSplitArah()` kini memakai `perfPassBase` (filter Performa tanpa arah: sesi + psikologi) dan rentang `splitRange` (`all|y|90|30`, kunci `jurnalSplitRange`, chip `#splitRange`). `stats()` ditambah PF, expectancy, rata² menang/rugi, untung/rugi terbesar, lot rata². Tabel `#splitTbl` (10 baris, sisi lebih baik diberi kelas `best`), kesimpulan `#splitVerdict` (4 ukuran utama, peringatan bila < 20 transaksi per arah), judul kolom membuka `openListModal`. `perfRedraw` ikut memanggil `renderSplitArah`.
+- Tes baru `tsplit2.js` (24 cek). `APP_VERSION`, `V` (`sw.js`) dan `?v=` → 1.1.200.
+
+### 1.1.199 — 27 Okt
+- **Performa: heatmap Jam & hari buka** (`renderPerfHeat2()`, `#perfHeat2`, `#perfHeat2Info`). `drawLapHeat()` dipecah menjadi pembungkus + `drawHeatGrid(D, heatEl, infoEl, mode, setMode, redraw)` yang dipakai bersama Laporan dan Performa; mode metrik Performa terpisah (`perfHeat2Mode`). Data dari transaksi yang lolos `perfPass`, bin 2 jam menurut `waktu_buka` GMT+8.
+- Tes baru `tperf5.js` (22 cek). `APP_VERSION`, `V` (`sw.js`) dan `?v=` → 1.1.199.
+
+### 1.1.198 — 26 Okt
+- **Performa: Bandingkan dua periode.** `renderLapCmp` dipecah: `cmpBuild(rA,rB,lA,lB)` menghasilkan tabel + catatan dan dipakai bersama Laporan dan Performa; `cmpRange(side, selOverride)`. `renderPerfCmp()` (`#perfCmp`, `csw_perfCmpA/B`, kunci `jurnalPerfCmpA/B`) menyaring dengan `perfPass`.
+- **Tampilan Total: Rincian per akun** (`renderPerfAcct()`, `#perfAcctSec`, hanya saat `IS_TOTAL`): per `t.akun` jumlah transaksi, laba, win rate, PF, Max DD dari kurva laba kumulatif akun, mengikuti `perfPass`.
+- Tes baru `tperf4.js` (26 cek). `APP_VERSION`, `V` (`sw.js`) dan `?v=` → 1.1.198.
+
+### 1.1.197 — 25 Okt
+- **Performa: filter catatan psikologi.** `perfPsy` ({emosi, trigger, jenis_entry}, kunci `jurnalPerfEmosi/Trigger/Jenis`; '' = semua, '-' = belum dicatat) masuk ke `perfPass`/`perfFilterOn`/`perfSplit`; tiga `CS` select (`csw_perfEmosi/Trigger/Jenis`) di baris `#perfPsyFilter`; catatan filter `#perfArahNote` ikut menyebut filter ini; `window.perfRedraw` menggambar ulang bulanan, mingguan, heatmap, dan metrik risiko.
+- **Performa: blok Metrik risiko** (`perfRiskData()` + `renderPerfRisk()`, `#perfRisk`): risk:reward aktual (rata² untung / rata² rugi), win rate impas = 1/(1+R:R), expectancy, rugi terbesar + % dari saldo tepat sebelum transaksi (`DATA.equity`), dan % entri yang lotnya ≥ 1,25× lot sebelumnya setelah transaksi rugi. Kartu bulanan sudah memuat PF, rata² untung/rugi, DD, hari terbaik/terburuk (v1.1.1xx), jadi tidak diubah.
+- Tes baru `tperf3.js` (24 cek). `APP_VERSION`, `V` (`sw.js`) dan `?v=` → 1.1.197.
+
 ### 1.1.196 — 24 Okt
 - **Kalender bawaan diperpanjang ke 30 Des 2026** (`kalender.js`, +17 event): NFP 4 Des; CPI 10 Nov dan 10 Des; PPI 13 Nov dan 15 Des; JOLTS 1 Des; klaim pengangguran 12 Nov, 19 Nov, 3, 10, 17 Des; keputusan FOMC 9 Des (rapat 8-9 Des); risalah FOMC 18 Nov dan 30 Des. Tanggal BLS dan jadwal FOMC dari situs resmi; semua berstatus `est` (perkiraan jam, EST = UTC-5 setelah 1 Nov). Belum ditambahkan: PCE, PDB, penjualan ritel, ISM Nov-Des (tanggal belum terverifikasi).
 - `KAL.cover` otomatis menjadi 2 Okt – 30 Des 2026. Tes kalender dan berita lolos. `APP_VERSION`, `V` (`sw.js`) dan `?v=` → 1.1.196.

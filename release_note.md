@@ -2,7 +2,7 @@
 
 Ringkasan perubahan untuk pengguna, terbaru di atas. Isinya sama dengan **Setelan → Tentang aplikasi → Lihat riwayat** di aplikasi (data `USER_CHANGELOG` di `app.js`). Rincian teknis per versi ada di `CHANGELOG.md`; rencana ke depan di `roadmap.md`.
 
-**Versi saat ini: 1.1.196** (24 Okt 2026)
+**Versi saat ini: 1.1.215** (12 Nov 2026)
 
 ## Sorotan
 - Ringkasan: kurva ekuitas yang jelas (modal, puncak berjalan, drawdown, tooltip), pilihan **Ekuitas / PNL kumulatif**, PNL Minggu/Bulan Ini, lencana DD saat ini.
@@ -14,6 +14,26 @@ Ringkasan perubahan untuk pengguna, terbaru di atas. Isinya sama dengan **Setela
 
 ## 1 Okt 2026 (v1.1.145 – v1.1.192)
 **Baru**
+- **Pengingat**: notifikasi berita dampak tinggi, batas harian, dan catatan psikologi (Setelan → Pengingat; berjalan saat aplikasi terbuka).
+- **Format angka**: pilih Indonesia (1.234,56) atau Internasional (1,234.56) di Setelan → Preferensi.
+- **Kinerja**: pemformat angka di-cache; membuka 8.000 transaksi ±120 ms lebih cepat.
+- **Performa mingguan**: sumbu tegak tetap dan angka di ujung batang (semua batang sampai 12 minggu, selebihnya terbaik/terburuk).
+- **Kalender**: rapat ECB, BoE, BoJ (Okt-Des 2026) dan catatan reaksi emas per event (Naik/Turun/Datar + catatan).
+- **Arsipkan riwayat lama**: unduh arsip lalu hapus transaksi lama dengan saldo/ekuitas tetap (baris Arsip di Deposit), bisa diurungkan atau dipulihkan dari berkas.
+- **Lampiran gambar chart per transaksi** (IndexedDB lokal, dikompres, maks 4 per transaksi, paste Ctrl+V).
+- **Pratinjau impor broker** dengan centang per posisi dan daftar baris bermasalah.
+- **Deep link periode dan filter** untuk Laporan dan Transaksi (query di hash; URL ikut berubah saat filter diganti).
+- **Pengaturan trading ikut sinkron cloud** (kolom `pengaturan.setelan`). Jalankan `migrasi-pengaturan.sql` sekali di Supabase.
+- **Pelanggaran aturan trading** per transaksi (checklist di form, detail, filter, CSV, Laporan biaya melanggar vs patuh, aturan paling sering dilanggar). Jalankan `migrasi-aturan.sql` sekali di Supabase agar ikut tersinkron.
+- **Setup / strategi** dan centang konfirmasi per transaksi (form, detail, filter, isi massal, CSV, Laporan per setup). Jalankan `migrasi-setup.sql` sekali di Supabase agar ikut tersinkron.
+- Detail Transaksi: **Salin tautan** ke transaksi (#transaksi-ID); membuka tautan langsung menampilkan detailnya.
+- Performa: **Ringkasan mingguan** (minggu ini vs lalu, emosi/trigger paling merugikan, kepatuhan batas harian, tiga pertanyaan refleksi).
+- Kalender: ISM, Penjualan Ritel, PDB, dan PCE Nov–Des 2026.
+- Perbaikan: teks di tengah donut Split arah tidak lagi terpotong.
+- Kartu **Split arah (Beli vs Jual)** lebih lengkap: tabel perbandingan, sisi yang lebih baik ditandai, kesimpulan otomatis, pilihan rentang waktu, mengikuti filter Performa.
+- Performa: heatmap **Jam & hari buka** (kapan entri paling untung atau rugi), mengikuti filter Performa.
+- Performa: **Bandingkan dua periode**; tampilan Total: **Rincian per akun** (laba, win rate, PF, drawdown).
+- Performa: filter Emosi, Trigger entry, dan Jenis entry, plus blok **Metrik risiko** (risk:reward aktual, win rate impas, expectancy, rugi terbesar, lot naik setelah rugi).
 - Kalender ekonomi bawaan diperpanjang sampai 30 Des 2026 (NFP, CPI, PPI, FOMC, klaim, JOLTS).
 - Label satuan di akun USD dan Rupiah lebih jelas (footer, batas rugi harian, nilai pip, saldo kalkulator, cek saldo broker).
 - Sinkron cloud per akun (jalankan `migrasi-multi-akun.sql` sekali di Supabase). Data lama menjadi Akun utama.

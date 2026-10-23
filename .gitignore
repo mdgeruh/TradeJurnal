@@ -1,0 +1,6 @@
+.DS_Store
+Thumbs.db
+node_modules/
+*.log
+jurnal-xauusd-data-*.json
+jurnal-xauusd-*.html

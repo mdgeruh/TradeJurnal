@@ -77,13 +77,14 @@ function peekAccountData(id){
 // Opsi bawaan + opsi kustom pengguna (Setelan → Trading → Opsi trigger dan exit; disimpan di localStorage 'jurnalCustomOpts').
 const TRIGGER_BASE = ['Breakout','Retest/Pullback','Support/Resistance','Trend Following','Reversal/Pembalikan','Order Block','FVG','Fibonacci Retracement','Moving Average Cross','News/Fundamental'];
 const EXIT_BASE = ['TP','SL','Cut Loss','ABC (Asal Biru Close)'];
+const SETUP_BASE = ['CRT H4','CRT H4 + RSI divergence','RSI divergence','Tanpa setup'];   // v1.1.204: setup/strategi per transaksi
 const EXIT_ALIASES = { 'ABC': 'ABC (Asal Biru Close)' }; // penulisan lama di data → nama resmi, agar laporan tidak memecah jadi dua grup
 function canonExit(v){ return EXIT_ALIASES[v] || v; }
 const CUSTOM_OPTS = (()=>{
-  const out = { trigger: [], exit: [] };
+  const out = { trigger: [], exit: [], setup: [] };
   try{
     const o = JSON.parse(localStorage.getItem('jurnalCustomOpts') || 'null') || {};
-    [['trigger', TRIGGER_BASE], ['exit', EXIT_BASE]].forEach(([k, base])=>{
+    [['trigger', TRIGGER_BASE], ['exit', EXIT_BASE], ['setup', SETUP_BASE]].forEach(([k, base])=>{
       (Array.isArray(o[k]) ? o[k] : []).forEach(v=>{
         v = typeof v === 'string' ? v.trim().slice(0,40) : '';
         if(v && v !== 'Lainnya' && !base.includes(v) && !out[k].includes(v) && out[k].length < 20) out[k].push(v);
@@ -94,6 +95,7 @@ const CUSTOM_OPTS = (()=>{
 })();
 const TRIGGER_OPTIONS = [...TRIGGER_BASE, ...CUSTOM_OPTS.trigger, 'Lainnya'];
 const EXIT_TRIGGER_OPTIONS = [...EXIT_BASE, ...CUSTOM_OPTS.exit, 'Lainnya'];
+const SETUP_OPTIONS = [...SETUP_BASE, ...CUSTOM_OPTS.setup];
 function loadEmbeddedData(){
   return JSON.parse(document.getElementById('journal-data').textContent);
 }
@@ -222,10 +224,18 @@ function buildPeriodChips(el, opts){
 const LIVE_RANGES = buildLiveRanges();
 const LIVE_PERIODS = computeLivePeriods(LIVE_RANGES);
 
-const fmtCent = n => (n<0?'-':'') + Math.abs(n).toLocaleString('id-ID',{minimumFractionDigits:2,maximumFractionDigits:2});
+// Pemformat angka di-cache (v1.1.213): membuat Intl.NumberFormat baru di tiap pemanggilan toLocaleString(opsi) lambat
+// (ribuan kali saat memuat 8.000 transaksi). Satu instance per kombinasi (min,maks desimal), dipakai ulang.
+// Format angka (v1.1.214): 'id' = 1.234,56 (bawaan) / 'en' = 1,234.56. Disimpan global di 'jurnalNumFmt' (bukan per akun).
+let NUM_LOCALE = 'id-ID';
+try{ if(localStorage.getItem('jurnalNumFmt') === 'en') NUM_LOCALE = 'en-US'; }catch(e){}
+function DEC(){ return NUM_LOCALE === 'en-US' ? '.' : ','; }   // pemisah desimal untuk teks hasil toFixed()
+const NF_CACHE = {};
+const nf = (min, max) => { const k = NUM_LOCALE + '|' + min + '|' + max; return NF_CACHE[k] || (NF_CACHE[k] = new Intl.NumberFormat(NUM_LOCALE, { minimumFractionDigits:min, maximumFractionDigits:max })); };
+const fmtCent = n => (n<0?'-':'') + nf(2,2).format(Math.abs(n));
 // Tanda minus SEBELUM simbol ("-Rp 1.234"), sama seperti "-$1,00" di fmtMoney; pembulatan ke 0 tidak menampilkan "-Rp 0".
-const fmtRp = n => { const r = Math.round(n); return (r<0?'-':'') + 'Rp ' + Math.abs(r).toLocaleString('id-ID'); };
-const fmtPct = n => (n*100).toLocaleString('id-ID',{minimumFractionDigits:1,maximumFractionDigits:1}) + '%';
+const fmtRp = n => { const r = Math.round(n); return (r<0?'-':'') + 'Rp ' + nf(0,3).format(Math.abs(r)); };
+const fmtPct = n => nf(1,1).format(n*100) + '%';
 
 // ---------- Mata uang tampilan kartu hero (USD / USC / Rp) ----------
 // Data internal tetap dalam sen (¢); 100¢ = 1 USD. USC = US cent (satuan asli akun cent), BUKAN USD Coin.
@@ -251,18 +261,18 @@ function fmtMoneyNum(c, compact){
   if(HERO_CURRENCY==='USD') return fmtCent(c/100);
   const rp = c/100*DATA.kurs, a = Math.abs(rp), sg = rp<0?'-':'';
   if(compact){
-    if(a>=1e6) return sg + (a/1e6).toLocaleString('id-ID',{maximumFractionDigits:1}) + 'jt';
-    if(a>=1e3) return sg + (a/1e3).toLocaleString('id-ID',{maximumFractionDigits:1}) + 'rb';
+    if(a>=1e6) return sg + (a/1e6).toLocaleString(NUM_LOCALE,{maximumFractionDigits:1}) + 'jt';
+    if(a>=1e3) return sg + (a/1e3).toLocaleString(NUM_LOCALE,{maximumFractionDigits:1}) + 'rb';
   }
-  return sg + Math.round(a).toLocaleString('id-ID');
+  return sg + Math.round(a).toLocaleString(NUM_LOCALE);
 }
 const curUnitSymbol = () => HERO_CURRENCY==='IDR' ? 'Rp' : (HERO_CURRENCY==='USD' ? '$' : '\u00a2');
 // Label sumbu-Y kurva ekuitas: angka bulat ringkas, desimal hanya bila rentang sempit (USD).
 function fmtAxisMoney(c, rangeCent){
-  if(HERO_CURRENCY==='USC') return Math.round(c).toLocaleString('id-ID');
+  if(HERO_CURRENCY==='USC') return Math.round(c).toLocaleString(NUM_LOCALE);
   if(HERO_CURRENCY==='USD'){
     const r = rangeCent/100, dec = r>=20 ? 0 : (r>=2 ? 1 : 2);
-    return (c/100).toLocaleString('id-ID',{minimumFractionDigits:dec,maximumFractionDigits:dec});
+    return (c/100).toLocaleString(NUM_LOCALE,{minimumFractionDigits:dec,maximumFractionDigits:dec});
   }
   return fmtMoneyNum(c, true);
 }
@@ -577,7 +587,7 @@ function computePeriodStats(matched){
 function renderStatStrip(st, periodLabel){
   const pe = document.getElementById('statPeriod');
   if(pe && periodLabel) pe.textContent = 'Periode: ' + periodLabel;
-  const pfTxt = st.total===0 ? '—' : (st.pf===Infinity ? '∞' : st.pf.toFixed(2).replace('.',',')+'x');
+  const pfTxt = st.total===0 ? '—' : (st.pf===Infinity ? '∞' : st.pf.toFixed(2).replace('.', DEC())+'x');
   document.getElementById('statStrip').innerHTML = `
     <div class="stat"><div class="stat-lbl">Transaksi</div><div class="stat-val">${st.total}</div></div>
     <div class="stat"><div class="stat-lbl">Win rate</div><div class="stat-val">${st.total? fmtPct(st.winrate) : '—'}</div></div>
@@ -586,7 +596,7 @@ function renderStatStrip(st, periodLabel){
     <div class="stat"><div class="stat-lbl" title="Berbasis PNL (tanpa deposit/penarikan); beda dasar hitung dengan Drawdown ekuitas di kurva">Max DD (PNL)</div><div class="stat-val ${st.maxdd>0?'down':''}">-${fmtMoney(st.maxdd)}</div></div>
     <div class="stat"><div class="stat-lbl">Expectancy</div><div class="stat-val ${st.expectancy>=0?'up':'down'}">${st.expectancy>=0?'+':''}${fmtMoney(st.expectancy)}</div></div>
     <div class="stat"><div class="stat-lbl">Streak</div><div class="stat-val ${st.streak>0?'up':(st.streak<0?'down':'')}">${st.streak===0 ? '—' : Math.abs(st.streak) + (st.streak>0 ? ' menang' : ' rugi')}</div></div>
-    <div class="stat"><div class="stat-lbl">Rata² menang</div><div class="stat-val up">${st.winCount ? '+' + fmtMoney(st.avgWin) : '—'}</div><span class="approx-rp">${st.rr>0 ? 'RR ' + st.rr.toFixed(2).replace('.',',') + 'x' : ''}</span></div>
+    <div class="stat"><div class="stat-lbl">Rata² menang</div><div class="stat-val up">${st.winCount ? '+' + fmtMoney(st.avgWin) : '—'}</div><span class="approx-rp">${st.rr>0 ? 'RR ' + st.rr.toFixed(2).replace('.', DEC()) + 'x' : ''}</span></div>
     <div class="stat"><div class="stat-lbl">Rata² rugi</div><div class="stat-val down">${st.lossCount ? '−' + fmtMoney(st.avgLoss) : '—'}</div></div>
   `;
 }
@@ -594,6 +604,24 @@ function renderStatStrip(st, periodLabel){
 // ---------- Laporan: ringkasan performa + analisis psikologi trading, mengikuti periode terpilih ----------
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+// ---------- Pelanggaran aturan trading per transaksi (v1.1.205) ----------
+// Tiap transaksi bisa menyimpan t.langgar = daftar teks aturan (dari kartu Aturan trading di Ringkasan) yang dilanggar. Tidak ada = patuh.
+function getTradingRules(){ try{ const a = JSON.parse(localStorage.getItem('jurnalRules') || '[]'); return Array.isArray(a) ? a.filter(x => typeof x==='string' && x).slice(0,12) : []; }catch(e){ return []; } }
+window.getTradingRules = getTradingRules;
+function normLanggar(a){ const out = []; (Array.isArray(a) ? a : []).forEach(x => { x = String(x||'').trim().slice(0,120); if(x && !out.includes(x)) out.push(x); }); return out.slice(0,12); }
+function renderLanggarBox(prefix, selected){
+  const box = document.getElementById(prefix+'Langgar'), wrap = document.getElementById(prefix+'LanggarWrap'); if(!box || !wrap) return;
+  const sel = normLanggar(selected), rules = getTradingRules(); sel.forEach(x => { if(!rules.includes(x)) rules.push(x); });
+  wrap.hidden = !rules.length;
+  box.innerHTML = rules.map(r => `<label class="langgar-chip"><input type="checkbox" value="${escapeHtml(r)}"${sel.includes(r)?' checked':''}><span>${escapeHtml(r)}</span></label>`).join('');
+}
+function readLanggar(prefix){ const box = document.getElementById(prefix+'Langgar'); return box ? normLanggar([...box.querySelectorAll('input:checked')].map(i => i.value)) : []; }
+const isLanggar = t => !!(t && t.langgar && t.langgar.length);
+function langgarGroups(list){
+  const map = {};
+  list.forEach(t => (t.langgar||[]).forEach(r => { const g = map[r] || (map[r] = { name:r, count:0, win:0, pl:0, list:[] }); g.count++; g.list.push(t); if(t.laba>0) g.win++; g.pl += t.laba; }));
+  return Object.values(map).sort((a,b) => b.count - a.count);
 }
 function groupByField(matched, field){
   const map = {};
@@ -644,16 +672,16 @@ function renderLaporan(matched, label, prev){
   const st = computePeriodStats(matched || []);
   const stripEl = document.getElementById('laporanStatStrip');
   if(stripEl){
-    const pfTxt = st.total===0 ? '—' : (st.pf===Infinity ? '∞' : st.pf.toFixed(2).replace('.',',')+'x');
+    const pfTxt = st.total===0 ? '—' : (st.pf===Infinity ? '∞' : st.pf.toFixed(2).replace('.', DEC())+'x');
     const pv = prev || null;
     const ppFmt = v=> fmtPct(v).replace('%',' pp');
-    const rrTxt = st.rr>0 ? st.rr.toFixed(2).replace('.',',') : '—';
+    const rrTxt = st.rr>0 ? st.rr.toFixed(2).replace('.', DEC()) : '—';
     const kpiEl = document.getElementById('lapKpi');
     if(kpiEl){
       kpiEl.innerHTML = `
         <div class="stat"><div class="stat-lbl">Laba bersih</div><div class="stat-val ${st.pl>=0?'up':'down'}">${st.total? (st.pl>=0?'+':'')+fmtMoney(st.pl) : '—'}</div>${st.total? approxRp(st.pl) : ''}${pv? deltaTag(st.pl, pv.pl, fmtMoney) : ''}</div>
         <div class="stat"><div class="stat-lbl">Win rate</div><div class="stat-val">${st.total? fmtPct(st.winrate) : '—'}</div>${pv? deltaTag(st.winrate, pv.winrate, ppFmt) : ''}</div>
-        <div class="stat"><div class="stat-lbl">PF</div><div class="stat-val">${pfTxt}</div>${pv? deltaTag(st.pf, pv.pf, v=>v.toFixed(2).replace('.',',')+'x') : ''}</div>
+        <div class="stat"><div class="stat-lbl">PF</div><div class="stat-val">${pfTxt}</div>${pv? deltaTag(st.pf, pv.pf, v=>v.toFixed(2).replace('.', DEC())+'x') : ''}</div>
         <div class="stat"><div class="stat-lbl">Max DD</div><div class="stat-val ${st.maxdd>0?'down':''}">${st.maxdd>0?'-':''}${fmtMoney(st.maxdd)}</div>${approxRp(-st.maxdd)}<span class="approx-rp" id="lapKpiDDPct"></span>${pv? deltaTag(st.maxdd, pv.maxdd, fmtMoney, true) : ''}</div>`;
       let noteEl = document.getElementById('laporanDeltaNote');
       if(!noteEl){ noteEl = document.createElement('div'); noteEl.id = 'laporanDeltaNote'; noteEl.className = 'lap-delta-note'; kpiEl.insertAdjacentElement('afterend', noteEl); }
@@ -687,6 +715,24 @@ function renderLaporan(matched, label, prev){
     }
   }
   renderPsyGroup('laporanJenisEntry', groupByField(matchedArr, 'jenis_entry'), matchedArr.length);
+  renderPsyGroup('laporanSetup', groupByField(matchedArr, 'setup'), matchedArr.length);
+  { const withSetup = matchedArr.filter(t => t.setup || t.konfirmasi).map(t => Object.assign({}, t, { _k: t.konfirmasi ? 'Konfirmasi lengkap' : 'Konfirmasi belum lengkap' }));
+    renderPsyGroup('laporanKonfirmasi', groupByField(withSetup, '_k'), withSetup.length, false, 'Belum ada transaksi dengan setup atau konfirmasi pada periode terpilih.'); }
+  { const anyL = matchedArr.some(isLanggar), cmp = document.getElementById('laporanLanggarCmp');
+    const lr = matchedArr.map(t => Object.assign({}, t, { _l: isLanggar(t) ? 'Melanggar aturan' : 'Patuh aturan' }));
+    renderPsyGroup('laporanLanggar', anyL ? groupByField(lr, '_l') : [], matchedArr.length, false, 'Belum ada pelanggaran aturan yang dicatat pada periode terpilih. Centang aturan yang dilanggar saat menambah atau mengedit transaksi.');
+    renderPsyGroup('laporanLanggarRule', langgarGroups(matchedArr), null, false, 'Belum ada aturan yang dicatat dilanggar.');
+    if(cmp){
+      const v = matchedArr.filter(isLanggar), p = matchedArr.filter(t => !isLanggar(t));
+      if(v.length && p.length){
+        const sum = a => a.reduce((x,t) => x + t.laba, 0), ev = sum(v)/v.length, ep = sum(p)/p.length, d = ep - ev, sg = n => (n>=0?'+':'') + fmtMoney(n);
+        cmp.hidden = false;
+        cmp.innerHTML = `<div><b>Melanggar aturan</b>: ${v.length}x, total <span class="${sum(v)>=0?'up':'down'}">${sg(sum(v))}</span>, Exp <span class="${ev>=0?'up':'down'}">${sg(ev)}</span></div>` +
+          `<div><b>Patuh aturan</b>: ${p.length}x, total <span class="${sum(p)>=0?'up':'down'}">${sg(sum(p))}</span>, Exp <span class="${ep>=0?'up':'down'}">${sg(ep)}</span></div>` +
+          `<div class="psy-cmp-d">Selisih expectancy ${sg(d)} per transaksi: ${d>=0?'transaksi patuh aturan lebih baik':'transaksi yang melanggar aturan justru lebih baik'}.${(v.length<10||p.length<10)?' Sampel masih kecil.':''}</div>`;
+      } else { cmp.hidden = true; cmp.innerHTML = ''; }
+    }
+  }
 }
 window.renderLaporan = renderLaporan;
 
@@ -781,14 +827,15 @@ function heatBg(v, mode, mx){
   else { cv = v>=0 ? '--gain' : '--loss'; pct = 25 + 75*Math.abs(v)/(mx||1); }
   return `background:color-mix(in srgb, var(${cv}) ${Math.round(pct)}%, transparent)`;
 }
-function drawLapHeat(){
-  const D = lapHeatData, heatEl = document.getElementById('lapHeat'), infoEl = document.getElementById('lapHeatInfo');
+function drawLapHeat(){ drawHeatGrid(lapHeatData, document.getElementById('lapHeat'), document.getElementById('lapHeatInfo'), lapHeatMode, m => { lapHeatMode = m; }, drawLapHeat); }
+// Penggambar heatmap jam \u00d7 hari bersama (Laporan dan Performa, v1.1.199).
+function drawHeatGrid(D, heatEl, infoEl, mode, setMode, redraw){
   if(!heatEl || !infoEl) return;
   if(!D || !D.used){
     heatEl.innerHTML = '<div class="psy-empty">Belum ada transaksi dengan waktu buka pada periode ini.</div>';
     infoEl.textContent = ''; heatEl.onclick = null; return;
   }
-  const mode = lapHeatMode, add = (t,c)=>{ t.n+=c.n; t.pl+=c.pl; t.win+=c.win; t.list.push(...c.list); };
+  const add = (t,c)=>{ t.n+=c.n; t.pl+=c.pl; t.win+=c.win; t.list.push(...c.list); };
   const look = {}, rows = [], cols = [], grand = {n:0,pl:0,win:0,list:[]};
   for(let i=0;i<7;i++) rows.push({n:0,pl:0,win:0,list:[]});
   for(let i=0;i<12;i++) cols.push({n:0,pl:0,win:0,list:[]});
@@ -822,10 +869,10 @@ function drawLapHeat(){
     : 'Rugi</span><i></i><span>Profit</span><span>· warna penuh = ±' + escapeHtml(fmtMoney(mxC));
   heatEl.innerHTML = h + `<div class="lap-heat-legend"><span>${leg}</span></div><div class="psy-cover" style="margin-top:6px;">Garis putus-putus = kurang dari ${HEAT_LOW_N} transaksi (sampel kecil). Σ = total per hari / per jam.</div>`;
   const base = `${D.used} dari ${D.total} transaksi punya waktu buka. Ketuk sel untuk detail.`;
-  heatSel = null; infoEl.textContent = base;
+  let heatSel = null; infoEl.textContent = base;
   heatEl.onclick = (e)=>{
     const btn = e.target.closest('.hm-btn');
-    if(btn){ lapHeatMode = btn.dataset.m; drawLapHeat(); return; }
+    if(btn){ setMode(btn.dataset.m); redraw(); return; }
     const el = e.target.closest('.hc'); if(!el) return;
     heatEl.querySelectorAll('.hc.sel').forEach(x=>x.classList.remove('sel'));
     el.classList.add('sel');
@@ -911,15 +958,15 @@ function renderLapArahSplit(){
   const beli = lap2NoArah.filter(t=>t.arah==='Beli'), jual = lap2NoArah.filter(t=>t.arah==='Jual');
   renderPsyGroup('lapArahSplit', [psyRow('Beli', beli), psyRow('Jual', jual)].filter(r=>r.count), lap2NoArah.length, true, 'Belum ada transaksi pada periode ini.');
   const sb = lapArahStat(beli), sj = lapArahStat(jual);
-  const pf = v => v==null ? '\u2014' : (v===Infinity ? '\u221e' : v.toFixed(2).replace('.',',') + 'x'), lot = v => v==null ? '\u2014' : v.toFixed(2).replace('.',',');
+  const pf = v => v==null ? '\u2014' : (v===Infinity ? '\u221e' : v.toFixed(2).replace('.', DEC()) + 'x'), lot = v => v==null ? '\u2014' : v.toFixed(2).replace('.', DEC());
   const c = (l,v)=>`<div class="stat"><div class="stat-lbl">${l}</div><div class="stat-val">${v}</div></div>`;
   document.getElementById('lapArahStats').innerHTML = c('PF Beli', pf(sb.pf)) + c('PF Jual', pf(sj.pf)) + c('Lot rata-rata Beli', lot(sb.lot)) + c('Lot rata-rata Jual', lot(sj.lot));
   document.getElementById('lapArahNote').textContent = lap2Arah==='semua' ? '' : 'Blok ini membandingkan kedua arah, jadi filter Arah di atas tidak berlaku di sini (periode dan filter lain tetap).';
 }
 // ---------- L14: distribusi hasil per transaksi (PNL; 10% terbaik/terburuk = ceil(10% x n) transaksi, n >= 10) ----------
 let lapDistData = null, lapDistPipsData = null, lapDistUnit = 'pnl';   // unit tampilan histogram: 'pnl' | 'pips'
-const fmtPipsV = v => (v<0?'-':'') + Math.abs(v).toLocaleString('id-ID',{minimumFractionDigits:1,maximumFractionDigits:1}) + ' pips';
-const fmtAxisPips = (v, rng) => v.toLocaleString('id-ID',{minimumFractionDigits: rng>=20?0:1, maximumFractionDigits: rng>=20?0:1});
+const fmtPipsV = v => (v<0?'-':'') + Math.abs(v).toLocaleString(NUM_LOCALE,{minimumFractionDigits:1,maximumFractionDigits:1}) + ' pips';
+const fmtAxisPips = (v, rng) => v.toLocaleString(NUM_LOCALE,{minimumFractionDigits: rng>=20?0:1, maximumFractionDigits: rng>=20?0:1});
 document.querySelectorAll('#lapDistUnit [data-u]').forEach(b => b.addEventListener('click', () => {
   lapDistUnit = b.dataset.u==='pips' ? 'pips' : 'pnl';
   document.querySelectorAll('#lapDistUnit [data-u]').forEach(x => { const on = x.dataset.u===lapDistUnit; x.classList.toggle('active', on); x.setAttribute('aria-pressed', on ? 'true' : 'false'); });
@@ -1206,7 +1253,7 @@ function renderLapLanjut(matched, range){
   // L5: lot & ukuran posisi (deteksi menaikkan lot setelah rugi / martingale / revenge sizing)
   const lotOf = t => { const v = parseFloat(t.lot); return v>0 ? v : 0; };
   const avgLot = list => { const a = list.map(lotOf).filter(v=>v>0); return a.length ? a.reduce((x,y)=>x+y,0)/a.length : 0; };
-  const fmtLot = v => v>0 ? v.toFixed(2).replace('.',',') : '\u2014';
+  const fmtLot = v => v>0 ? v.toFixed(2).replace('.', DEC()) : '\u2014';
   const lotAll = avgLot(arr), lotW = avgLot(afterWin), lotL = avgLot(afterLoss);
   const lotRatio = (lotW>0 && lotL>0) ? lotL/lotW : null;
   const lotUp = [], lotFlat = [];
@@ -1220,7 +1267,7 @@ function renderLapLanjut(matched, range){
   if(lotEl) lotEl.innerHTML = `
     <div class="stat"><div class="stat-lbl">Lot rata-rata</div><div class="stat-val">${fmtLot(lotAll)}</div></div>
     <div class="stat"><div class="stat-lbl">Setelah menang</div><div class="stat-val">${fmtLot(lotW)}</div></div>
-    <div class="stat"><div class="stat-lbl">Setelah rugi</div><div class="stat-val ${lotRatio!==null && lotRatio>=1.2 ? 'down' : ''}">${fmtLot(lotL)}</div>${lotRatio!==null ? `<span class="approx-rp">${lotRatio.toFixed(2).replace('.',',')}\u00d7 setelah menang</span>` : ''}</div>`;
+    <div class="stat"><div class="stat-lbl">Setelah rugi</div><div class="stat-val ${lotRatio!==null && lotRatio>=1.2 ? 'down' : ''}">${fmtLot(lotL)}</div>${lotRatio!==null ? `<span class="approx-rp">${lotRatio.toFixed(2).replace('.', DEC())}\u00d7 setelah menang</span>` : ''}</div>`;
   renderPsyGroup('lapLotAfterLoss', [psyRow('Lot naik \u2265 1,25\u00d7 setelah rugi', lotUp), psyRow('Lot sama / turun setelah rugi', lotFlat)].filter(r=>r.count), null, true, 'Belum ada transaksi yang didahului transaksi rugi dengan data lot.');
   const sizeBins = [['Kecil (< 0,75\u00d7 rata-rata)',[]],['Normal (0,75\u20131,5\u00d7)',[]],['Besar (> 1,5\u00d7 rata-rata)',[]]];
   if(lotAll>0) for(const t of arr){ const l = lotOf(t); if(!(l>0)) continue; sizeBins[l < lotAll*0.75 ? 0 : (l > lotAll*1.5 ? 2 : 1)][1].push(t); }
@@ -1228,7 +1275,7 @@ function renderLapLanjut(matched, range){
   const maxLossV = arr.reduce((m,t)=> t.laba<0 && -t.laba>m ? -t.laba : m, 0);
   const lotNote = document.getElementById('lapLotNote');
   if(lotNote) lotNote.textContent = (maxLossV>0 && st.avgLoss>0)
-    ? `Rugi terbesar ${fmtMoney(maxLossV)} = ${(maxLossV/st.avgLoss).toFixed(1).replace('.',',')}\u00d7 rata-rata rugi (${fmtMoney(st.avgLoss)}). Lot rata-rata dihitung dari transaksi yang punya data lot.`
+    ? `Rugi terbesar ${fmtMoney(maxLossV)} = ${(maxLossV/st.avgLoss).toFixed(1).replace('.', DEC())}\u00d7 rata-rata rugi (${fmtMoney(st.avgLoss)}). Lot rata-rata dihitung dari transaksi yang punya data lot.`
     : 'Belum ada transaksi rugi pada periode ini.';
   // L4: temuan otomatis (aturan sederhana, hanya kelompok bersampel cukup)
   const F = [], sg = v=>(v>=0?'+':'') + fmtMoney(v);
@@ -1248,8 +1295,8 @@ function renderLapLanjut(matched, range){
   }
   if(st.total >= 30 && st.avgLoss > 0 && st.avgWin > 0){
     const be = 1/(1+st.rr);
-    if(st.rr < 1 && st.winrate > 0.5) F.push(`Win rate ${fmtPct(st.winrate)}, tetapi rata-rata kalah ${(1/st.rr).toFixed(1).replace('.',',')}× rata-rata menang (RR 1 : ${st.rr.toFixed(2).replace('.',',')}). Dengan RR ini, titik impas butuh win rate ≈ ${fmtPct(be)}.`);
-    else if(st.rr >= 1 && st.winrate < be) F.push(`Win rate ${fmtPct(st.winrate)} di bawah titik impas ${fmtPct(be)} untuk RR 1 : ${st.rr.toFixed(2).replace('.',',')}.`);
+    if(st.rr < 1 && st.winrate > 0.5) F.push(`Win rate ${fmtPct(st.winrate)}, tetapi rata-rata kalah ${(1/st.rr).toFixed(1).replace('.', DEC())}× rata-rata menang (RR 1 : ${st.rr.toFixed(2).replace('.', DEC())}). Dengan RR ini, titik impas butuh win rate ≈ ${fmtPct(be)}.`);
+    else if(st.rr >= 1 && st.winrate < be) F.push(`Win rate ${fmtPct(st.winrate)} di bawah titik impas ${fmtPct(be)} untuk RR 1 : ${st.rr.toFixed(2).replace('.', DEC())}.`);
   }
   if(afterWin.length >= 20 && afterLoss.length >= 20){
     const wa = psyRow('', afterWin), la = psyRow('', afterLoss);
@@ -1268,7 +1315,7 @@ function renderLapLanjut(matched, range){
   const dur = bins.map((b,i)=>psyRow(b[0], binList[i])).filter(r=>r.count >= 20).sort((a,b)=>(a.pl/a.count) - (b.pl/b.count));
   if(dur.length >= 2) F.push(`Durasi posisi: expectancy terbaik ${dur[dur.length-1].name} (n=${dur[dur.length-1].count}, ${sg(dur[dur.length-1].pl/dur[dur.length-1].count)}), terburuk ${dur[0].name} (n=${dur[0].count}, ${sg(dur[0].pl/dur[0].count)}).`);
   if(afterWin.length >= 20 && afterLoss.length >= 20 && lotRatio !== null && lotRatio >= 1.2)
-    F.push(`Lot rata-rata setelah transaksi rugi ${fmtLot(lotL)} vs setelah menang ${fmtLot(lotW)} (${lotRatio.toFixed(2).replace('.',',')}\u00d7).`);
+    F.push(`Lot rata-rata setelah transaksi rugi ${fmtLot(lotL)} vs setelah menang ${fmtLot(lotW)} (${lotRatio.toFixed(2).replace('.', DEC())}\u00d7).`);
   if(lotUp.length >= 20 && lotFlat.length >= 20){
     const u = psyRow('', lotUp), fl = psyRow('', lotFlat);
     if(u.pl/u.count < fl.pl/fl.count)
@@ -1287,7 +1334,7 @@ function renderLapLanjut(matched, range){
       const busy = days.reduce((a,d)=> d.list.length > a.list.length ? d : a, days[0]);
       const worst = days.reduce((a,d)=> d.pl < a.pl ? d : a, days[0]);
       dailyEl.innerHTML = `
-        <div class="stat"><div class="stat-lbl">Hari trading</div><div class="stat-val">${days.length}</div><span class="approx-rp">rata-rata ${(arr.length/days.length).toFixed(1).replace('.',',')} trx/hari</span></div>
+        <div class="stat"><div class="stat-lbl">Hari trading</div><div class="stat-val">${days.length}</div><span class="approx-rp">rata-rata ${(arr.length/days.length).toFixed(1).replace('.', DEC())} trx/hari</span></div>
         <div class="stat"><div class="stat-lbl">Hari tersibuk</div><div class="stat-val">${busy.list.length} trx</div><span class="approx-rp">${dLbl(busy.k)} \u00b7 PNL ${sg(busy.pl)}</span></div>
         <div class="stat"><div class="stat-lbl">Hari terburuk</div><div class="stat-val ${worst.pl<0?'down':''}">${sg(worst.pl)}</div><span class="approx-rp">${dLbl(worst.k)} \u00b7 ${worst.list.length} trx</span></div>`;
     }
@@ -1745,8 +1792,8 @@ function cmpFmtRange(s, e){
   const f = (q, y) => `${q.getUTCDate()} ${ID_BULAN[q.getUTCMonth()]}` + (y ? ' ' + q.getUTCFullYear() : '');
   return `${f(a, a.getUTCFullYear()!==z.getUTCFullYear())} \u2013 ${f(z, true)}`;
 }
-function cmpRange(side){
-  const key = cmpSel[side], {y,m,d} = GMT8_NOW, DAY = 86400000;
+function cmpRange(side, selOverride){
+  const key = selOverride || cmpSel[side], {y,m,d} = GMT8_NOW, DAY = 86400000;
   const [todayS, todayE] = gmt8DayBounds(y,m,d);
   let s, e, running = false;
   if(key==='bulan-ini'){ s = gmt8DayBounds(y,m,1)[0]; e = todayE; running = true; }
@@ -1779,24 +1826,20 @@ function cmpTrades(r){
   if(lap2Arah !== 'semua') list = list.filter(t=>t.arah===lap2Arah);
   return list;
 }
-function renderLapCmp(){
-  const el = document.getElementById('lapCmp'), noteEl = document.getElementById('lapCmpNote');
-  if(!el) return;
-  ['A','B'].forEach(sd=>{ const c = document.getElementById('cmp'+sd+'Custom'); if(c) c.hidden = cmpSel[sd] !== 'kustom'; });
-  const rA = cmpRange('A'), rB = cmpRange('B'), lA = cmpTrades(rA), lB = cmpTrades(rB);
+function cmpBuild(rA, rB, lA, lB){
   const sA = computePeriodStats(lA), sB = computePeriodStats(lB);
   const sg = v => v>0 ? '+' : '';
   const money = v => fmtMoney(v), moneyS = v => sg(v) + fmtMoney(v);
   const both = sA.total>0 && sB.total>0;
   const rows = [
     ['Transaksi', st=>st.total, v=>String(v), d=>sg(d)+Math.abs(d), null],
-    ['Win rate', st=>st.total?st.winrate:null, v=>fmtPct(v), d=>sg(d)+(Math.abs(d)*100).toFixed(1).replace('.',',')+' pt', 'up'],
+    ['Win rate', st=>st.total?st.winrate:null, v=>fmtPct(v), d=>sg(d)+(Math.abs(d)*100).toFixed(1).replace('.', DEC())+' pt', 'up'],
     ['Laba bersih', st=>st.total?st.pl:null, moneyS, d=>moneyS(d), 'up'],
-    ['Profit factor', st=>st.total?st.pf:null, v=>v===Infinity?'\u221e':v.toFixed(2).replace('.',',')+'x', d=>sg(d)+Math.abs(d).toFixed(2).replace('.',',')+'x', 'up'],
+    ['Profit factor', st=>st.total?st.pf:null, v=>v===Infinity?'\u221e':v.toFixed(2).replace('.', DEC())+'x', d=>sg(d)+Math.abs(d).toFixed(2).replace('.', DEC())+'x', 'up'],
     ['Expectancy', st=>st.total?st.expectancy:null, moneyS, d=>moneyS(d), 'up'],
     ['Rata-rata menang', st=>st.winCount?st.avgWin:null, money, d=>moneyS(d), 'up'],
     ['Rata-rata rugi', st=>st.lossCount?st.avgLoss:null, v=>'-'+money(v), d=>moneyS(d), 'down'],
-    ['Rasio menang/rugi', st=>st.rr>0?st.rr:null, v=>v.toFixed(2).replace('.',','), d=>sg(d)+Math.abs(d).toFixed(2).replace('.',','), 'up'],
+    ['Rasio menang/rugi', st=>st.rr>0?st.rr:null, v=>v.toFixed(2).replace('.', DEC()), d=>sg(d)+Math.abs(d).toFixed(2).replace('.', DEC()), 'up'],
     ['Max DD (PNL)', st=>st.total?st.maxdd:null, v=>'-'+money(v), d=>moneyS(d), 'down']
   ];
   let better = 0, worse = 0, judged = 0;
@@ -1814,7 +1857,7 @@ function renderLapCmp(){
     }
     return `<tr><td class="lbl">${lbl}</td><td>${cell(a)}</td><td>${cell(b)}</td><td class="${cls}">${escapeHtml(dTxt)}</td></tr>`;
   }).join('');
-  el.innerHTML = `
+  const html = `
     <div class="lap-cmp-legend"><div><b>A</b>${escapeHtml(rA.label)} \u00b7 ${sA.total} transaksi</div><div><b>B</b>${escapeHtml(rB.label)} \u00b7 ${sB.total} transaksi</div></div>
     <div class="lap-tbl-scroll"><table class="lap-cmp-tbl"><thead><tr><th></th><th>A</th><th>B</th><th>Selisih (B\u2212A)</th></tr></thead><tbody>${body}</tbody></table></div>`;
   const notes = [];
@@ -1823,7 +1866,15 @@ function renderLapCmp(){
   else if(!both) notes.push('Salah satu periode belum punya transaksi (sesuai filter), jadi selisih belum bisa dihitung.');
   if(both && (sA.total < 10 || sB.total < 10)) notes.push('Salah satu periode kurang dari 10 transaksi: selisih belum cukup untuk disimpulkan.');
   if(rA.running || rB.running) notes.push('Periode berjalan (sampai hari ini) belum penuh: jumlah transaksi dan laba bersih tidak sebanding langsung, lebih adil dibaca lewat win rate, PF, dan expectancy.');
-  if(noteEl) noteEl.textContent = notes.join(' ');
+  return { html, note: notes.join(' ') };
+}
+function renderLapCmp(){
+  const el = document.getElementById('lapCmp'), noteEl = document.getElementById('lapCmpNote');
+  if(!el) return;
+  ['A','B'].forEach(sd=>{ const c = document.getElementById('cmp'+sd+'Custom'); if(c) c.hidden = cmpSel[sd] !== 'kustom'; });
+  const rA = cmpRange('A'), rB = cmpRange('B'), r = cmpBuild(rA, rB, cmpTrades(rA), cmpTrades(rB));
+  el.innerHTML = r.html;
+  if(noteEl) noteEl.textContent = r.note;
 }
 // ---------- Laporan: Periode & filter bisa dilipat (v1.1.153) ----------
 (function(){
@@ -2028,10 +2079,16 @@ function buildLapCsv(){
   add('KPI','Rata-rata menang (¢)',null,null,null,st.winCount?num(st.avgWin):'');
   add('KPI','Rata-rata kalah (¢)',null,null,null,st.lossCount?num(st.avgLoss):'');
   add('KPI','RR (menang/kalah)',null,null,null,st.rr>0?st.rr.toFixed(2):'');
-  for(const [bagian, field] of [['Trigger entry','trigger'],['Trigger exit','trigger_exit'],['Emosi','emosi'],['Jenis entry','jenis_entry']]){
+  for(const [bagian, field] of [['Trigger entry','trigger'],['Trigger exit','trigger_exit'],['Emosi','emosi'],['Jenis entry','jenis_entry'],['Setup','setup']]){
     groupByField(list, field).sort((a,b)=>b.pl-a.pl).forEach(r=>add(bagian, r.name, r.count, r.win, r.pl));
     const un = list.filter(t=>!t[field]);
     if(un.length) add(bagian, '(belum dicatat)', un.length, un.filter(t=>t.laba>0).length, un.reduce((a,t)=>a+t.laba,0));
+  }
+  if(list.some(isLanggar)){
+    const lv = list.filter(isLanggar), lp = list.filter(t => !isLanggar(t));
+    add('Aturan', 'Melanggar aturan', lv.length, lv.filter(t=>t.laba>0).length, lv.reduce((a,t)=>a+t.laba,0));
+    if(lp.length) add('Aturan', 'Patuh aturan', lp.length, lp.filter(t=>t.laba>0).length, lp.reduce((a,t)=>a+t.laba,0));
+    langgarGroups(list).forEach(r => add('Aturan dilanggar', r.name, r.count, r.win, r.pl));
   }
   // Sesi pasar & heatmap jam x hari (waktu buka GMT+8; transaksi tanpa waktu_buka tidak ikut)
   const sess = LAP_SESSIONS.map(()=>({n:0,win:0,pl:0})), heat = {};
@@ -2336,10 +2393,10 @@ function renderEquityChart(){
   const stepD = [1,2,2.5,5,10].map(m=>m*mag).find(v=>v >= rawStep) || 10*mag;
   const fmtTick = vd => {
     const a = Math.abs(vd), sg = vd<0 ? '-' : '';
-    if(HERO_CURRENCY==='USD') return sg + a.toLocaleString('id-ID',{minimumFractionDigits:0,maximumFractionDigits:stepD<1?2:0});
-    if(a>=1e6) return sg + (a/1e6).toLocaleString('id-ID',{maximumFractionDigits:2}) + 'jt';
-    if(a>=1e3) return sg + (a/1e3).toLocaleString('id-ID',{maximumFractionDigits:2}) + 'rb';
-    return sg + a.toLocaleString('id-ID',{maximumFractionDigits:2});
+    if(HERO_CURRENCY==='USD') return sg + a.toLocaleString(NUM_LOCALE,{minimumFractionDigits:0,maximumFractionDigits:stepD<1?2:0});
+    if(a>=1e6) return sg + (a/1e6).toLocaleString(NUM_LOCALE,{maximumFractionDigits:2}) + 'jt';
+    if(a>=1e3) return sg + (a/1e3).toLocaleString(NUM_LOCALE,{maximumFractionDigits:2}) + 'rb';
+    return sg + a.toLocaleString(NUM_LOCALE,{maximumFractionDigits:2});
   };
   let gridLines = '', yLabels = '', zeroLine = '';
   for(let k=Math.ceil(yLo*axisF/stepD - 1e-9); k*stepD <= yHi*axisF + 1e-9; k++){
@@ -2727,7 +2784,7 @@ window.renderEquityChart = renderEquityChart;
 // ---------- Months ----------
 const monthGrid = document.getElementById('monthGrid');
 const evalClass = ev => ev==='Sangat Baik' ? 'good' : (ev==='Waspada' ? 'warn' : 'bad');
-const perfFmtPf = v => v === null ? '\u2013' : v.toFixed(2).replace('.', ',');
+const perfFmtPf = v => v === null ? '\u2013' : v.toFixed(2).replace('.', DEC());
 const perfDay = (d, lbl) => d ? `${lbl} ${d.k.slice(8,10)}/${d.k.slice(5,7)} <span class="${d.pl>=0?'up':'down'}">${d.pl>=0?'+':''}${fmtMoney(d.pl)}</span>` : '';
 // Filter arah Performa (v1.1.178): '' = semua, 'Beli' atau 'Jual'. Disimpan di localStorage 'jurnalPerfArah'.
 let perfArah = ''; try{ const v = localStorage.getItem('jurnalPerfArah'); if(v==='Beli' || v==='Jual') perfArah = v; }catch(e){}
@@ -2735,8 +2792,15 @@ const perfTradesAll = p => DATA.trades.filter(t => { const k = String(t.tanggal_
 // Filter sesi Performa (v1.1.179): sesi pasar menurut waktu buka (GMT+8), memakai LAP_SESSIONS; transaksi tanpa waktu_buka tidak lolos saat aktif.
 let perfSesi = ''; try{ const v = localStorage.getItem('jurnalPerfSesi'); if(LAP_SESSIONS.some(x => x[0]===v)) perfSesi = v; }catch(e){}
 const perfSesiOf = t => { if(!t.waktu_buka) return ''; const d = new Date(parseGmt8(t.waktu_buka) + 8*3600000); if(isNaN(d)) return ''; const i = lapSessionIdx(d.getUTCHours()); return i < 0 ? '' : LAP_SESSIONS[i][0]; };
-const perfPass = t => (!perfArah || t.arah === perfArah) && (!perfSesi || perfSesiOf(t) === perfSesi);
-const perfFilterOn = () => !!(perfArah || perfSesi);
+// Filter catatan psikologi Performa (v1.1.197): emosi, trigger entry, jenis entry. '' = semua, '-' = belum dicatat.
+const PERF_PSY = [['Emosi','emosi','jurnalPerfEmosi'],['Trigger','trigger','jurnalPerfTrigger'],['Jenis','jenis_entry','jurnalPerfJenis']];
+const perfPsy = { emosi:'', trigger:'', jenis_entry:'' };
+PERF_PSY.forEach(([, f, k]) => { try{ const v = localStorage.getItem(k); if(v) perfPsy[f] = v.slice(0, 60); }catch(e){} });
+const perfPsyOk = t => PERF_PSY.every(([, f]) => !perfPsy[f] || (perfPsy[f] === '-' ? !t[f] : t[f] === perfPsy[f]));
+const perfPsyOn = () => PERF_PSY.some(([, f]) => !!perfPsy[f]);
+const perfPass = t => (!perfArah || t.arah === perfArah) && (!perfSesi || perfSesiOf(t) === perfSesi) && perfPsyOk(t);
+const perfPassBase = t => (!perfSesi || perfSesiOf(t) === perfSesi) && perfPsyOk(t);   // filter Performa tanpa arah (kartu Split arah, v1.1.200)
+const perfFilterOn = () => !!(perfArah || perfSesi || perfPsyOn());
 const perfTrades = p => perfTradesAll(p).filter(perfPass);
 const perfMonthsNow = () => perfFilterOn() ? computePerf(perfPass).months : DATA.months;
 const perfWeeksNow = () => perfFilterOn() ? computePerf(perfPass).weeks : DATA.weeks;
@@ -2744,7 +2808,7 @@ const perfWeeksNow = () => perfFilterOn() ? computePerf(perfPass).weeks : DATA.w
 function perfSplit(p){
   const out = {};
   ['Beli','Jual'].forEach(a => {
-    const ts = perfTradesAll(p).filter(t => t.arah === a && (!perfSesi || perfSesiOf(t) === perfSesi)), n = ts.length, w = ts.filter(t => t.laba > 0).length;
+    const ts = perfTradesAll(p).filter(t => t.arah === a && (!perfSesi || perfSesiOf(t) === perfSesi) && perfPsyOk(t)), n = ts.length, w = ts.filter(t => t.laba > 0).length;
     out[a] = { n, wr: n ? w / n : null, pl: ts.reduce((s, t) => s + (+t.laba || 0), 0) };
   });
   return out;
@@ -2758,8 +2822,8 @@ function perfSplitHtml(p){
 }
 function perfOpen(p, title){ if(window.openListModal) window.openListModal(title, perfTrades(p)); }
 function perfGradeText(){
-  const c = getPerfCfg(), w = c.minWr.toLocaleString('id-ID');
-  return `Laba/rugi, win rate, dan % thd saldo sebelum bulan berjalan. Penilaian: Sangat Baik = untung dan win rate \u2265 ${w}%; Waspada = untung atau win rate \u2265 ${w}%; selain itu Perlu Evaluasi.` + (c.target ? ` Target bulanan ${c.target.toLocaleString('id-ID')}%.` : '') + ' Atur di Setelan \u2192 Target performa.';
+  const c = getPerfCfg(), w = c.minWr.toLocaleString(NUM_LOCALE);
+  return `Laba/rugi, win rate, dan % thd saldo sebelum bulan berjalan. Penilaian: Sangat Baik = untung dan win rate \u2265 ${w}%; Waspada = untung atau win rate \u2265 ${w}%; selain itu Perlu Evaluasi.` + (c.target ? ` Target bulanan ${c.target.toLocaleString(NUM_LOCALE)}%.` : '') + ' Atur di Setelan \u2192 Target performa.';
 }
 function renderMonths(){
   const gn = document.getElementById('perfGradeNote'); if(gn) gn.textContent = perfGradeText();
@@ -2830,10 +2894,41 @@ const allWeeks = perfWeeksNow();
 const weeks = perfWkRange ? allWeeks.slice(-perfWkRange) : allWeeks;
 stripEl.innerHTML = ''; labelsEl.innerHTML = '';
 const STRIP_H = 92; // must match .week-strip height in CSS
+const PAD = 12;     // ruang atas/bawah untuk nilai di ujung batang (v1.1.212)
+const USE_H = STRIP_H - 2*PAD;
 const maxGainW = Math.max(0, ...weeks.map(w=>w.pl));
 const maxLossW = Math.max(0, ...weeks.map(w=>-w.pl));
 const rangeW = (maxGainW + maxLossW) || 1;
-const baselinePx = (maxLossW/rangeW) * STRIP_H; // distance of zero-line from bottom
+const baselinePx = PAD + (maxLossW/rangeW) * USE_H; // distance of zero-line from bottom
+// Angka ringkas untuk sumbu dan nilai batang, mengikuti mata uang kartu hero.
+const wkCompact = c => {
+  if(HERO_CURRENCY==='IDR') return fmtMoneyNum(c, true);
+  const v = HERO_CURRENCY==='USD' ? c/100 : c, a = Math.abs(v), sg = v<0?'-':'';
+  if(a>=1e4) return sg + Math.round(a/1e3).toLocaleString(NUM_LOCALE) + 'k';
+  if(a>=1e3) return sg + (a/1e3).toLocaleString(NUM_LOCALE,{maximumFractionDigits:1}) + 'k';
+  return sg + a.toLocaleString(NUM_LOCALE,{maximumFractionDigits: a>=100 ? 0 : (a>=10 ? 1 : 2)});
+};
+// Sumbu-Y tetap (di luar area geser): +maks, 0, -maks, plus garis bantu putus-putus.
+(function(){
+  const ax = document.getElementById('weekAxis'); if(!ax) return;
+  ax.innerHTML = '';
+  if(!weeks.length) return;
+  const ticks = [];
+  if(maxGainW>0) ticks.push({px: baselinePx + maxGainW/rangeW*USE_H, txt: '+'+wkCompact(maxGainW), v: maxGainW});
+  ticks.push({px: baselinePx, txt: '0', v: 0});
+  if(maxLossW>0) ticks.push({px: baselinePx - maxLossW/rangeW*USE_H, txt: wkCompact(-maxLossW), v: -maxLossW});
+  const shown = ticks.filter((t,i)=> t.v!==0 || ticks.every(o=>o===t || Math.abs(o.px-t.px)>=10));
+  shown.forEach(t=>{
+    const s = document.createElement('span');
+    s.textContent = t.txt; s.style.bottom = t.px + 'px';
+    ax.appendChild(s);
+    if(t.v!==0){
+      const g = document.createElement('div');
+      g.className = 'week-grid'; g.style.bottom = t.px + 'px';
+      stripEl.appendChild(g);
+    }
+  });
+})();
 
 const zeroLine = document.createElement('div');
 zeroLine.className = 'week-zero-line';
@@ -2847,7 +2942,7 @@ if(weeks.length){
   const bestW = weeks.reduce((a,w)=>w.pl>a.pl?w:a), worstW = weeks.reduce((a,w)=>w.pl<a.pl?w:a);
   const avgLine = document.createElement('div');
   avgLine.className = 'week-avg-line'; avgLine.title = 'Rata-rata per minggu';
-  avgLine.style.bottom = Math.max(0, Math.min(STRIP_H, baselinePx + avgW/rangeW*STRIP_H)) + 'px';
+  avgLine.style.bottom = Math.max(0, Math.min(STRIP_H, baselinePx + avgW/rangeW*USE_H)) + 'px';
   stripEl.appendChild(avgLine);
   if(sumEl) sumEl.innerHTML = `${perfWkRange ? perfWkRange + ' minggu terakhir' : 'Semua minggu'} (${weeks.length}) \u2022 rata\u00b2 <span class="${avgW>=0?'up':'down'}">${avgW>=0?'+':''}${fmtMoney(avgW)}</span>/minggu \u2022 ${upW} untung, ${weeks.length-upW} tidak` + (weeks.length >= 3 ? ` \u2022 terbaik ${bestW.pl>=0?'+':''}${fmtMoney(bestW.pl)} (W${bestW.minggu}), terburuk ${worstW.pl>=0?'+':''}${fmtMoney(worstW.pl)} (W${worstW.minggu})` : '');
 } else if(sumEl) sumEl.textContent = '';
@@ -2856,16 +2951,21 @@ const weekTooltip = document.createElement('div');
 weekTooltip.className = 'eq-tooltip week-tooltip';
 stripEl.appendChild(weekTooltip);
 
+const bestWk = weeks.length ? weeks.reduce((x,w)=>w.pl>x.pl?w:x) : null, worstWk = weeks.length ? weeks.reduce((x,w)=>w.pl<x.pl?w:x) : null;
 weeks.forEach(w=>{
   const pctTxt = (w.pct===null || w.pct===undefined) ? '\u2013' : `${w.pct>=0?'+':''}${fmtPct(w.pct)}`;
   const wrap = document.createElement('div');
   wrap.className = 'week-bar-wrap';
   const pos = w.pl>=0;
-  const barH = Math.max(2, Math.abs(w.pl)/rangeW * STRIP_H);
+  const barH = Math.max(2, Math.abs(w.pl)/rangeW * USE_H);
   const barStyle = pos
     ? `height:${barH}px;bottom:${baselinePx}px;`
     : `height:${barH}px;top:${STRIP_H-baselinePx}px;`;
-  wrap.innerHTML = `<div class="week-bar ${pos?'':'neg'}" style="${barStyle}"></div>`;
+  // Nilai di ujung batang: semua bila <= 12 minggu, selain itu hanya terbaik dan terburuk.
+  const showVal = weeks.length <= 12 || w === bestWk || w === worstWk;
+  const valStyle = pos ? `bottom:${baselinePx+barH+1}px;` : `top:${STRIP_H-baselinePx+barH+1}px;`;
+  wrap.innerHTML = `<div class="week-bar ${pos?'':'neg'}" style="${barStyle}"></div>` +
+    (showVal && w.pl!==0 ? `<span class="week-val ${pos?'up':'down'}" style="${valStyle}">${wkCompact(w.pl)}</span>` : '');
   wrap.addEventListener('mouseenter', ()=>{
     weekTooltip.style.opacity = 1;
     weekTooltip.style.left = (wrap.offsetLeft + wrap.offsetWidth/2) + 'px';
@@ -2962,17 +3062,143 @@ function renderYearHeat(){
 }
 renderYearHeat();
 
+// Ringkasan mingguan otomatis (v1.1.202): minggu ISO terpilih vs minggu sebelumnya, emosi/trigger paling merugikan,
+// kepatuhan batas harian, dan tiga pertanyaan refleksi (catatan disimpan lokal di 'jurnalWeekRefl', tidak ikut sinkron).
+const WEEK_REFL_Q = ['Apa yang berjalan baik minggu ini, dan ingin kamu ulangi?', 'Kesalahan atau pola apa yang paling mahal minggu ini?', 'Satu aturan atau kebiasaan yang akan kamu jaga minggu depan?'];
+let weekRevIdx = -1;   // indeks pada DATA.weeks; -1 = minggu terbaru
+const weekReflLoad = () => { try{ const o = JSON.parse(localStorage.getItem('jurnalWeekRefl') || '{}'); return o && typeof o === 'object' && !Array.isArray(o) ? o : {}; }catch(e){ return {}; } };
+function weekWorstGroup(list, field){
+  const m = new Map();
+  list.forEach(t => { const k = t[field]; if(!k) return; const g = m.get(k) || { k, n: 0, pl: 0 }; g.n++; g.pl += t.laba; m.set(k, g); });
+  const arr = [...m.values()].filter(g => g.n >= 2 && g.pl < 0).sort((a, b) => a.pl - b.pl);
+  return arr[0] || null;
+}
+function weekDayCompliance(list){
+  const lim = DAY_LIMITS; if(!lim.maxLoss && !lim.maxTrades) return null;
+  const byDay = new Map();
+  list.slice().sort((a,b) => String(a.tanggal_gmt8) < String(b.tanggal_gmt8) ? -1 : 1).forEach(t => { const k = String(t.tanggal_gmt8).slice(0,10); (byDay.get(k) || byDay.set(k, []).get(k)).push(t); });
+  let days = 0, overLoss = 0, overTr = 0;
+  byDay.forEach(ts => { days++; let cum = 0, worst = 0; ts.forEach(t => { cum += t.laba; if(-cum > worst) worst = -cum; }); if(lim.maxLoss && worst > lim.maxLoss) overLoss++; if(lim.maxTrades && ts.length > lim.maxTrades) overTr++; });
+  return { days, overLoss, overTr, lim };
+}
+function renderWeekReview(){
+  const el = document.getElementById('weekReview'); if(!el) return;
+  const W = DATA.weeks || [];
+  if(!W.length){ el.innerHTML = '<div class="section-note" style="text-align:left;">Belum ada transaksi.</div>'; return; }
+  const idx = weekRevIdx < 0 || weekRevIdx >= W.length ? W.length - 1 : weekRevIdx;
+  const w = W[idx], prev = idx > 0 ? W[idx - 1] : null;
+  const list = perfTradesAll(w), pl = list.reduce((x, t) => x + t.laba, 0);
+  const sg = v => (v >= 0 ? '+' : '') + fmtMoney(v);
+  const delta = (a, b, fmt) => b == null ? '' : ` <span class="${a - b >= 0 ? 'up' : 'down'}">${a - b >= 0 ? '\u25b2' : '\u25bc'} ${fmt(Math.abs(a - b))}</span>`;
+  const rng = `${w.from.slice(8,10)}/${w.from.slice(5,7)} \u2013 ${w.to.slice(8,10)}/${w.to.slice(5,7)}`;
+  const cell = (l, v, cls, sub) => `<div class="stat"><div class="stat-lbl">${l}</div><div class="stat-val ${cls || ''}">${v}</div>${sub ? `<span class="approx-rp">${sub}</span>` : ''}</div>`;
+  const pf = v => v === null || v === undefined ? '\u2013' : (v === Infinity ? '\u221e' : v.toFixed(2).replace('.', DEC()));
+  const we = weekWorstGroup(list, 'emosi'), wt = weekWorstGroup(list, 'trigger'), comp = weekDayCompliance(list);
+  const worstTxt = (g, nm) => g ? `${nm} <b>${escapeHtml(g.k)}</b>: ${g.n}\u00d7, <span class="down">${sg(g.pl)}</span>` : `${nm}: belum ada yang merugi berulang`;
+  let compTxt = 'Batas harian belum diatur (Setelan \u2192 Trading).';
+  if(comp){ const bad = [comp.lim.maxLoss && `${comp.overLoss} hari melewati batas rugi`, comp.lim.maxTrades && `${comp.overTr} hari melewati batas transaksi`].filter(Boolean); compTxt = (comp.overLoss + comp.overTr === 0 ? `<span class="up">Patuh</span> di semua ${comp.days} hari trading.` : `<span class="down">${bad.join(', ')}</span> dari ${comp.days} hari trading.`); }
+  const refl = weekReflLoad()[w.from] || [];
+  el.innerHTML = `
+    <div class="wr-nav"><button type="button" class="ledger-reset-btn" id="wrPrev" ${idx <= 0 ? 'disabled' : ''} aria-label="Minggu sebelumnya">\u25c0</button><b>Minggu ${w.minggu} \u00b7 ${rng}</b><button type="button" class="ledger-reset-btn" id="wrNext" ${idx >= W.length - 1 ? 'disabled' : ''} aria-label="Minggu berikutnya">\u25b6</button></div>
+    <div class="stats wr-stats">${cell('PNL', sg(pl), pl >= 0 ? 'up' : 'down', prev ? 'vs minggu lalu' + delta(pl, prev.pl, fmtMoney) : '')}${cell('Transaksi', String(list.length), '', prev ? 'minggu lalu ' + prev.trans : '')}${cell('Win rate', fmtPct(w.winrate), '', prev ? 'minggu lalu ' + fmtPct(prev.winrate) : '')}${cell('Profit factor', pf(w.pf), '', prev ? 'minggu lalu ' + pf(prev.pf) : '')}</div>
+    <ul class="wr-list"><li>${worstTxt(we, 'Emosi paling merugikan')}</li><li>${worstTxt(wt, 'Trigger paling merugikan')}</li><li>Batas harian: ${compTxt}</li></ul>
+    <div class="wr-refl">${WEEK_REFL_Q.map((q, i) => `<label class="wr-q"><span>${i + 1}. ${q}</span><textarea rows="2" maxlength="400" data-i="${i}" placeholder="Tulis singkat..."></textarea></label>`).join('')}<div class="section-note" style="text-align:left;">Catatan refleksi disimpan di perangkat ini saja (tidak ikut sinkron cloud).</div></div>`;
+  el.querySelectorAll('textarea').forEach(ta => { ta.value = refl[+ta.dataset.i] || ''; ta.oninput = () => { const o = weekReflLoad(), a = (o[w.from] || ['', '', '']).slice(0, 3); while(a.length < 3) a.push(''); a[+ta.dataset.i] = ta.value; if(a.every(x => !x)) delete o[w.from]; else o[w.from] = a; try{ localStorage.setItem('jurnalWeekRefl', JSON.stringify(o)); }catch(e){} }; });
+  const go = d => { weekRevIdx = idx + d; renderWeekReview(); };
+  const pv = document.getElementById('wrPrev'), nx = document.getElementById('wrNext');
+  if(pv) pv.onclick = () => go(-1); if(nx) nx.onclick = () => go(1);
+}
+// Metrik risiko Performa (v1.1.197): dihitung dari transaksi tersaring (semua periode).
+function perfRiskData(){
+  const arr = DATA.trades.filter(t => perfPass(t) && /^\d{4}-\d{2}-\d{2}/.test(String(t.tanggal_gmt8 || ''))).slice().sort((a,b) => a.tanggal_gmt8 < b.tanggal_gmt8 ? -1 : (a.tanggal_gmt8 > b.tanggal_gmt8 ? 1 : 0));
+  const wins = arr.filter(t => t.laba > 0), losses = arr.filter(t => t.laba < 0);
+  const avgW = wins.length ? wins.reduce((x,t) => x + t.laba, 0) / wins.length : null;
+  const avgL = losses.length ? -losses.reduce((x,t) => x + t.laba, 0) / losses.length : null;
+  const rr = (avgW !== null && avgL > 0) ? avgW / avgL : null;
+  const wr = arr.length ? wins.length / arr.length : null;
+  const be = rr ? 1 / (1 + rr) : null;              // win rate impas untuk R:R tersebut
+  const expect = arr.length ? arr.reduce((x,t) => x + t.laba, 0) / arr.length : null;
+  let big = null;
+  losses.forEach(t => { if(!big || t.laba < big.laba) big = t; });
+  let bigPct = null;
+  if(big){ let b = 0; const eq = DATA.equity || []; for(let i = 0; i < eq.length; i++){ if(String(eq[i][0]) < String(big.tanggal_gmt8)) b = eq[i][1]; else break; } if(b > 0) bigPct = -big.laba / b; }
+  const lotOf = t => { const v = parseFloat(t.lot); return v > 0 ? v : 0; };
+  let after = 0, up = 0;
+  for(let i = 1; i < arr.length; i++){ if(!(arr[i-1].laba < 0)) continue; const p = lotOf(arr[i-1]), c = lotOf(arr[i]); if(!(p > 0 && c > 0)) continue; after++; if(c >= p * 1.25) up++; }
+  return { n: arr.length, avgW, avgL, rr, wr, be, expect, big, bigPct, after, up };
+}
+function renderPerfRisk(){
+  const el = document.getElementById('perfRisk'); if(!el) return;
+  const r = perfRiskData();
+  if(!r.n){ el.innerHTML = '<div class="section-note" style="text-align:left;">Belum ada transaksi.</div>'; return; }
+  const f2 = v => v.toFixed(2).replace('.', DEC());
+  const c = (l, v, cls, sub) => `<div class="stat"><div class="stat-lbl">${l}</div><div class="stat-val ${cls || ''}">${v}</div>${sub ? `<span class="approx-rp">${sub}</span>` : ''}</div>`;
+  const rrOk = r.rr !== null && r.wr !== null && r.wr >= r.be;
+  const upPct = r.after ? r.up / r.after : null;
+  el.innerHTML =
+    c('Risk:reward aktual', r.rr === null ? '\u2014' : '1 : ' + f2(r.rr), r.rr === null ? '' : (r.rr >= 1 ? 'up' : 'down'), r.rr === null ? 'Butuh transaksi untung dan rugi' : `rata\u00b2 untung ${fmtMoney(r.avgW)} / rugi ${fmtMoney(r.avgL)}`) +
+    c('Win rate impas', r.be === null ? '\u2014' : fmtPct(r.be), '', r.be === null ? '' : `Win rate kamu ${fmtPct(r.wr)} \u2022 ${rrOk ? 'di atas impas' : 'di bawah impas'}`) +
+    c('Expectancy / transaksi', (r.expect >= 0 ? '+' : '') + fmtMoney(r.expect), r.expect >= 0 ? 'up' : 'down', `${r.n} transaksi`) +
+    c('Rugi terbesar', r.big ? '-' + fmtMoney(-r.big.laba) : '\u2014', r.big ? 'down' : '', r.big ? (r.bigPct !== null ? `${fmtPct(r.bigPct)} dari saldo sebelumnya` : 'saldo sebelumnya tidak tersedia') : 'Belum ada transaksi rugi') +
+    c('Lot naik setelah rugi', upPct === null ? '\u2014' : fmtPct(upPct), upPct !== null && upPct >= 0.3 ? 'down' : '', upPct === null ? 'Butuh data lot berurutan' : `${r.up} dari ${r.after} entri setelah rugi (lot \u2265 1,25\u00d7)`);
+}
+// Perbandingan dua periode di Performa (v1.1.198): memakai tabel yang sama dengan Laporan, disaring oleh filter Performa.
+const PERF_CMP_PRESETS = CMP_PRESETS.filter(p => p.value !== 'kustom');
+const perfCmpSel = { A:'bulan-lalu', B:'bulan-ini' };
+try{ ['A','B'].forEach(k => { const v = localStorage.getItem('jurnalPerfCmp' + k); if(PERF_CMP_PRESETS.some(p => p.value === v)) perfCmpSel[k] = v; }); }catch(e){}
+function renderPerfCmp(){
+  const el = document.getElementById('perfCmp'), noteEl = document.getElementById('perfCmpNote'); if(!el) return;
+  const rA = cmpRange('A', perfCmpSel.A), rB = cmpRange('B', perfCmpSel.B);
+  const pick = r => r.empty ? [] : DATA.trades.filter(t => { const tt = parseGmt8(t.tanggal_gmt8); return tt >= r.start && tt <= r.end && perfPass(t); });
+  const r = cmpBuild(rA, rB, pick(rA), pick(rB));
+  el.innerHTML = r.html; if(noteEl) noteEl.textContent = r.note;
+}
+// Rincian per akun di tampilan Total (v1.1.198): laba, win rate, PF, drawdown tiap akun, dari transaksi yang lolos filter Performa.
+function renderPerfAcct(){
+  const sec = document.getElementById('perfAcctSec'); if(!sec) return;
+  sec.hidden = !IS_TOTAL; if(!IS_TOTAL) return;
+  const el = document.getElementById('perfAcct'); if(!el) return;
+  const by = new Map();
+  DATA.trades.filter(perfPass).forEach(t => { const k = t.akun || '?'; if(!by.has(k)) by.set(k, []); by.get(k).push(t); });
+  if(!by.size){ el.innerHTML = '<div class="section-note" style="text-align:left;">Belum ada transaksi.</div>'; return; }
+  const rows = [...by.entries()].map(([name, ts]) => {
+    ts.sort((a,b) => String(a.tanggal_gmt8) < String(b.tanggal_gmt8) ? -1 : 1);
+    let gw = 0, gl = 0, w = 0, c = 0, pk = 0, dd = 0;
+    ts.forEach(t => { if(t.laba > 0){ gw += t.laba; w++; } else if(t.laba < 0) gl -= t.laba; c += t.laba; pk = Math.max(pk, c); dd = Math.max(dd, pk - c); });
+    return { name, n: ts.length, pl: c, wr: w / ts.length, pf: gl > 0 ? gw / gl : (gw > 0 ? Infinity : null), dd };
+  }).sort((a,b) => b.pl - a.pl);
+  const pf = v => v === null ? '\u2013' : (v === Infinity ? '\u221e' : v.toFixed(2).replace('.', DEC()));
+  el.innerHTML = `<div class="lap-tbl-scroll"><table class="lap-cmp-tbl perf-acct-tbl"><thead><tr><th>Akun</th><th>Transaksi</th><th>Laba</th><th>Win rate</th><th>PF</th><th>Max DD</th></tr></thead><tbody>` +
+    rows.map(r => `<tr><td class="lbl">${escapeHtml(r.name)}</td><td>${r.n}</td><td class="${r.pl>=0?'up':'down'}">${r.pl>=0?'+':''}${fmtMoney(r.pl)}</td><td>${fmtPct(r.wr)}</td><td>${pf(r.pf)}</td><td class="down">${r.dd>0?'-'+fmtMoney(r.dd):'\u2013'}</td></tr>`).join('') + `</tbody></table></div>`;
+}
+// Heatmap jam \u00d7 hari di Performa (v1.1.199): waktu buka (GMT+8), bin 2 jam, dari transaksi yang lolos filter Performa (semua periode).
+let perfHeat2Mode = 'pnl';
+function renderPerfHeat2(){
+  const el = document.getElementById('perfHeat2'), info = document.getElementById('perfHeat2Info'); if(!el || !info) return;
+  const cell = {}; let used = 0, total = 0;
+  DATA.trades.forEach(t => {
+    if(!perfPass(t)) return; total++;
+    if(!t.waktu_buka) return;
+    const d = new Date(parseGmt8(t.waktu_buka) + 8*3600000); if(isNaN(d)) return;
+    const k = ((d.getUTCDay()+6)%7)*12 + Math.floor(d.getUTCHours()/2);
+    const c = cell[k] || (cell[k] = {n:0, pl:0, win:0, list:[]});
+    c.n++; c.pl += t.laba; if(t.laba > 0) c.win++; c.list.push(t); used++;
+  });
+  drawHeatGrid({cell, used, total}, el, info, perfHeat2Mode, m => { perfHeat2Mode = m; }, renderPerfHeat2);
+}
 // Filter Performa: arah (Semua/Beli/Jual) dan sesi pasar. Menghitung ulang kartu bulanan dan daftar mingguan.
 (function(){
   const el = document.getElementById('perfArahTabs'); if(!el) return;
   const note = document.getElementById('perfArahNote'), sEl = document.getElementById('perfSesiTabs');
   const upd = () => {
     if(!note) return;
-    const bag = [perfArah && `posisi ${perfArah}`, perfSesi && `sesi ${perfSesi} (menurut waktu buka)`].filter(Boolean);
+    const pl = (f, n) => perfPsy[f] && `${n} ${perfPsy[f] === '-' ? 'belum dicatat' : perfPsy[f]}`;
+    const bag = [perfArah && `posisi ${perfArah}`, perfSesi && `sesi ${perfSesi} (menurut waktu buka)`, pl('emosi','emosi'), pl('trigger','trigger'), pl('jenis_entry','jenis entry')].filter(Boolean);
     note.hidden = !bag.length;
     note.textContent = bag.length ? `Hanya ${bag.join(', ')}. Penilaian, win rate dan profit factor dihitung dari transaksi tersaring saja; % thd saldo tetap memakai saldo seluruh akun.` + (perfSesi ? ' Transaksi tanpa waktu buka tidak ikut.' : '') : '';
   };
-  const redraw = () => { upd(); renderMonths(); renderWeeks(); renderYearHeat(); };
+  const redraw = () => { upd(); renderMonths(); renderWeeks(); renderYearHeat(); renderPerfRisk(); renderPerfAcct(); renderPerfCmp(); renderPerfHeat2(); if(window.renderSplitArah) window.renderSplitArah(); };
+  window.perfRedraw = redraw;
   const save = (k, v) => { try{ if(v) localStorage.setItem(k, v); else localStorage.removeItem(k); }catch(e){} };
   buildPeriodChips(el, { items:[{key:'',label:'Semua arah'},{key:'Beli',label:'Beli'},{key:'Jual',label:'Jual'}], active: perfArah, onSelect: k => { perfArah = k; save('jurnalPerfArah', k); redraw(); } });
   if(sEl) buildPeriodChips(sEl, { items:[{key:'',label:'Semua sesi'}, ...LAP_SESSIONS.map(x => ({key:x[0], label:x[0]}))], active: perfSesi, onSelect: k => { perfSesi = k; save('jurnalPerfSesi', k); redraw(); } });
@@ -2980,6 +3206,7 @@ renderYearHeat();
   if(wEl) buildPeriodChips(wEl, { items:[{key:'12',label:'12 minggu'},{key:'26',label:'26 minggu'},{key:'0',label:'Semua'}], active: String(perfWkRange), onSelect: k => { perfWkRange = +k; save('jurnalPerfWeeks', +k ? String(k) : ''); renderWeeks(); } });
   upd();
 })();
+renderPerfRisk(); renderPerfAcct(); renderPerfCmp(); renderPerfHeat2(); renderWeekReview();
 
 // ---------- Records ----------
 document.getElementById('maxddNote').textContent = convCentText(DATA.maxdd_note);
@@ -2995,15 +3222,20 @@ DATA.dashboard.top_loss.forEach(t=>{
 });
 
 // ---------- Split arah: Beli vs Jual (pie chart) ----------
+// Rentang kartu Split arah (v1.1.200): 'all' | 'y' (tahun ini) | '90' | '30' hari; disimpan di 'jurnalSplitRange'.
+let splitRange = 'all'; try{ const v = localStorage.getItem('jurnalSplitRange'); if(['all','y','90','30'].includes(v)) splitRange = v; }catch(e){}
 function renderSplitArah(){
   const centerEl = document.getElementById('splitPieCenter');
   const legendEl = document.getElementById('splitPieLegend');
   const arcBeli = document.getElementById('splitPieBeli');
   const arcJual = document.getElementById('splitPieJual');
   if(!centerEl || !legendEl || !arcBeli || !arcJual) return;
+  // v1.1.200: mengikuti filter sesi/psikologi Performa dan rentang waktu kartu ini.
+  const cutoff = (() => { if(splitRange === 'all') return ''; if(splitRange === 'y') return GMT8_NOW.y + '-01-01'; const dt = new Date(Date.UTC(GMT8_NOW.y, GMT8_NOW.m, GMT8_NOW.d) - (+splitRange - 1) * 86400000); return dt.toISOString().slice(0,10); })();
+  const splitList = DATA.trades.filter(t => perfPassBase(t) && (!cutoff || String(t.tanggal_gmt8 || '').slice(0,10) >= cutoff));
   const groups = { Beli: [], Jual: [] };
-  DATA.trades.forEach(t=>{ if(groups[t.arah]) groups[t.arah].push(t); });
-  const totalTrans = DATA.trades.length;
+  splitList.forEach(t=>{ if(groups[t.arah]) groups[t.arah].push(t); });
+  const totalTrans = groups.Beli.length + groups.Jual.length;
 
   function stats(list){
     const n = list.length;
@@ -3011,7 +3243,13 @@ function renderSplitArah(){
     const losses = list.filter(t=>t.laba<0);
     const pl = list.reduce((s,t)=>s+t.laba,0);
     const winrate = n ? wins.length/n : 0;
-    return {n, wins: wins.length, losses: losses.length, winrate, pl};
+    const gw = wins.reduce((x,t)=>x+t.laba,0), gl = -losses.reduce((x,t)=>x+t.laba,0);
+    const lots = list.map(t=>parseFloat(t.lot)).filter(v=>v>0);
+    return {n, wins: wins.length, losses: losses.length, winrate, pl,
+      pf: gl > 0 ? gw / gl : (gw > 0 ? Infinity : null), exp: n ? pl / n : null,
+      avgW: wins.length ? gw / wins.length : null, avgL: losses.length ? gl / losses.length : null,
+      bigW: wins.length ? Math.max(...wins.map(t=>t.laba)) : null, bigL: losses.length ? -Math.min(...losses.map(t=>t.laba)) : null,
+      lot: lots.length ? lots.reduce((x,y)=>x+y,0) / lots.length : null};
   }
 
   const sBeli = stats(groups.Beli), sJual = stats(groups.Jual);
@@ -3045,6 +3283,40 @@ function renderSplitArah(){
     `;
   }).join('');
 
+  // Tabel perbandingan + kesimpulan (v1.1.200)
+  { const tb = document.getElementById('splitTbl'), vd = document.getElementById('splitVerdict');
+    const f2 = v => v.toFixed(2).replace('.', DEC()), mny = v => fmtMoney(v), sg = v => (v >= 0 ? '+' : '') + fmtMoney(v);
+    const rows = [
+      ['Transaksi', s => s.n, v => String(v), 0],
+      ['Laba bersih', s => s.n ? s.pl : null, sg, 1],
+      ['Win rate', s => s.n ? s.winrate : null, v => fmtPct(v), 1],
+      ['Profit factor', s => s.pf, v => v === Infinity ? '\u221e' : f2(v), 1],
+      ['Expectancy', s => s.exp, sg, 1],
+      ['Rata\u00b2 menang', s => s.avgW, v => '+' + mny(v), 1],
+      ['Rata\u00b2 rugi', s => s.avgL, v => '-' + mny(v), -1],
+      ['Untung terbesar', s => s.bigW, v => '+' + mny(v), 1],
+      ['Rugi terbesar', s => s.bigL, v => '-' + mny(v), -1],
+      ['Lot rata\u00b2', s => s.lot, v => f2(v), 0]
+    ];
+    let wB = 0, wJ = 0;
+    const body = rows.map(([lbl, get, fmt, dir]) => {
+      const a = get(sBeli), b = get(sJual); let cA = '', cB = '';
+      if(dir && a != null && b != null && a !== b){ const aBetter = dir > 0 ? a > b : a < b; if(aBetter) cA = ' best'; else cB = ' best'; if(['Laba bersih','Win rate','Profit factor','Expectancy'].includes(lbl)){ if(aBetter) wB++; else wJ++; } }
+      return `<tr><td class="lbl">${lbl}</td><td class="${cA.trim()}">${a == null ? '\u2014' : escapeHtml(fmt(a))}</td><td class="${cB.trim()}">${b == null ? '\u2014' : escapeHtml(fmt(b))}</td></tr>`;
+    }).join('');
+    if(tb) tb.innerHTML = totalTrans ? `<div class="lap-tbl-scroll"><table class="lap-cmp-tbl split-cmp-tbl"><thead><tr><th></th><th><button type="button" class="split-open" data-arah="Beli">Beli</button></th><th><button type="button" class="split-open" data-arah="Jual">Jual</button></th></tr></thead><tbody>${body}</tbody></table></div>` : '<div class="section-note" style="text-align:left;">Belum ada transaksi pada rentang ini.</div>';
+    if(vd){
+      let msg = '';
+      if(sBeli.n && sJual.n){
+        const small = (sBeli.n < 20 || sJual.n < 20) ? ' Salah satu arah kurang dari 20 transaksi, jadi belum cukup untuk disimpulkan.' : '';
+        if(wB === wJ) msg = 'Beli dan Jual seimbang pada laba, win rate, profit factor, dan expectancy.' + small;
+        else { const w = wB > wJ ? 'Beli' : 'Jual', ws = w === 'Beli' ? sBeli : sJual, ls = w === 'Beli' ? sJual : sBeli; msg = `${w} lebih unggul di ${Math.max(wB, wJ)} dari 4 ukuran utama (expectancy ${sg(ws.exp)} vs ${sg(ls.exp)} per transaksi).` + small; }
+      } else if(totalTrans) msg = 'Hanya satu arah yang punya transaksi pada rentang ini, jadi belum ada pembanding.';
+      vd.textContent = msg;
+    }
+    if(tb) tb.onclick = e => { const b = e.target.closest('.split-open'); if(!b || !window.openListModal) return; const a = b.dataset.arah; window.openListModal('Posisi ' + a, groups[a]); };
+  }
+
   // ---------- Interaksi hover/klik: tampilkan detail arah di tengah donut ----------
   const detailByArah = { Beli: sBeli, Jual: sJual };
   const pctByArah = { Beli: pctBeli, Jual: pctJual };
@@ -3061,7 +3333,7 @@ function renderSplitArah(){
     centerEl.innerHTML = `
       <div class="spc-num" style="color:${colorByArah[arah]}">${s.n}</div>
       <div class="spc-lbl">${arah} &middot; ${pct.toFixed(1)}%</div>
-      <div class="spc-sub">${plSign}${fmtMoney(s.pl)}<br>WR ${fmtPct(s.winrate)} &middot; ${s.wins}W/${s.losses}L</div>
+      <div class="spc-sub">${plSign}${fmtMoney(s.pl)}<br>WR ${fmtPct(s.winrate)}<br>${s.wins}W / ${s.losses}L</div>
     `;
   }
   function setHighlight(arah){
@@ -3107,6 +3379,10 @@ function renderSplitArah(){
 }
 renderSplitArah();
 window.renderSplitArah = renderSplitArah;
+(function(){
+  const el = document.getElementById('splitRange'); if(!el) return;
+  buildPeriodChips(el, { items:[{key:'all',label:'Semua'},{key:'y',label:'Tahun ini'},{key:'90',label:'90 hari'},{key:'30',label:'30 hari'}], active: splitRange, onSelect: k => { splitRange = k; try{ localStorage.setItem('jurnalSplitRange', k); }catch(e){} renderSplitArah(); } });
+})();
 
 // ---------- Money management ----------
 const mm = DATA.dashboard.mm;
@@ -3264,11 +3540,13 @@ function renderDepositLog(){
     <div class="mm-cell"><div class="stat-lbl">Total deposit</div><div class="stat-val up">${fmtMoney(dep.total_deposit)}</div></div>
     <div class="mm-cell"><div class="stat-lbl">Total penarikan</div><div class="stat-val down">${fmtMoney(dep.total_penarikan)}</div></div>
     <div class="mm-cell"><div class="stat-lbl">Kompensasi MC</div><div class="stat-val" style="color:var(--gold)">${fmtMoney(dep.total_mc)}</div></div>
+    ${dep.total_arsip ? `<div class="mm-cell"><div class="stat-lbl">Saldo awal arsip</div><div class="stat-val ${dep.total_arsip>=0?'up':'down'}">${dep.total_arsip>=0?'+':''}${fmtMoney(dep.total_arsip)}</div></div>` : ''}
     <div class="mm-cell highlight"><div class="stat-lbl">Modal bersih</div><div class="stat-val">${fmtMoney(dep.modal_bersih)}</div></div>
   `;
   const tipeTag = t => {
     if(t==='Deposit') return `<span class="tag deposit">Deposit</span>`;
     if(t==='Penarikan') return `<span class="tag penarikan">Penarikan</span>`;
+    if(t==='Arsip') return `<span class="tag kompensasi">Arsip</span>`;
     return `<span class="tag kompensasi">Kompensasi MC</span>`;
   };
   const q = document.getElementById('depositSearchBox').value.trim().toLowerCase();
@@ -3363,7 +3641,7 @@ try{ const v = localStorage.getItem('jurnalBigLossPct'); if(v==='off') bigLossPc
 let bigLossThreshold = null;
 function recomputeBigLoss(){
   bigLossThreshold = (bigLossPct>0 && sortedLosses.length) ? sortedLosses[Math.max(0, Math.ceil(sortedLosses.length*bigLossPct/100)-1)] : null;
-  document.getElementById('tradeCount').textContent = allTrades.length + ' transaksi tercatat' + (bigLossThreshold!==null ? ` · garis merah = rugi ${String(bigLossPct).replace('.',',')}% terbesar` : '');
+  document.getElementById('tradeCount').textContent = allTrades.length + ' transaksi tercatat' + (bigLossThreshold!==null ? ` · garis merah = rugi ${String(bigLossPct).replace('.', DEC())}% terbesar` : '');
 }
 
 recomputeBigLoss();
@@ -3406,13 +3684,13 @@ function saveLedgerState(f){
 window.addEventListener('pagehide', ()=>{
   try{ const v = JSON.parse(sessionStorage.getItem(LEDGER_KEY)||'null'), sc = document.querySelector('.ledger-scroll'); if(v && sc){ v.st = sc.scrollTop; sessionStorage.setItem(LEDGER_KEY, JSON.stringify(v)); } }catch(e){}
 });
-function hasNote(t){ return !!(t.trigger || t.trigger_exit || t.emosi || t.jenis_entry); }
+function hasNote(t){ return !!(t.trigger || t.trigger_exit || t.emosi || t.jenis_entry || t.setup); }
 function renderTrades(){
   const q = document.getElementById('searchBox').value.trim().toLowerCase();
   const arah = CS.get('csw_filterArah');
   const hasil = CS.get('csw_filterHasil');
   const catatan = CS.get('csw_filterCatatan');
-  const fEmosi = CS.get('csw_filterEmosi'), fTrig = CS.get('csw_filterTrigger'), fJenis = CS.get('csw_filterJenis'), fSesi = CS.get('csw_filterSesi'), fBerita = CS.get('csw_filterBerita');
+  const fEmosi = CS.get('csw_filterEmosi'), fTrig = CS.get('csw_filterTrigger'), fJenis = CS.get('csw_filterJenis'), fSetup = CS.get('csw_filterSetup'), fLanggar = CS.get('csw_filterLanggar'), fSesi = CS.get('csw_filterSesi'), fBerita = CS.get('csw_filterBerita');
   const fromV = DTP.get('ledgerFrom');
   const toV = DTP.get('ledgerTo');
   const rs = fromV ? parseGmt8(fromV+'T00:00:00') : null;
@@ -3436,6 +3714,9 @@ function renderTrades(){
     if(fEmosi && t.emosi!==fEmosi) return false;
     if(fTrig && t.trigger!==fTrig) return false;
     if(fJenis && t.jenis_entry!==fJenis) return false;
+    if(fSetup && t.setup!==fSetup) return false;
+    if(fLanggar==='melanggar' && !isLanggar(t)) return false;
+    if(fLanggar==='patuh' && isLanggar(t)) return false;
     if(fSesi!=='' && (!t.waktu_buka || lapSessionIdx(new Date(parseGmt8(t.waktu_buka) + 8*3600000).getUTCHours()) !== +fSesi)) return false;
     if(fBerita){
       const ms = parseGmt8(t.waktu_buka || t.tanggal_gmt8), cv = window.KAL && window.KAL.cover;
@@ -3475,7 +3756,7 @@ function renderTrades(){
   document.getElementById('ledgerSum').textContent = `Jumlah: ${fmtMoney(sum)}`;
   const wn = filtered.filter(t=>t.laba>0), ls = filtered.filter(t=>t.laba<0);
   const gw = wn.reduce((a,t)=>a+t.laba,0), gl = ls.reduce((a,t)=>a+t.laba,0), stEl = document.getElementById('ledgerStats');
-  if(stEl) stEl.textContent = filtered.length ? `Seluruh hasil filter: ${wn.length} menang · ${ls.length} rugi · WR ${(wn.length/filtered.length*100).toFixed(1).replace('.',',')}%` + (wn.length ? ` · rata-rata menang ${fmtMoney(gw/wn.length)}` : '') + (ls.length ? ` · rata-rata rugi ${fmtMoney(gl/ls.length)}` + (wn.length ? ` · PF ${(gw/Math.abs(gl)).toFixed(2).replace('.',',')}` : '') : '') : '';
+  if(stEl) stEl.textContent = filtered.length ? `Seluruh hasil filter: ${wn.length} menang · ${ls.length} rugi · WR ${(wn.length/filtered.length*100).toFixed(1).replace('.', DEC())}%` + (wn.length ? ` · rata-rata menang ${fmtMoney(gw/wn.length)}` : '') + (ls.length ? ` · rata-rata rugi ${fmtMoney(gl/ls.length)}` + (wn.length ? ` · PF ${(gw/Math.abs(gl)).toFixed(2).replace('.', DEC())}` : '') : '') : '';
   lastFilteredTrades = filtered;
   { const ss = document.getElementById('ledgerSortSel'); if(ss){ const v = currentSort.key + ':' + currentSort.dir; ss.value = [...ss.options].some(o=>o.value===v) ? v : ''; } }
   const moreBtn = document.getElementById('ledgerMoreBtn');
@@ -3562,7 +3843,7 @@ document.getElementById('ledgerResetBtn').addEventListener('click', ()=>{
   CS.set('csw_filterArah', '');
   CS.set('csw_filterHasil', '');
   CS.set('csw_filterCatatan', '');
-  ['csw_filterEmosi','csw_filterTrigger','csw_filterJenis','csw_filterSesi','csw_filterBerita'].forEach(id=>CS.set(id, ''));
+  ['csw_filterEmosi','csw_filterTrigger','csw_filterJenis','csw_filterSetup','csw_filterLanggar','csw_filterSesi','csw_filterBerita'].forEach(id=>CS.set(id, ''));
   DTP.set('ledgerFrom', '');
   DTP.set('ledgerTo', '');
   document.getElementById('ledgerLotMin').value = '';
@@ -3636,14 +3917,14 @@ document.getElementById('ledgerResetBtn').addEventListener('click', ()=>{
 })();
 document.getElementById('ledgerExportBtn').addEventListener('click', ()=>{
   if(!lastFilteredTrades.length){ return; }
-  const header = ['Tanggal tutup','ID posisi','Arah','Lot','Buka','Tutup','Pips','Laba (cent)','Tanggal tutup (GMT+8)','Waktu buka (GMT+8)','Trigger entry','Trigger exit','Emosi','Jenis entry','Catatan'];
+  const header = ['Tanggal tutup','ID posisi','Arah','Lot','Buka','Tutup','Pips','Laba (cent)','Tanggal tutup (GMT+8)','Waktu buka (GMT+8)','Trigger entry','Trigger exit','Emosi','Jenis entry','Setup','Konfirmasi setup','Aturan dilanggar','Catatan'];
   const csvEscape = v => {
     const s = String(v);
     return /[",\n;]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
   };
   const rows = lastFilteredTrades.map(t => [
     fmtDateTime(t.tanggal), t.id, t.arah, t.lot, t.buka.toFixed(2), t.tutup.toFixed(2), t.pips.toFixed(1), t.laba.toFixed(2),
-    String(t.tanggal_gmt8||'').replace('T',' '), String(t.waktu_buka||'').replace('T',' '), t.trigger||'', t.trigger_exit||'', t.emosi||'', t.jenis_entry||'', t.catatan||''
+    String(t.tanggal_gmt8||'').replace('T',' '), String(t.waktu_buka||'').replace('T',' '), t.trigger||'', t.trigger_exit||'', t.emosi||'', t.jenis_entry||'', t.setup||'', t.konfirmasi ? 'Ya' : '', (t.langgar||[]).join(' | '), t.catatan||''
   ].map(csvEscape).join(','));
   const csv = '\uFEFF' + [header.join(','), ...rows].join('\n');
   const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
@@ -3681,7 +3962,7 @@ const CSV_ALIAS = {
   id:['idposisi','id','ticket','position','posisi'], arah:['arah','type','tipe','direction'],
   lot:['lot','volume','size'], buka:['buka','hargabuka','openprice'], tutup:['tutup','hargatutup','closeprice'],
   pips:['pips'], laba:['labacent','laba','profit'], wb:['waktubukagmt8','waktubuka','opentime'],
-  trigger:['triggerentry','trigger'], trigger_exit:['triggerexit'], emosi:['emosi'], jenis_entry:['jenisentry'], catatan:['catatan','catatanbebas','note','notes']
+  trigger:['triggerentry','trigger'], trigger_exit:['triggerexit'], emosi:['emosi'], jenis_entry:['jenisentry'], setup:['setup','strategi'], konfirmasi:['konfirmasisetup','konfirmasi'], langgar:['aturandilanggar','langgar','pelanggaran'], catatan:['catatan','catatanbebas','note','notes']
 };
 function csvToTrades(text){
   const rows = parseCsvText(text);
@@ -3734,7 +4015,7 @@ function csvToTrades(text){
     if(!isFinite(laba)) laba = round2(pips * lot * LOT_K);
     fresh.push({ id, arah, lot, buka, tutup, pips, laba,
       tanggal: new Date(new Date(g8 + 'Z').getTime() - 5*3600*1000).toISOString().slice(0,19), tanggal_gmt8: g8,
-      waktu_buka: pdt(get(r,'wb')), trigger: get(r,'trigger'), trigger_exit: get(r,'trigger_exit'), emosi: get(r,'emosi'), jenis_entry: get(r,'jenis_entry'), ...(get(r,'catatan') ? { catatan: get(r,'catatan').slice(0,1000) } : {}) });
+      waktu_buka: pdt(get(r,'wb')), trigger: get(r,'trigger'), trigger_exit: get(r,'trigger_exit'), emosi: get(r,'emosi'), jenis_entry: get(r,'jenis_entry'), ...(get(r,'setup') ? { setup: get(r,'setup').slice(0,60) } : {}), ...(/^(ya|y|1|true|yes)$/i.test(get(r,'konfirmasi')||'') ? { konfirmasi: true } : {}), ...(normLanggar((get(r,'langgar')||'').split(/\s*[|;]\s*/)).length ? { langgar: normLanggar((get(r,'langgar')||'').split(/\s*[|;]\s*/)) } : {}), ...(get(r,'catatan') ? { catatan: get(r,'catatan').slice(0,1000) } : {}) });
   });
   return { fresh, dup, bad, assumed: col.gmt8===undefined && !namedFmt, namedFmt };
 }
@@ -3780,7 +4061,7 @@ window.renderTrades = renderTrades;
   const note = document.getElementById('optNote');
   const save = () => { try{ localStorage.setItem('jurnalCustomOpts', JSON.stringify(CUSTOM_OPTS)); return true; }catch(e){ return false; } };
   function render(){
-    [['trigger','optTriggerChips',TRIGGER_BASE],['exit','optExitChips',EXIT_BASE]].forEach(([k,id,base])=>{
+    [['trigger','optTriggerChips',TRIGGER_BASE],['exit','optExitChips',EXIT_BASE],['setup','optSetupChips',SETUP_BASE]].forEach(([k,id,base])=>{
       document.getElementById(id).innerHTML = base.map(v=>`<span class="opt-chip">${escapeHtml(v)}</span>`).join('') +
         CUSTOM_OPTS[k].map((v,i)=>`<span class="opt-chip custom">${escapeHtml(v)}<button type="button" data-k="${k}" data-i="${i}" aria-label="Hapus ${escapeHtml(v)}">\u00D7</button></span>`).join('');
     });
@@ -3796,7 +4077,8 @@ window.renderTrades = renderTrades;
   }
   document.getElementById('optTriggerAdd').addEventListener('click', ()=>add('trigger','optTriggerIn',TRIGGER_BASE));
   document.getElementById('optExitAdd').addEventListener('click', ()=>add('exit','optExitIn',EXIT_BASE));
-  [['optTriggerIn','optTriggerAdd'],['optExitIn','optExitAdd']].forEach(([i,b])=>document.getElementById(i).addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); document.getElementById(b).click(); } }));
+  document.getElementById('optSetupAdd').addEventListener('click', ()=>add('setup','optSetupIn',SETUP_BASE));
+  [['optTriggerIn','optTriggerAdd'],['optExitIn','optExitAdd'],['optSetupIn','optSetupAdd']].forEach(([i,b])=>document.getElementById(i).addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); document.getElementById(b).click(); } }));
   sec.addEventListener('click', e=>{
     const b = e.target.closest('.opt-chip button'); if(!b) return;
     const k = b.dataset.k, i = +b.dataset.i, v = CUSTOM_OPTS[k][i]; if(v == null) return;
@@ -3893,11 +4175,11 @@ window.renderTrades = renderTrades;
   if(accIn) accIn.addEventListener('change', () => {
     const hex = accIn.value.toUpperCase(), sc = SCHEMES.find(x=>x.id===scheme), ink = sc[isLight()?'l':'c'][0];
     const r = ratio(hex, ink);
-    if(r < 4.5){ say('Aksen ditolak: kontras ' + r.toFixed(1).replace('.',',') + ':1 terhadap latar (minimal 4,5:1). Pilih warna yang lebih ' + (isLight() ? 'gelap' : 'terang') + '.', true); paintAccent(); return; }
+    if(r < 4.5){ say('Aksen ditolak: kontras ' + r.toFixed(1).replace('.', DEC()) + ':1 terhadap latar (minimal 4,5:1). Pilih warna yang lebih ' + (isLight() ? 'gelap' : 'terang') + '.', true); paintAccent(); return; }
     const near = [sc[isLight()?'l':'c'][2], sc[isLight()?'l':'c'][3]].concat(cb ? [isLight() ? '#0A58C0' : '#4DA3FF', isLight() ? '#B04400' : '#FF9F43'] : []);
     if(near.some(c => dist(hex, c.toUpperCase()) < 70)){ say('Aksen ditolak: terlalu mirip warna untung/rugi, jadi mudah tertukar dengan hasil trading.', true); paintAccent(); return; }
     accents[modeKey()] = [hex, mix(hex, ink, 0.3)];
-    saveAccent(); say('Aksen ' + hex + ' dipakai (kontras ' + r.toFixed(1).replace('.',',') + ':1).'); paintAccent(); repaintCharts();
+    saveAccent(); say('Aksen ' + hex + ' dipakai (kontras ' + r.toFixed(1).replace('.', DEC()) + ':1).'); paintAccent(); repaintCharts();
   });
   const accReset = document.getElementById('accentReset');
   if(accReset) accReset.addEventListener('click', () => { delete accents[modeKey()]; saveAccent(); say('Aksen kembali ke bawaan skema.'); paintAccent(); repaintCharts(); });
@@ -4123,6 +4405,8 @@ const SETTINGS_VALIDATORS = {
   jurnalSidebar: v => v==='collapsed' || v==='expanded',
   jurnalHideNum: v => v==='0' || v==='1',
   jurnalFontSize: v => v==='kecil' || v==='besar',
+  jurnalNumFmt: v => v==='id' || v==='en',
+  jurnalNotif: v => { try{ const o = JSON.parse(v); return !!o && typeof o === 'object' && !Array.isArray(o) && Object.keys(o).every(k => ['event','limit','note'].includes(k) && (o[k] === 0 || o[k] === 1)); }catch(e){ return false; } },
   jurnalCustomOpts: v => { try{ const o = JSON.parse(v); return !!o && typeof o==='object' && !Array.isArray(o) && ['trigger','exit'].every(k => o[k]===undefined || (Array.isArray(o[k]) && o[k].length<=20 && o[k].every(x => typeof x==='string' && x.length>0 && x.length<=40))); }catch(e){ return false; } },
   'kal-prefs': v => { try{ const o = JSON.parse(v); return !!o && typeof o==='object' && !Array.isArray(o); }catch(e){ return false; } },
   'kal-notes': v => { try{ const o = JSON.parse(v); return !!o && typeof o==='object' && !Array.isArray(o) && Object.values(o).every(x => x && typeof x==='object' && Object.values(x).every(y => typeof y==='string' && y.length<=60)); }catch(e){ return false; } },
@@ -4139,9 +4423,10 @@ function refreshStorageInfo(){
   try{
     for(let i=0;i<localStorage.length;i++){ const k = localStorage.key(i), n = k.length + (localStorage.getItem(k)||'').length; chars += n; if(k===JOURNAL_LS_KEY) mine = n; }
   }catch(e){ t.textContent = 'Penyimpanan lokal tidak bisa dibaca di browser ini.'; return; }
-  const kb = c => (c*2/1024).toLocaleString('id-ID',{maximumFractionDigits:1}) + ' KB', pct = Math.min(100, chars*2/(5*1024*1024)*100);
-  t.textContent = `${DATA.trades.length.toLocaleString('id-ID')} transaksi dan ${DATA.deposit.log.length.toLocaleString('id-ID')} baris deposit. Data jurnal ≈ ${kb(mine)}; seluruh penyimpanan lokal ≈ ${kb(chars)} dari batas kira-kira 5 MB (${pct.toLocaleString('id-ID',{maximumFractionDigits:1})}%). Batas sebenarnya bergantung browser.`;
+  const kb = c => (c*2/1024).toLocaleString(NUM_LOCALE,{maximumFractionDigits:1}) + ' KB', pct = Math.min(100, chars*2/(5*1024*1024)*100);
+  t.textContent = `${DATA.trades.length.toLocaleString(NUM_LOCALE)} transaksi dan ${DATA.deposit.log.length.toLocaleString(NUM_LOCALE)} baris deposit. Data jurnal ≈ ${kb(mine)}; seluruh penyimpanan lokal ≈ ${kb(chars)} dari batas kira-kira 5 MB (${pct.toLocaleString(NUM_LOCALE,{maximumFractionDigits:1})}%). Batas sebenarnya bergantung browser.`;
   bar.style.width = pct.toFixed(1) + '%'; bar.classList.toggle('warn', pct >= 70);
+  if(window.JFOTO) JFOTO.stats().then(f => { if(f.n) t.textContent += ` Lampiran gambar: ${f.n} (≈ ${(f.bytes/1024).toLocaleString(NUM_LOCALE,{maximumFractionDigits:0})} KB, di IndexedDB, tidak masuk hitungan di atas).`; }).catch(() => {});
 }
 refreshStorageInfo();
 document.getElementById('settingsGearBtn').addEventListener('click', refreshStorageInfo);
@@ -4361,6 +4646,7 @@ document.getElementById('clearLocalDataBtn').addEventListener('click', async ()=
     downloadTextFile(`jurnal-xauusd-data-${dateStampNow()}-sebelum-reset.json`, JSON.stringify(DATA, null, 2), 'application/json;charset=utf-8;');
   }
   try{ localStorage.removeItem(JOURNAL_LS_KEY); }catch(e){}
+  try{ if(window.JFOTO) await JFOTO.clearAcct(); }catch(e){}
   queueNotifyAfterReload(hasData ? 'Cadangan otomatis didownload & data direset ke bawaan file.' : 'Data direset ke bawaan file.', 'success');
   try{ sessionStorage.setItem('jurnalPendingTab', 'setelan'); }catch(err){}
   // Jeda sebentar supaya proses download cadangan sempat dimulai browser sebelum halaman reload.
@@ -4491,10 +4777,12 @@ function recomputeAll(){
   const total_deposit = round2(log.filter(l=>l.tipe==='Deposit').reduce((s,l)=>s+l.cent,0));
   const total_penarikan = round2(Math.abs(log.filter(l=>l.tipe==='Penarikan').reduce((s,l)=>s+l.cent,0)));
   const total_mc = round2(log.filter(l=>l.tipe==='Kompensasi MC').reduce((s,l)=>s+l.cent,0));
+  const total_arsip = round2(log.filter(l=>l.tipe==='Arsip').reduce((s,l)=>s+l.cent,0));
   const modal_bersih = round2(total_deposit - total_penarikan);
   DATA.deposit.total_deposit = total_deposit;
   DATA.deposit.total_penarikan = total_penarikan;
   DATA.deposit.total_mc = total_mc;
+  DATA.deposit.total_arsip = total_arsip;
   DATA.deposit.modal_bersih = modal_bersih;
 
   const saldo_akhir = DATA.equity.length ? DATA.equity[DATA.equity.length-1][1] : 0;
@@ -4650,6 +4938,7 @@ const JENIS_ENTRY_OPTIONS = ['Konservatif','Agresif'];
 ['entryTriggerExit','editTriggerExit'].forEach(id=> CS.build('csw_'+id, EXIT_TRIGGER_OPTIONS, '- Pilih -'));
 ['entryEmosi','editEmosi'].forEach(id=> CS.build('csw_'+id, EMOSI_OPTIONS, '- Pilih -'));
 ['entryJenisEntry','editJenisEntry'].forEach(id=> CS.build('csw_'+id, JENIS_ENTRY_OPTIONS, '- Pilih -'));
+['entrySetup','editSetup'].forEach(id=> CS.build('csw_'+id, SETUP_OPTIONS, '- Pilih -'));
 CS.set('csw_entryArah', 'Beli');
 CS.set('csw_editArah', 'Beli');
 
@@ -4892,7 +5181,7 @@ CS.set('csw_heroCurrency', HERO_CURRENCY);
 document.querySelectorAll('.cur-unit').forEach(el=>{ el.textContent = curUnitSymbol(); });
 CS.build('csw_filterArah', [{value:'',label:'Semua arah'}, {value:'Beli',label:'Beli'}, {value:'Jual',label:'Jual'}], 'Semua arah', ()=>{ if(window.renderTrades) window.renderTrades(); });
 CS.build('csw_filterHasil', [{value:'',label:'Semua hasil'}, {value:'win',label:'Menang'}, {value:'loss',label:'Kalah'}], 'Semua hasil', ()=>{ if(window.renderTrades) window.renderTrades(); });
-[['csw_filterEmosi','Semua emosi',EMOSI_OPTIONS],['csw_filterTrigger','Semua trigger',TRIGGER_OPTIONS],['csw_filterJenis','Semua jenis entry',JENIS_ENTRY_OPTIONS]].forEach(([id,ph,o])=>CS.build(id, [{value:'',label:ph}, ...o.map(x=>({value:x,label:x}))], ph, ()=>{ if(window.renderTrades) window.renderTrades(); }));
+[['csw_filterEmosi','Semua emosi',EMOSI_OPTIONS],['csw_filterTrigger','Semua trigger',TRIGGER_OPTIONS],['csw_filterJenis','Semua jenis entry',JENIS_ENTRY_OPTIONS],['csw_filterSetup','Semua setup',SETUP_OPTIONS]].forEach(([id,ph,o])=>CS.build(id, [{value:'',label:ph}, ...o.map(x=>({value:x,label:x}))], ph, ()=>{ if(window.renderTrades) window.renderTrades(); }));
 (function(){
   const el = document.getElementById('newsWinChips'); if(!el) return;
   const draw = () => buildPeriodChips(el, { items:[15,30,60].map(n => ({ key:String(n), label:'±'+n+' menit' })), active:String(NEWS_WIN), onSelect:k => {
@@ -4910,10 +5199,25 @@ CS.build('csw_filterHasil', [{value:'',label:'Semua hasil'}, {value:'win',label:
   }
 })();
 CS.build('csw_filterBerita', [{value:'',label:'Semua berita'},{value:'dekat',label:'Dekat rilis'},{value:'jauh',label:'Di luar rilis'}], 'Semua berita', ()=>{ if(window.renderTrades) window.renderTrades(); });
+CS.build('csw_filterLanggar', [{value:'',label:'Semua aturan'},{value:'melanggar',label:'Melanggar aturan'},{value:'patuh',label:'Patuh aturan'}], 'Semua aturan', ()=>{ if(window.renderTrades) window.renderTrades(); });
 CS.build('csw_filterSesi', [{value:'',label:'Semua sesi'}, ...LAP_SESSIONS.map((x,i)=>({value:String(i),label:x[0]}))], 'Semua sesi', ()=>{ if(window.renderTrades) window.renderTrades(); });
 CS.build('csw_filterCatatan', [{value:'',label:'Semua catatan'}, {value:'belum',label:'Belum ada catatan psikologi'}, {value:'sudah',label:'Sudah ada catatan'}], 'Semua catatan', ()=>{ if(window.renderTrades) window.renderTrades(); });
 [['csw_lapEmosi','Semua emosi',EMOSI_OPTIONS,v=>{lap2Emosi=v;}],['csw_lapTrigger','Semua trigger',TRIGGER_OPTIONS,v=>{lap2Trigger=v;}],['csw_lapJenis','Semua jenis',JENIS_ENTRY_OPTIONS,v=>{lap2Jenis=v;}]].forEach(([id,ph,opts,set])=>{
   CS.build(id, [{value:'semua',label:ph},...opts.map(o=>({value:o,label:o})),{value:'-',label:'Belum dicatat'}], ph, ()=>{ set(CS.get(id)); renderLap2(); });
+});
+['A','B'].forEach(sd => {
+  const id = 'csw_perfCmp' + sd, lbl = (PERF_CMP_PRESETS.find(p => p.value === perfCmpSel[sd]) || {}).label || '';
+  CS.build(id, PERF_CMP_PRESETS, lbl, () => { perfCmpSel[sd] = CS.get(id); try{ localStorage.setItem('jurnalPerfCmp' + sd, perfCmpSel[sd]); }catch(e){} renderPerfCmp(); });
+  CS.set(id, perfCmpSel[sd]);
+});
+PERF_PSY.forEach(([nm, f, k]) => {
+  const id = 'csw_perf' + nm, opts = f === 'emosi' ? EMOSI_OPTIONS : (f === 'trigger' ? TRIGGER_OPTIONS : JENIS_ENTRY_OPTIONS), ph = f === 'emosi' ? 'Semua emosi' : (f === 'trigger' ? 'Semua trigger' : 'Semua jenis');
+  CS.build(id, [{value:'',label:ph},...opts.map(o=>({value:o,label:o})),{value:'-',label:'Belum dicatat'}], ph, ()=>{
+    perfPsy[f] = CS.get(id) || '';
+    try{ if(perfPsy[f]) localStorage.setItem(k, perfPsy[f]); else localStorage.removeItem(k); }catch(e){}
+    if(window.perfRedraw) window.perfRedraw();
+  });
+  if(perfPsy[f]) CS.set(id, perfPsy[f]);
 });
 ['A','B'].forEach(sd=>{
   const id = 'csw_cmp' + sd;
@@ -4921,7 +5225,7 @@ CS.build('csw_filterCatatan', [{value:'',label:'Semua catatan'}, {value:'belum',
   CS.set(id, cmpSel[sd]);
   ['From','To'].forEach(x=>{ const inp = document.getElementById('cmp'+sd+x); if(inp) inp.addEventListener('change', renderLapCmp); });
 });
-CS.build('csw_depositFilterTipe', [{value:'',label:'Semua tipe'}, {value:'Deposit',label:'Deposit'}, {value:'Penarikan',label:'Penarikan'}, {value:'Kompensasi MC',label:'Kompensasi MC'}], 'Semua tipe', renderDepositLog);
+CS.build('csw_depositFilterTipe', [{value:'',label:'Semua tipe'}, {value:'Deposit',label:'Deposit'}, {value:'Penarikan',label:'Penarikan'}, {value:'Kompensasi MC',label:'Kompensasi MC'}, {value:'Arsip',label:'Arsip'}], 'Semua tipe', renderDepositLog);
 renderDepositLog();
 function onLedgerDateChange(){
   document.querySelectorAll('.ledger-quick-range .quick-chip').forEach(b=>b.classList.remove('active'));
@@ -5011,6 +5315,7 @@ syncLedgerAllChip(); // default: chip All aktif (tanpa batas tanggal); dipanggil
       CS.set('csw_entryTriggerExit', '');
       CS.set('csw_entryEmosi', '');
       CS.set('csw_entryJenisEntry', '');
+      CS.set('csw_entrySetup', ''); document.getElementById('entryKonfirmasi').checked = false; renderLanggarBox('entry', []);
       document.getElementById('entryCatatan').value = '';
       // Isi awal dari transaksi manual terakhir (arah, lot, trigger entry, jenis entry); bisa dikosongkan.
       const pre = document.getElementById('entryPrefillNote'); pre.hidden = true;
@@ -5043,7 +5348,7 @@ syncLedgerAllChip(); // default: chip All aktif (tanpa batas tanggal); dipanggil
   function entrySnap(){
     const v = id => (document.getElementById(id) || {}).value || '';
     return JSON.stringify([mode, v('entryIdPosisi'), CS.get('csw_entryArah'), v('entryLot'), DTP.get('entryWaktuBuka'), v('entryBuka'), v('entryTutup'), v('entryLaba'),
-      CS.get('csw_entryTrigger'), CS.get('csw_entryTriggerExit'), CS.get('csw_entryEmosi'), CS.get('csw_entryJenisEntry'), v('entryCatatan'), v('entryUsd')]);
+      CS.get('csw_entryTrigger'), CS.get('csw_entryTriggerExit'), CS.get('csw_entryEmosi'), CS.get('csw_entryJenisEntry'), CS.get('csw_entrySetup'), document.getElementById('entryKonfirmasi').checked, readLanggar('entry').join('|'), v('entryCatatan'), v('entryUsd')]);
   }
   const entryDirty = () => overlay.classList.contains('show') && entrySnap() !== openSnap;
   async function requestCloseEntry(){
@@ -5154,9 +5459,10 @@ syncLedgerAllChip(); // default: chip All aktif (tanpa batas tanggal); dipanggil
       const trigger_exit = CS.get('csw_entryTriggerExit');
       const emosi = CS.get('csw_entryEmosi');
       const jenis_entry = CS.get('csw_entryJenisEntry');
+      const setupBaru = CS.get('csw_entrySetup'), konfBaru = document.getElementById('entryKonfirmasi').checked, lgBaru = readLanggar('entry');
       const idPosisi = idPosisiRaw || ('manual-'+Date.now());
       const catatanBaru = document.getElementById('entryCatatan').value.trim().slice(0,1000);
-      const barisBaru = { id: idPosisi, arah, lot, buka, tutup, pips, laba, tanggal, tanggal_gmt8, waktu_buka: waktu_buka_gmt8, trigger, trigger_exit, emosi, jenis_entry, ...(catatanBaru ? { catatan: catatanBaru } : {}) };
+      const barisBaru = { id: idPosisi, arah, lot, buka, tutup, pips, laba, tanggal, tanggal_gmt8, waktu_buka: waktu_buka_gmt8, trigger, trigger_exit, emosi, jenis_entry, ...(setupBaru ? { setup: setupBaru } : {}), ...(konfBaru ? { konfirmasi: true } : {}), ...(lgBaru.length ? { langgar: lgBaru } : {}), ...(catatanBaru ? { catatan: catatanBaru } : {}) };
       if(dupe){
         const selisihBuka = Math.abs(dupe.buka - buka) > 0.01 ? '\n\nPerhatian: harga buka berbeda (' + dupe.buka.toFixed(2) + ' vs ' + buka.toFixed(2) + ').' : '';
         const ok = await showConfirmModal(`ID Posisi "${idPosisiRaw}" sudah ada (lot ${dupe.lot}, laba ${dupe.laba>=0?'+':''}${fmtMoney(dupe.laba)}). Gabungkan sebagai penutupan bertahap? Lot dijumlah, harga tutup dirata-rata berbobot lot, laba dijumlah, waktu tutup mengikuti bagian terakhir.` + selisihBuka, { yes:'Gabungkan', no:'Batal' });
@@ -5164,7 +5470,7 @@ syncLedgerAllChip(); // default: chip All aktif (tanpa batas tanggal); dipanggil
         if(window.JTB) JTB.snapshot('Penutupan bertahap ' + idPosisiRaw);
         const i = DATA.trades.indexOf(dupe);
         const gab = JTB.combinePartialTrades([dupe, barisBaru]);
-        ['trigger','trigger_exit','emosi','jenis_entry','catatan'].forEach(k=>{ if(dupe[k]) gab[k] = dupe[k]; else if(barisBaru[k]) gab[k] = barisBaru[k]; });
+        ['trigger','trigger_exit','emosi','jenis_entry','setup','konfirmasi','langgar','catatan'].forEach(k=>{ if(dupe[k]) gab[k] = dupe[k]; else if(barisBaru[k]) gab[k] = barisBaru[k]; });
         DATA.trades[i] = gab;
         DATA.trades.sort((x,y)=>parseGmt8(x.tanggal_gmt8) - parseGmt8(y.tanggal_gmt8));
         mergedPartial = idPosisiRaw;
@@ -5244,7 +5550,10 @@ function fmtDurMin(m){ m = Math.round(m); const d = Math.floor(m/1440), h = Math
     document.getElementById('dvTriggerExit').textContent = t.trigger_exit || '-';
     document.getElementById('dvEmosi').textContent = t.emosi || '-';
     document.getElementById('dvJenisEntry').textContent = t.jenis_entry || '-';
+    document.getElementById('dvSetup').textContent = t.setup ? t.setup + (t.konfirmasi ? ' \u2713 konfirmasi lengkap' : '') : (t.konfirmasi ? '\u2713 konfirmasi lengkap' : '-');
+    document.getElementById('dvLanggar').textContent = isLanggar(t) ? t.langgar.join('; ') : '-';
     document.getElementById('dvCatatan').textContent = t.catatan || '-';
+    if(window.JFOTO) JFOTO.render(id);
     viewBox.style.display='grid'; editBox.style.display='none';
     viewActions.style.display='flex'; editActions.style.display='none';
     const ids = lastFilteredTrades.map(x=>x.id), ix = ids.indexOf(id);
@@ -5257,14 +5566,14 @@ function fmtDurMin(m){ m = Math.round(m); const d = Math.floor(m/1440), h = Math
   function fillQueue(){ try{ const v = sessionStorage.getItem(FILL_KEY); return v ? JSON.parse(v) : null; }catch(e){ return null; } }
   function clearFillQueue(){ try{ sessionStorage.removeItem(FILL_KEY); sessionStorage.removeItem(FILL_OPEN); }catch(e){} }
   function nextCandidates(){ const q = fillQueue(); return (q || lastFilteredTrades.filter(x=>x.id!==currentId && !hasNote(x)).map(x=>x.id)).filter(id=>id!==currentId); }
-  function closeDetail(){ overlay.classList.remove('show'); currentId=null; clearFillQueue(); }
+  function closeDetail(){ overlay.classList.remove('show'); currentId=null; clearFillQueue(); if(window.JFOTO) JFOTO.clear(); }
   // Pelindung isian saat mengedit (v1.1.188): perubahan yang belum disimpan tidak hilang oleh ketukan di luar / tombol tutup.
   const editing = () => editBox.style.display === 'grid';
   let editSnap = '';
   function editSnapNow(){
     const v = id => (document.getElementById(id) || {}).value || '';
     return JSON.stringify([CS.get('csw_editArah'), v('editLot'), DTP.get('editWaktuBuka'), v('editBuka'), v('editTutup'), v('editLaba'), DTP.get('editWaktu'),
-      CS.get('csw_editTrigger'), CS.get('csw_editTriggerExit'), CS.get('csw_editEmosi'), CS.get('csw_editJenisEntry'), v('editCatatan')]);
+      CS.get('csw_editTrigger'), CS.get('csw_editTriggerExit'), CS.get('csw_editEmosi'), CS.get('csw_editJenisEntry'), CS.get('csw_editSetup'), document.getElementById('editKonfirmasi').checked, v('editCatatan')]);
   }
   const editDirty = () => overlay.classList.contains('show') && editing() && editSnapNow() !== editSnap;
   async function confirmDiscard(){ return !editDirty() || await showConfirmModal('Buang perubahan yang belum disimpan?', { yes:'Buang', no:'Lanjut mengedit' }); }
@@ -5308,6 +5617,15 @@ function fmtDurMin(m){ m = Math.round(m); const d = Math.floor(m/1440), h = Math
   document.getElementById('detailNextBtn').addEventListener('click', ()=>stepDetail(1));
   overlay.addEventListener('click', (e)=>{ if(e.target===overlay && !editDirty()) closeDetail(); }); // sedang mengedit dan sudah diubah: ketukan di luar tidak menutup
 
+  { const lb = document.getElementById('detailLinkBtn');
+    if(lb) lb.addEventListener('click', () => {
+      const id = String(currentId == null ? '' : currentId).toLowerCase();
+      if(!/^[a-z0-9]+$/.test(id)){ lb.textContent = 'Tautan tidak tersedia'; setTimeout(() => { lb.textContent = 'Salin tautan'; }, 1800); return; }
+      const url = location.href.split('#')[0] + '#transaksi-' + id;
+      const done = ok => { lb.textContent = ok ? 'Tautan disalin' : 'Salin manual: ' + url; setTimeout(() => { lb.textContent = 'Salin tautan'; }, ok ? 1800 : 6000); };
+      try{ navigator.clipboard.writeText(url).then(() => done(true), () => done(false)); }catch(e){ done(false); }
+    });
+  }
   document.getElementById('detailEditBtn').addEventListener('click', ()=>{
     const t = findTrade(currentId);
     if(!t) return;
@@ -5322,6 +5640,7 @@ function fmtDurMin(m){ m = Math.round(m); const d = Math.floor(m/1440), h = Math
     CS.set('csw_editTriggerExit', t.trigger_exit || '');
     CS.set('csw_editEmosi', t.emosi || '');
     CS.set('csw_editJenisEntry', t.jenis_entry || '');
+    CS.set('csw_editSetup', t.setup || ''); document.getElementById('editKonfirmasi').checked = !!t.konfirmasi; renderLanggarBox('edit', t.langgar);
     document.getElementById('editCatatan').value = t.catatan || '';
     viewBox.style.display='none'; editBox.style.display='grid';
     viewActions.style.display='none'; editActions.style.display='flex';
@@ -5377,6 +5696,8 @@ function fmtDurMin(m){ m = Math.round(m); const d = Math.floor(m/1440), h = Math
     t.trigger_exit = CS.get('csw_editTriggerExit');
     t.emosi = CS.get('csw_editEmosi');
     t.jenis_entry = CS.get('csw_editJenisEntry');
+    { const sv = CS.get('csw_editSetup'); if(sv) t.setup = sv; else delete t.setup; if(document.getElementById('editKonfirmasi').checked) t.konfirmasi = true; else delete t.konfirmasi; }
+    { const lg = readLanggar('edit'); if(lg.length) t.langgar = lg; else delete t.langgar; }
     { const cat = document.getElementById('editCatatan').value.trim().slice(0,1000); if(cat) t.catatan = cat; else delete t.catatan; }
     rebuildEquitySeries();
     recomputeAll();
@@ -5421,6 +5742,93 @@ function fmtDurMin(m){ m = Math.round(m); const d = Math.floor(m/1440), h = Math
   window.openTradeDetail = openDetail;
 })();
 
+// ---------- Lampiran gambar chart per transaksi (v1.1.209) ----------
+// Foto setup disimpan di IndexedDB perangkat ini (db jurnalFoto), dikompres JPEG maks 1280 px, maks 4 per transaksi.
+// Tidak ikut sinkron cloud, ekspor JSON, atau salinan HTML. Kunci memuat id akun; sisa gambar transaksi yang sudah dihapus dibersihkan setelah 2 hari.
+const JFOTO = (function(){
+  const DB = 'jurnalFoto', ST = 'foto', MAX = 4, MAXPX = 1280, ORPHAN_MS = 2*86400000;
+  let dbp = null, curId = null, urls = [], recs = [], lbIdx = 0;
+  const rq = r => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+  const open = () => dbp || (dbp = new Promise((res, rej) => { try{ const r = indexedDB.open(DB, 1); r.onupgradeneeded = () => { const s = r.result.createObjectStore(ST, { keyPath:'k' }); s.createIndex('tid', 'tid'); s.createIndex('acct', 'acct'); }; r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }catch(e){ rej(e); } }));
+  const store = async mode => (await open()).transaction(ST, mode).objectStore(ST);
+  async function list(tid){ const all = await rq((await store('readonly')).index('tid').getAll(String(tid))); return all.filter(x => x.acct === ACCT.id).sort((a, b) => a.at - b.at); }
+  async function compress(file){
+    const bmp = await createImageBitmap(file), sc = Math.min(1, MAXPX / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(bmp.width * sc)); c.height = Math.max(1, Math.round(bmp.height * sc));
+    const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(bmp, 0, 0, c.width, c.height);
+    if(bmp.close) bmp.close();
+    const toBlob = q => new Promise(r => c.toBlob(r, 'image/jpeg', q));
+    let blob = await toBlob(0.82); if(blob && blob.size > 350000) blob = await toBlob(0.65);
+    if(!blob) throw new Error('gagal mengompres');
+    return { blob, w:c.width, h:c.height };
+  }
+  async function add(tid, files){
+    const have = (await list(tid)).length, res = { added:0, skipped:0, full:false };
+    for(const f of Array.from(files)){
+      if(have + res.added >= MAX){ res.full = true; res.skipped++; continue; }
+      if(!/^image\//.test(f.type || '')){ res.skipped++; continue; }
+      try{ const c = await compress(f), at = Date.now(); await rq((await store('readwrite')).put({ k: ACCT.id + '|' + tid + '|' + at + '|' + Math.random().toString(36).slice(2,6), acct: ACCT.id, tid: String(tid), at, blob: c.blob, w: c.w, h: c.h })); res.added++; }
+      catch(e){ res.skipped++; }
+    }
+    return res;
+  }
+  async function remove(k){ await rq((await store('readwrite')).delete(k)); }
+  async function stats(){ const all = (await rq((await store('readonly')).index('acct').getAll(ACCT.id))); return { n: all.length, bytes: all.reduce((s, r) => s + (r.blob ? r.blob.size : 0), 0) }; }
+  async function clearAcct(){ const s = await store('readwrite'), ks = await rq(s.index('acct').getAllKeys(ACCT.id)); await Promise.all(ks.map(k => rq(s.delete(k)))); }
+  async function purgeOrphans(){
+    const ids = new Set((DATA.trades || []).map(t => String(t.id))), s = await store('readwrite'), all = await rq(s.index('acct').getAll(ACCT.id)), now = Date.now();
+    let n = 0; for(const r of all){ if(!ids.has(r.tid) && now - r.at > ORPHAN_MS){ await rq(s.delete(r.k)); n++; } } return n;
+  }
+  // ---- UI di detail transaksi ----
+  const $ = id => document.getElementById(id);
+  function clear(){ urls.forEach(u => URL.revokeObjectURL(u)); urls = []; recs = []; curId = null; const st = $('dvFoto'); if(st) st.innerHTML = ''; }
+  function note(t, bad){ const n = $('fotoNote'); if(!n) return; n.textContent = t; n.classList.toggle('bad', !!bad); }
+  const HINT = 'Maks. ' + MAX + ' gambar per transaksi, disimpan di perangkat ini saja (tidak ikut sinkron atau ekspor). Tempel gambar dengan Ctrl+V.';
+  async function render(id){
+    const row = $('dvFotoRow'); if(!row) return;
+    urls.forEach(u => URL.revokeObjectURL(u)); urls = []; curId = id;
+    if(IS_TOTAL){ row.hidden = true; return; }
+    row.hidden = false; note(HINT);
+    let rs = []; try{ rs = await list(id); }catch(e){ note('Penyimpanan gambar tidak tersedia di browser ini.', true); $('fotoAddBtn').disabled = true; $('dvFoto').innerHTML = ''; return; }
+    if(curId !== id) return;
+    recs = rs; $('fotoAddBtn').disabled = rs.length >= MAX;
+    urls = rs.map(r => URL.createObjectURL(r.blob));
+    $('dvFoto').innerHTML = rs.map((r, i) => `<div class="foto-item"><button type="button" class="foto-thumb" data-i="${i}" aria-label="Perbesar gambar ${i+1}"><img src="${urls[i]}" alt="Lampiran chart ${i+1}"></button><button type="button" class="foto-del" data-k="${escapeHtml(r.k)}" aria-label="Hapus gambar ${i+1}" title="Hapus gambar">&times;</button></div>`).join('');
+  }
+  async function addAndRender(files){
+    if(curId == null || !files.length) return;
+    const id = curId, r = await add(id, files); await render(id);
+    note(r.added ? (r.added + ' gambar ditambahkan.' + (r.full ? ' Batas ' + MAX + ' gambar tercapai.' : '')) : (r.full ? 'Batas ' + MAX + ' gambar per transaksi tercapai.' : 'Berkas bukan gambar atau tidak bisa dibaca.'), !r.added);
+  }
+  function lightbox(i){
+    let ov = $('fotoLbOverlay');
+    if(!ov){
+      ov = document.createElement('div'); ov.className = 'modal-overlay'; ov.id = 'fotoLbOverlay'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'Lampiran chart');
+      ov.innerHTML = '<div class="foto-lb"><img id="fotoLbImg" alt="Lampiran chart"><div class="foto-lb-bar"><button type="button" class="ledger-reset-btn" id="fotoLbPrev" aria-label="Sebelumnya">&lsaquo;</button><span id="fotoLbPos"></span><button type="button" class="ledger-reset-btn" id="fotoLbNext" aria-label="Berikutnya">&rsaquo;</button><button type="button" class="ledger-reset-btn" id="fotoLbClose">Tutup</button></div></div>';
+      document.body.appendChild(ov);
+      ov.addEventListener('click', e => { if(e.target === ov || e.target.closest('#fotoLbClose')) ov.classList.remove('show'); else if(e.target.closest('#fotoLbPrev')) show(lbIdx - 1); else if(e.target.closest('#fotoLbNext')) show(lbIdx + 1); });
+    }
+    function show(n){ if(!urls.length) return; lbIdx = (n + urls.length) % urls.length; $('fotoLbImg').src = urls[lbIdx]; $('fotoLbPos').textContent = (lbIdx + 1) + ' / ' + urls.length; }
+    ov._show = show; show(i); ov.classList.add('show');
+  }
+  document.addEventListener('click', async e => {
+    const th = e.target.closest('#dvFoto .foto-thumb'); if(th){ lightbox(+th.dataset.i); return; }
+    const del = e.target.closest('#dvFoto .foto-del');
+    if(del){ if(!await showConfirmModal('Hapus gambar ini dari transaksi?', { yes:'Hapus', no:'Batal' })) return; const id = curId; try{ await remove(del.dataset.k); }catch(err){} await render(id); return; }
+    if(e.target.closest('#fotoAddBtn')) $('fotoFile').click();
+  });
+  document.addEventListener('change', e => { if(e.target && e.target.id === 'fotoFile'){ const f = Array.from(e.target.files || []); e.target.value = ''; addAndRender(f); } });
+  document.addEventListener('paste', e => {
+    const ov = $('detailModalOverlay'); if(!ov || !ov.classList.contains('show') || curId == null || IS_TOTAL) return;
+    const t = e.target; if(t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+    const fs = Array.from((e.clipboardData && e.clipboardData.files) || []).filter(f => /^image\//.test(f.type));
+    if(fs.length){ e.preventDefault(); addAndRender(fs); }
+  });
+  setTimeout(() => { try{ purgeOrphans().catch(() => {}); }catch(e){} }, 3000);
+  return { list, add, remove, stats, clearAcct, purgeOrphans, render, clear, MAX };
+})();
+window.JFOTO = JFOTO;
+
 // ---------- Ringkasan: ajakan isi catatan psikologi (v1.1.115) ----------
 // Menghitung transaksi tanpa catatan (hasNote) dan membuka alur "Simpan & lanjut" yang sudah ada (antrean di sessionStorage).
 function renderPsyPrompt(){
@@ -5430,7 +5838,7 @@ function renderPsyPrompt(){
   if(!trades.length || !missing.length){ box.hidden = true; return; }
   const cover = (trades.length - missing.length) / trades.length * 100;
   document.getElementById('psyPromptTitle').textContent = `${missing.length} transaksi belum ada catatan psikologi`;
-  document.getElementById('psyPromptSub').textContent = `Cakupan catatan baru ${cover.toFixed(cover < 10 ? 1 : 0).replace('.', ',')}% dari ${trades.length} transaksi. Makin lengkap, makin berguna analisis psikologi di Laporan. Diurutkan dari transaksi terbaru.`;
+  document.getElementById('psyPromptSub').textContent = `Cakupan catatan baru ${cover.toFixed(cover < 10 ? 1 : 0).replace('.', DEC())}% dari ${trades.length} transaksi. Makin lengkap, makin berguna analisis psikologi di Laporan. Diurutkan dari transaksi terbaru.`;
   box.hidden = false;
 }
 (function(){
@@ -5457,7 +5865,7 @@ renderPsyPrompt();
 (function(){
   const table = document.querySelector('table.ledger'), bar = document.getElementById('bulkBar'), selBtn = document.getElementById('ledgerSelectBtn');
   if(!table || !bar || !selBtn) return;
-  [['csw_bulkEmosi','Isi emosi',EMOSI_OPTIONS],['csw_bulkTrigger','Isi trigger',TRIGGER_OPTIONS],['csw_bulkJenis','Isi jenis entry',JENIS_ENTRY_OPTIONS]].forEach(([id,ph,o])=>CS.build(id, o, ph));
+  [['csw_bulkEmosi','Isi emosi',EMOSI_OPTIONS],['csw_bulkTrigger','Isi trigger',TRIGGER_OPTIONS],['csw_bulkJenis','Isi jenis entry',JENIS_ENTRY_OPTIONS],['csw_bulkSetup','Isi setup',SETUP_OPTIONS]].forEach(([id,ph,o])=>CS.build(id, o, ph));
   const ui = ()=>{ document.getElementById('bulkCount').textContent = ledgerSel.size + ' dipilih'; };
   const setMode = on => {
     table.classList.toggle('selecting', on); bar.style.display = on ? 'flex' : 'none';
@@ -5478,9 +5886,9 @@ renderPsyPrompt();
   document.getElementById('bulkAllBtn').addEventListener('click', ()=>{ lastFilteredTrades.forEach(t=>ledgerSel.add(t.id)); ui(); renderTrades(); });
   document.getElementById('bulkNoneBtn').addEventListener('click', ()=>{ ledgerSel.clear(); ui(); renderTrades(); });
   document.getElementById('bulkApplyBtn').addEventListener('click', async ()=>{
-    const f = { emosi:CS.get('csw_bulkEmosi'), trigger:CS.get('csw_bulkTrigger'), jenis_entry:CS.get('csw_bulkJenis') };
+    const f = { emosi:CS.get('csw_bulkEmosi'), trigger:CS.get('csw_bulkTrigger'), jenis_entry:CS.get('csw_bulkJenis'), setup:CS.get('csw_bulkSetup') };
     const keys = Object.keys(f).filter(k=>f[k]);
-    if(!ledgerSel.size || !keys.length){ await showConfirmModal(!ledgerSel.size ? 'Pilih dulu transaksi yang mau diisi (ketuk barisnya, atau "Pilih semua hasil filter").' : 'Pilih minimal satu isian: emosi, trigger, atau jenis entry.'); return; }
+    if(!ledgerSel.size || !keys.length){ await showConfirmModal(!ledgerSel.size ? 'Pilih dulu transaksi yang mau diisi (ketuk barisnya, atau "Pilih semua hasil filter").' : 'Pilih minimal satu isian: emosi, trigger, jenis entry, atau setup.'); return; }
     if(!await showConfirmModal(`Isi ${ledgerSel.size} transaksi: ${keys.map(k=>k.replace('_',' ') + ' = ' + f[k]).join(', ')}? Isian yang tidak dipilih tidak diubah; isian lama pada kolom yang sama ditimpa.`)) return;
     let n = 0;
     DATA.trades.forEach(t=>{ if(ledgerSel.has(t.id)){ keys.forEach(k=>{ t[k] = f[k]; }); n++; } });
@@ -5728,11 +6136,11 @@ function renderBackupStatus(){
     const v = parseFloat(String(inp.value).replace(',', '.'));
     if(!isFinite(v) || v <= 0){ note.textContent = 'Isi kurs dengan angka lebih dari 0, mis. 16500.'; note.classList.add('warn'); return; }
     if(v > 1e6){ note.textContent = 'Angka kurs tidak wajar. Isi Rupiah per 1 USD, mis. 16500.'; note.classList.add('warn'); return; }
-    if(Math.abs(v - (DATA.kurs || 0)) < 1e-9){ note.textContent = 'Kurs sudah ' + v.toLocaleString('id-ID') + '.'; note.classList.remove('warn'); return; }
+    if(Math.abs(v - (DATA.kurs || 0)) < 1e-9){ note.textContent = 'Kurs sudah ' + v.toLocaleString(NUM_LOCALE) + '.'; note.classList.remove('warn'); return; }
     DATA.kurs = Math.round(v * 10000) / 10000;
     recomputeAll();
     if(!saveActiveData(DATA)){ showNotifyModal('Gagal menyimpan ke penyimpanan lokal browser (penuh atau diblokir).', 'error'); return; }
-    queueNotifyAfterReload('Kurs disimpan: Rp ' + DATA.kurs.toLocaleString('id-ID') + ' per USD.', 'success');
+    queueNotifyAfterReload('Kurs disimpan: Rp ' + DATA.kurs.toLocaleString(NUM_LOCALE) + ' per USD.', 'success');
     try{ sessionStorage.setItem('jurnalPendingTab', 'setelan'); }catch(e){}
     location.reload();
   }
@@ -5767,7 +6175,7 @@ function renderBackupStatus(){
     if(!saveActiveData(DATA)) return msg('Gagal menyimpan ke penyimpanan lokal browser (penuh atau diblokir).', true);
     fill(calcParams());
     if(window.applyCalcDefaults) window.applyCalcDefaults();
-    msg(r > 3 ? `Tersimpan. Risiko ${r.toLocaleString('id-ID')}% tergolong agresif.` : 'Tersimpan. Kalkulator lot memakai angka ini.', r > 3);
+    msg(r > 3 ? `Tersimpan. Risiko ${r.toLocaleString(NUM_LOCALE)}% tergolong agresif.` : 'Tersimpan. Kalkulator lot memakai angka ini.', r > 3);
   }
   save.addEventListener('click', doSave);
   Object.values(el).forEach(i => i.addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); doSave(); } }));
@@ -5796,6 +6204,18 @@ function renderBackupStatus(){
       sync();
     });
   }
+  const nEl = document.getElementById('prefNum');
+  const numNow = () => NUM_LOCALE === 'en-US' ? 'en' : 'id';
+  if(nEl){
+    nEl.innerHTML = chip('id','1.234,56') + chip('en','1,234.56');
+    nEl.addEventListener('click', e => {
+      const b = e.target.closest('[data-v]'); if(!b || b.dataset.v === numNow()) return;
+      try{ if(b.dataset.v === 'id') localStorage.removeItem('jurnalNumFmt'); else localStorage.setItem('jurnalNumFmt', 'en'); }catch(err){}
+      try{ sessionStorage.setItem('jurnalPendingTab', 'setelan'); }catch(err){}
+      queueNotifyAfterReload('Format angka diganti ke ' + (b.dataset.v === 'en' ? '1,234.56' : '1.234,56') + '.', 'success');
+      setTimeout(() => { location.reload(); }, 200);   // semua tab dibangun dari data saat dibuka
+    });
+  }
   const hEl = document.getElementById('prefHide');
   const hideNow = () => { try{ return localStorage.getItem('jurnalHideNum')==='1' ? '1' : '0'; }catch(e){ return '0'; } };
   if(hEl){
@@ -5807,7 +6227,7 @@ function renderBackupStatus(){
       sync();
     });
   }
-  function sync(){ mark(curEl, HERO_CURRENCY); mark(dEl, DATE_FMT); tzEl.value = String(CURRENT_TZ_OFFSET); if(hEl) mark(hEl, hideNow()); if(fEl) mark(fEl, fontNow()); }
+  function sync(){ mark(curEl, HERO_CURRENCY); mark(dEl, DATE_FMT); tzEl.value = String(CURRENT_TZ_OFFSET); if(hEl) mark(hEl, hideNow()); if(nEl) mark(nEl, numNow()); if(fEl) mark(fEl, fontNow()); }
   curEl.addEventListener('click', e => { const b = e.target.closest('[data-v]'); if(b && b.dataset.v!==HERO_CURRENCY) setHeroCurrency(b.dataset.v); });
   dEl.addEventListener('click', e => {
     const b = e.target.closest('[data-v]'); if(!b || b.dataset.v===DATE_FMT) return;
@@ -5825,9 +6245,75 @@ function renderBackupStatus(){
   sync();
 })();
 
-const APP_VERSION = '1.1.196';
-const APP_BUILD_DATE = '2026-10-24';   // ikut diganti tiap rilis (ISO), tampil di Setelan → Tentang
+const APP_VERSION = '1.1.215';
+const APP_BUILD_DATE = '2026-11-12';   // ikut diganti tiap rilis (ISO), tampil di Setelan → Tentang
 const USER_CHANGELOG = [
+  { date:'2026-11-12', items:[
+    'Setelan → Pengingat: notifikasi untuk berita dampak Tinggi 15 menit sebelum rilis, batas harian tercapai (rugi atau jumlah transaksi), dan catatan psikologi yang belum diisi (30 menit setelah transaksi terakhir hari ini). Semua mati sampai Anda menyalakannya dan memberi izin notifikasi; tiap pengingat hanya dikirim sekali. Notifikasi muncul selama aplikasi terbuka (tab atau PWA, boleh di latar belakang); tidak ada server, jadi saat aplikasi tertutup tidak ada pengingat. Ada tombol Kirim contoh untuk mencoba.',
+  ]},
+  { date:'2026-11-11', items:[
+    'Setelan → Preferensi punya pilihan Format angka: Indonesia (1.234,56) atau Internasional (1,234.56). Berlaku di semua tab (kartu, tabel, grafik, Laporan, kalkulator) dan disimpan di browser ini. Halaman dimuat ulang sekali agar semuanya ikut berubah. Teks dan nama bulan tetap berbahasa Indonesia.',
+  ]},
+  { date:'2026-11-10', items:[
+    'Dashboard terbuka lebih cepat pada data besar: pemformat angka kini dipakai ulang (dulu dibuat baru ribuan kali), menghemat ±120 ms saat membuka 8.000 transaksi. Tampilan angka tidak berubah.',
+  ]},
+  { date:'2026-11-09', items:[
+    'Grafik Performa mingguan kini punya sumbu tegak yang tetap di kiri (nilai tertinggi, 0, dan terendah, dengan garis bantu putus-putus) dan angka di ujung batang. Sampai 12 minggu semua batang diberi angka; lebih dari itu hanya minggu terbaik dan terburuk. Angka mengikuti mata uang di kartu hero (¢, $, atau Rp ringkas).',
+  ]},
+  { date:'2026-11-08', items:[
+    'Kalender ekonomi kini memuat rapat bank sentral non-USD yang ikut menggerakkan emas: ECB (29 Okt, 17 Des), BoE (5 Nov, 17 Des), dan BoJ (30 Okt, 18 Des; jam BoJ perkiraan). Tanggal dan jam diambil dari kalender resmi masing-masing bank sentral; dampak Sedang.',
+    'Tiap event punya catatan reaksi emas buatan Anda: pilih Naik, Turun, atau Datar plus catatan singkat reaksi harga (maks. 60 huruf). Muncul sebagai lencana "Emas ↑/↓/→" di daftar, ikut ekspor pengaturan, dan bisa dipakai membandingkan reaksi antar rilis.',
+  ]},
+  { date:'2026-11-07', items:[
+    'Arsipkan riwayat lama (Setelan → Data): pilih tanggal batas, unduh berkas arsip (.json) lalu transaksi sampai tanggal itu dihapus supaya aplikasi tetap ringan. Saldo dan kurva ekuitas tidak berubah karena satu baris "Arsip" ditambahkan di Deposit (nilainya PNL bersih yang diarsipkan; modal bersih tetap). Statistik, Laporan, dan Performa hanya menghitung transaksi yang tersisa. Bisa diurungkan lewat Urungkan, atau dipulihkan dari berkas arsip.',
+  ]},
+  { date:'2026-11-06', items:[
+    'Lampiran gambar chart per transaksi: di Detail Transaksi tekan Tambah gambar (atau tempel dengan Ctrl+V) untuk menyimpan foto setup, maksimal 4 gambar per transaksi. Gambar otomatis dikecilkan (maks 1280 px, JPEG), bisa diperbesar dengan ketukan dan dihapus. Disimpan hanya di perangkat ini (tidak ikut sinkron cloud, ekspor JSON, atau salinan HTML) supaya data tetap kecil; ukuran totalnya tampil di Setelan → Data.',
+  ]},
+  { date:'2026-11-05', items:[
+    'Impor riwayat broker kini punya jendela pratinjau: tab Baru, Berbeda, Sama, dan Bermasalah (baris tidak valid beserta nomor baris dan alasannya). Tiap posisi baru dan koreksi bisa dicentang sebelum disimpan, dengan ringkasan laba dan saldo yang ikut berubah. Tersedia tombol "Hanya yang baru"; cadangan otomatis tetap dibuat dan bisa diurungkan.',
+  ]},
+  { date:'2026-11-04', items:[
+    'Tautan sekarang membawa periode dan filter: Laporan (#laporan-tren?p=bulanan&o=-1&arah=Beli&sesi=1) dan Transaksi (#transaksi?hasil=loss&emosi=Takut&dari=2026-10-01). Alamat browser ikut berubah saat Anda mengganti periode atau filter, jadi tampilan bisa disimpan sebagai bookmark atau dikirim ke perangkat lain. Nilai yang tidak dikenal diabaikan.',
+  ]},
+  { date:'2026-11-03', items:[
+    'Pengaturan trading kini ikut sinkron cloud: aturan trading, batas harian, opsi trigger/exit/setup kustom, target, jendela berita, zona waktu, dan kalender manual. Dikirim saat Kirim dan diterapkan saat Ambil (nilai tidak valid diabaikan). Pengaturan tampilan khas perangkat (tema, warna, ukuran huruf, sidebar) tidak ikut.',
+    'Jalankan migrasi-pengaturan.sql sekali di Supabase (SQL Editor) agar kolom barunya ada; sebelum itu sinkron tetap jalan.',
+  ]},
+  { date:'2026-11-02', items:[
+    'Pelanggaran aturan trading per transaksi: saat menambah atau mengedit transaksi, centang aturan (dari kartu Aturan trading di Ringkasan) yang kamu langgar. Tampil di detail, filter Transaksi (Melanggar / Patuh aturan), ekspor/impor CSV, dan Laporan.',
+    'Laporan punya blok baru "Pelanggaran aturan trading": PNL, win rate, dan expectancy transaksi yang melanggar dibanding yang patuh, plus daftar aturan yang paling sering dilanggar.',
+    'Sinkron cloud ikut membawa pelanggaran aturan. Jalankan migrasi-aturan.sql sekali di Supabase (SQL Editor); sebelum itu sinkron tetap jalan dan data disimpan di perangkat.',
+  ]},
+  { date:'2026-11-01', items:[
+    'Setup / strategi per transaksi: pilih setup (CRT H4, CRT H4 + RSI divergence, RSI divergence, Tanpa setup, atau setup buatan sendiri di Setelan) dan centang "Semua konfirmasi setup terpenuhi" saat menambah atau mengedit transaksi. Tampil di detail, filter Transaksi, isi massal, ekspor/impor CSV, dan Laporan (win rate, expectancy, dan PNL per setup serta per status konfirmasi).',
+    'Perbaikan: catatan "diisi dari transaksi manual terakhir" di form Tambah Transaksi tidak lagi tampil terus saat tidak ada isian awal; kolom catatan psikologi dirapikan jadi tiga kolom.',
+    'Sinkron cloud ikut membawa setup. Jalankan migrasi-setup.sql sekali di Supabase (SQL Editor) agar kolom barunya ada; sebelum itu sinkron tetap jalan dan setup disimpan di perangkat.',
+  ]},
+  { date:'2026-10-31', items:[
+    'Detail Transaksi: tombol Salin tautan membuat tautan langsung ke transaksi itu (#transaksi-ID). Membuka tautan tersebut membuka tab Transaksi dan langsung menampilkan detailnya.',
+  ]},
+  { date:'2026-10-30', items:[
+    'Performa: bagian baru Ringkasan mingguan: PNL, transaksi, win rate, dan profit factor minggu terpilih dibanding minggu sebelumnya; emosi dan trigger yang paling merugikan; kepatuhan batas harian; serta tiga pertanyaan refleksi dengan kolom catatan (disimpan di perangkat ini).',
+    'Kalender ekonomi bawaan: ditambah ISM Manufaktur dan Jasa, Penjualan Ritel, PDB estimasi kedua dan ketiga, serta PCE untuk November dan Desember 2026 (tanggal PDB dan PCE dari jadwal resmi BEA).',
+  ]},
+  { date:'2026-10-29', items:[
+    'Perbaikan: teks di tengah donut Split arah (Beli vs Jual) tidak lagi terpotong atau menimpa lingkaran; donut sedikit diperbesar dan rincian dibuat tiga baris.',
+  ]},
+  { date:'2026-10-28', items:[
+    'Kartu Split arah (Beli vs Jual) di Performa dioptimalkan: tabel perbandingan lengkap (laba, win rate, profit factor, expectancy, rata-rata menang/rugi, untung dan rugi terbesar, lot rata-rata) dengan sisi yang lebih baik ditandai, kesimpulan otomatis, pilihan rentang (Semua, Tahun ini, 90 hari, 30 hari), mengikuti filter sesi dan psikologi, dan judul kolom bisa diketuk untuk melihat transaksinya.',
+  ]},
+  { date:'2026-10-27', items:[
+    'Performa: bagian baru Jam & hari buka, heatmap kapan entri paling untung atau rugi (per 2 jam, waktu GMT+8), mengikuti filter Performa. Ketuk sel untuk detail dan daftar transaksi.',
+  ]},
+  { date:'2026-10-26', items:[
+    'Performa: bagian baru Bandingkan dua periode (bulan ini vs bulan lalu, 7/30 hari, tahun ini, dan lainnya), mengikuti filter Performa.',
+    'Tampilan Total: bagian Rincian per akun menampilkan transaksi, laba, win rate, profit factor, dan drawdown tiap akun.',
+  ]},
+  { date:'2026-10-25', items:[
+    'Performa: filter baru Emosi, Trigger entry, dan Jenis entry (bisa digabung dengan filter arah dan sesi, tersimpan setelah ditutup). Kartu bulanan, mingguan, dan heatmap ikut menyesuaikan.',
+    'Performa: blok Metrik risiko baru: risk:reward aktual, win rate impas, expectancy per transaksi, rugi terbesar (dan persen dari saldo sebelumnya), serta seberapa sering lot dinaikkan setelah rugi.',
+  ]},
   { date:'2026-10-24', items:[
     'Kalender ekonomi bawaan diperpanjang sampai 30 Des 2026: NFP, CPI, PPI, klaim pengangguran, JOLTS, keputusan dan risalah FOMC Nov-Des (tanggal dari jadwal resmi BLS dan The Fed; ditandai perkiraan sampai dikonfirmasi). Analisis "saat rilis berita" kini menjangkau transaksi hingga akhir Desember.',
   ]},
@@ -6144,6 +6630,166 @@ const USER_CHANGELOG = [
   update();
 })();
 
+// ---------- Arsipkan riwayat lama (v1.1.210) ----------
+// Transaksi sampai tanggal tertentu diunduh sebagai berkas arsip (.json) lalu dihapus dari jurnal. Satu baris deposit bertipe "Arsip" (nilai = PNL bersih yang diarsipkan)
+// menjaga saldo dan kurva ekuitas tetap sama; modal bersih tidak berubah. Statistik/Laporan hanya menghitung transaksi yang tersisa. Bisa diurungkan (snapshot) atau dipulihkan dari berkas arsip.
+(function(){
+  const box = document.getElementById('arsipSection'); if(!box) return;
+  const sum = document.getElementById('arsipSummary'), go = document.getElementById('arsipGoBtn'), note = document.getElementById('arsipNote'), rin = document.getElementById('arsipRestoreInput');
+  document.getElementById('arsipRestoreBtn').addEventListener('click', () => rin.click());
+  const pick = () => { const u = DTP.get('arsipUntil'); return /^\d{4}-\d{2}-\d{2}$/.test(u || '') ? u : ''; };
+  const sel = u => (DATA.trades || []).filter(t => String(t.tanggal_gmt8 || '').slice(0,10) <= u);
+  function upd(){
+    const u = pick(); go.disabled = true; note.textContent = '';
+    if(IS_TOTAL){ sum.textContent = 'Tampilan Total hanya baca; pilih satu akun.'; return; }
+    if(!u){ sum.textContent = 'Pilih tanggal batas. Semua transaksi sampai tanggal itu (GMT+8) akan diarsipkan.'; return; }
+    const s = sel(u), keep = (DATA.trades || []).length - s.length;
+    if(!s.length){ sum.textContent = 'Tidak ada transaksi sampai tanggal itu.'; return; }
+    const pl = round2(s.reduce((x, t) => x + t.laba, 0));
+    sum.innerHTML = `${s.length} transaksi (${escapeHtml(String(s[0].tanggal_gmt8).slice(0,10))} s.d. ${escapeHtml(String(s[s.length-1].tanggal_gmt8).slice(0,10))}), PNL bersih <b class="${pl>=0?'up':'down'}">${pl>=0?'+':''}${fmtMoney(pl)}</b>. Tersisa ${keep} transaksi.`;
+    if(!keep){ sum.innerHTML += ' Sisakan minimal satu transaksi.'; return; }
+    go.disabled = false;
+  }
+  DTP.build('arsipUntil', 'Sampai tanggal', { dateOnly:true, onChange:upd });
+  window.arsipRefresh = upd;
+  upd();
+  go.addEventListener('click', async () => {
+    const u = pick(); if(!u) return; const s = sel(u), keep = DATA.trades.length - s.length; if(!s.length || !keep) return;
+    const pl = round2(s.reduce((x, t) => x + t.laba, 0));
+    const ok = await showConfirmModal(`Arsipkan ${s.length} transaksi sampai ${u} (PNL bersih ${pl>=0?'+':''}${fmtMoney(pl)})?\n\nBerkas arsip (.json) diunduh dulu, lalu transaksi dihapus dari jurnal. Satu baris "Arsip" ditambahkan di Deposit supaya saldo dan kurva ekuitas tetap sama; modal bersih tidak berubah. Statistik, Laporan, dan Performa hanya menghitung ${keep} transaksi yang tersisa. Lampiran gambar transaksi ini ikut dihapus. Jika akun ini disinkronkan, transaksi tersebut juga terhapus dari cloud saat Anda menekan Kirim berikutnya. Bisa diurungkan lewat "Urungkan" atau dipulihkan dari berkas arsip.`, { yes:'Unduh dan arsipkan', no:'Batal' });
+    if(!ok) return;
+    const jenis = `Arsip riwayat s.d. ${u} (${s.length} transaksi)`, last = s[s.length-1], row = { tanggal: last.tanggal, jenis, tipe:'Arsip', usd: round2(pl/100), cent: pl };
+    downloadTextFile(`jurnal-xauusd-arsip-${u}-${dateStampNow()}.json`, JSON.stringify({ app:'jurnal-xauusd', type:'arsip', version:APP_VERSION, akun: ACCT.id, sampai: u, dibuat: new Date().toISOString(), jenis, saldo_awal: row, trades: s }, null, 2), 'application/json;charset=utf-8;');
+    if(window.JTB) JTB.snapshot('Arsip riwayat s.d. ' + u);
+    const gone = new Set(s.map(t => t.id));
+    DATA.trades = DATA.trades.filter(t => !gone.has(t.id));
+    DATA.deposit.log.push(row); DATA.deposit.log.sort((x, y) => String(x.tanggal).localeCompare(String(y.tanggal)));
+    rebuildEquitySeries(); recomputeAll();
+    if(!saveActiveData(DATA)){ note.textContent = 'Gagal menyimpan ke penyimpanan lokal browser. Gunakan Urungkan bila data berubah.'; note.style.color = 'var(--loss)'; return; }
+    try{ if(window.JFOTO) for(const id of gone){ for(const f of await JFOTO.list(id)) await JFOTO.remove(f.k); } }catch(e){}
+    queueNotifyAfterReload(`${s.length} transaksi diarsipkan. Saldo tidak berubah (baris "Arsip" di Deposit).`, 'success');
+    try{ sessionStorage.setItem('jurnalPendingTab', 'setelan'); }catch(e){}
+    setTimeout(() => location.reload(), 400);
+  });
+  rin.addEventListener('change', async e => {
+    const f = e.target.files[0]; e.target.value = ''; if(!f) return;
+    let o; try{ o = JSON.parse(await f.text()); }catch(err){ note.textContent = 'Berkas bukan JSON yang valid.'; note.style.color = 'var(--loss)'; return; }
+    if(!o || o.app !== 'jurnal-xauusd' || o.type !== 'arsip' || !Array.isArray(o.trades) || typeof o.jenis !== 'string'){ note.textContent = 'Ini bukan berkas arsip riwayat dari dashboard ini.'; note.style.color = 'var(--loss)'; return; }
+    if(o.akun && o.akun !== ACCT.id){ note.textContent = `Arsip ini milik akun "${o.akun}"; buka akun itu dulu.`; note.style.color = 'var(--loss)'; return; }
+    if(!await showConfirmModal(`Pulihkan ${o.trades.length} transaksi dari arsip sampai ${o.sampai || '?'}? Baris "Arsip" yang bersangkutan di Deposit dihapus supaya saldo tidak terhitung dua kali.`, { yes:'Pulihkan', no:'Batal' })) return;
+    if(window.JTB) JTB.snapshot('Pulihkan arsip s.d. ' + (o.sampai || ''));
+    const r = mergeImportedData({ trades: o.trades, deposit:{ log:[] } });
+    if(r.error){ note.textContent = r.error; note.style.color = 'var(--loss)'; return; }
+    const n0 = DATA.deposit.log.length;
+    DATA.deposit.log = DATA.deposit.log.filter(l => !(l.tipe === 'Arsip' && l.jenis === o.jenis));
+    rebuildEquitySeries(); recomputeAll();
+    if(!saveActiveData(DATA)){ note.textContent = 'Gagal menyimpan ke penyimpanan lokal browser.'; note.style.color = 'var(--loss)'; return; }
+    queueNotifyAfterReload(`Arsip dipulihkan: ${r.added} transaksi ditambahkan${n0 !== DATA.deposit.log.length ? ', baris Arsip dihapus' : ''}.`, 'success');
+    try{ sessionStorage.setItem('jurnalPendingTab', 'setelan'); }catch(err){}
+    setTimeout(() => location.reload(), 400);
+  });
+})();
+
+// ---------- Notifikasi pengingat (v1.1.215) ----------
+// Tanpa server: pengecekan jalan tiap menit selama aplikasi (tab atau PWA) terbuka, juga di latar belakang. Tiga jenis, semua mati
+// sampai dinyalakan di Setelan → Pengingat dan izin notifikasi diberikan: berita dampak Tinggi 15 menit sebelum rilis, batas harian
+// tercapai, dan transaksi hari ini yang belum ada catatan psikologinya. Tiap pengingat dikirim sekali (tanda di 'jurnalNotifSeen').
+const JNOTIF = (function(){
+  const CFG_KEY = 'jurnalNotif', TYPES = ['event','limit','note'], LEAD_MIN = 15, NOTE_WAIT_MIN = 30;
+  const log = [];
+  const cfg = () => { const r = {event:0,limit:0,note:0}; try{ const o = JSON.parse(localStorage.getItem(CFG_KEY) || '{}'); TYPES.forEach(k => { r[k] = o && o[k] === 1 ? 1 : 0; }); }catch(e){} return r; };
+  const setCfg = o => { try{ if(TYPES.every(k => !o[k])) localStorage.removeItem(CFG_KEY); else localStorage.setItem(CFG_KEY, JSON.stringify(o)); }catch(e){} };
+  const supported = () => typeof Notification !== 'undefined';
+  const perm = () => supported() ? Notification.permission : 'unsupported';
+  const seenKey = () => acctKey('jurnalNotifSeen');
+  const seen = () => { try{ const o = JSON.parse(localStorage.getItem(seenKey()) || '{}'); return o && typeof o === 'object' ? o : {}; }catch(e){ return {}; } };
+  const mark = (k, now) => { const o = seen(); o[k] = now; Object.keys(o).forEach(x => { if(now - o[x] > 3*86400000) delete o[x]; }); try{ localStorage.setItem(seenKey(), JSON.stringify(o)); }catch(e){} };
+  async function deliver(tag, title, body){
+    log.push({tag, title, body});
+    if(perm() !== 'granted') return false;
+    try{
+      const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
+      if(reg && reg.showNotification){ await reg.showNotification(title, {body, tag, icon:'icon-192.png', badge:'icon-192.png'}); return true; }
+    }catch(e){}
+    try{ new Notification(title, {body, tag}); return true; }catch(e){ return false; }
+  }
+  // Hasil: daftar [tag, judul, isi] yang baru dikirim. 'now' bisa diisi untuk uji.
+  async function check(now){
+    now = now || Date.now();
+    const c = cfg(), out = [];
+    if(perm() !== 'granted' || !TYPES.some(k => c[k])) return out;
+    const s = seen();
+    if(c.event && window.KAL && typeof KAL.events === 'function'){
+      KAL.events().filter(e => e.impact === 3 && e.ts > now && e.ts - now <= LEAD_MIN*60000 && !s['ev:' + e.id]).forEach(e => {
+        const mins = Math.max(1, Math.ceil((e.ts - now)/60000));
+        mark('ev:' + e.id, now);
+        out.push(['ev-' + e.id, `Berita dampak tinggi ${mins} menit lagi`, `${e.name} • ${KAL.hm(e.ts)}`]);
+      });
+    }
+    const day = new Date(now + 8*3600000).toISOString().slice(0,10);
+    const list = DATA.trades.filter(t => String(t.tanggal_gmt8||'').slice(0,10) === day).sort((x,y) => parseGmt8(x.tanggal_gmt8) - parseGmt8(y.tanggal_gmt8));
+    if(c.limit && list.length){
+      let cum = 0, worst = 0;
+      list.forEach(t => { cum += t.laba; if(-cum > worst) worst = -cum; });
+      if(DAY_LIMITS.maxLoss && worst >= DAY_LIMITS.maxLoss && !s['lim:' + day + ':loss']){
+        mark('lim:' + day + ':loss', now);
+        out.push(['lim-loss', 'Batas rugi harian tercapai', `Rugi hari ini ${fmtMoney(worst)} dari batas ${fmtMoney(DAY_LIMITS.maxLoss)}. Pertimbangkan berhenti trading hari ini.`]);
+      }
+      if(DAY_LIMITS.maxTrades && list.length >= DAY_LIMITS.maxTrades && !s['lim:' + day + ':n']){
+        mark('lim:' + day + ':n', now);
+        out.push(['lim-n', 'Batas transaksi harian tercapai', `${list.length} dari maks ${DAY_LIMITS.maxTrades} transaksi hari ini.`]);
+      }
+    }
+    if(c.note && list.length && !s['note:' + day]){
+      const miss = list.filter(t => !hasNote(t)).length, last = parseGmt8(list[list.length-1].tanggal_gmt8);
+      if(miss && now - last >= NOTE_WAIT_MIN*60000){
+        mark('note:' + day, now);
+        out.push(['note', `${miss} transaksi hari ini belum ada catatan psikologi`, 'Isi emosi dan trigger selagi masih segar di ingatan.']);
+      }
+    }
+    for(const o of out) await deliver(o[0], o[1], o[2]);
+    return out;
+  }
+  async function request(){
+    if(!supported()) return 'unsupported';
+    try{ return await Notification.requestPermission(); }catch(e){ return perm(); }
+  }
+  setTimeout(() => { check(); }, 4000);
+  setInterval(() => { check(); }, 60000);
+  document.addEventListener('visibilitychange', () => { if(!document.hidden) check(); });
+  return { cfg, setCfg, perm, supported, check, deliver, request, log, TYPES };
+})();
+window.JNOTIF = JNOTIF;
+(function setupNotifUI(){
+  const pBtn = document.getElementById('notifPermBtn'), pNote = document.getElementById('notifPermNote'), tBtn = document.getElementById('notifTestBtn');
+  if(!pBtn) return;
+  const chip = (v, l) => `<button type="button" class="quick-chip" data-v="${v}">${l}</button>`;
+  const rows = {event:'notifEvent', limit:'notifLimit', note:'notifNote'};
+  const paint = () => {
+    const c = JNOTIF.cfg(), p = JNOTIF.perm();
+    Object.keys(rows).forEach(k => { const el = document.getElementById(rows[k]); if(!el) return; el.querySelectorAll('[data-v]').forEach(b => { const on = (b.dataset.v === '1') === !!c[k]; b.classList.toggle('active', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); }); });
+    pNote.textContent = p === 'unsupported' ? 'Browser ini tidak mendukung notifikasi. Di iPhone, pasang aplikasi ke Layar Utama dulu (iOS 16.4 ke atas).'
+      : p === 'granted' ? 'Izin diberikan. Notifikasi muncul selama aplikasi terbuka.'
+      : p === 'denied' ? 'Izin ditolak. Ubah di pengaturan situs browser, lalu muat ulang halaman.'
+      : 'Belum diberi izin. Ketuk Izinkan, lalu nyalakan jenis pengingat di bawah.';
+    pBtn.hidden = p === 'granted' || p === 'unsupported' || p === 'denied';
+    if(tBtn) tBtn.disabled = p !== 'granted';
+  };
+  Object.keys(rows).forEach(k => {
+    const el = document.getElementById(rows[k]); if(!el) return;
+    el.innerHTML = chip('0', 'Mati') + chip('1', 'Aktif');
+    el.addEventListener('click', async e => {
+      const b = e.target.closest('[data-v]'); if(!b) return;
+      const c = JNOTIF.cfg(); c[k] = +b.dataset.v;
+      if(c[k] && JNOTIF.perm() === 'default') await JNOTIF.request();
+      JNOTIF.setCfg(c); paint();
+    });
+  });
+  pBtn.addEventListener('click', async () => { await JNOTIF.request(); paint(); });
+  if(tBtn) tBtn.addEventListener('click', () => { JNOTIF.deliver('uji', 'Pengingat Jurnal XAUUSD aktif', 'Beginilah tampilan notifikasi pengingat.'); });
+  paint();
+})();
+
 // ---------- Esc global: tutup modal teratas (v1.1.160) ----------
 (function(){
   // Prioritas: dialog konfirmasi/notifikasi dulu, lalu modal lain (yang terakhir di DOM = paling atas).
@@ -6151,7 +6797,7 @@ const USER_CHANGELOG = [
     confirmModalOverlay:'confirmModalNo', notifyModalOverlay:'notifyModalClose',
     entryModalOverlay:'entryModalCancel', detailModalOverlay:'detailCloseBtn',
     dayModalOverlay:'dayModalCloseBtn', calcModalOverlay:'calcModalCloseBtn',
-    changelogModalOverlay:'changelogCloseBtn'
+    changelogModalOverlay:'changelogCloseBtn', brokerPvOverlay:'brokerPvCancel', fotoLbOverlay:'fotoLbClose'
   };
   document.addEventListener('keydown', e => {
     if(e.key !== 'Escape' || e.defaultPrevented) return;
@@ -6215,10 +6861,56 @@ const USER_CHANGELOG = [
     if(sub){ const s = document.querySelector('#' + sub.nav + ' .sg-tab.active'); if(s) return name + '-' + s.dataset.key; }
     return name;
   }
+  // Periode dan filter di URL (v1.1.207): #laporan-tren?p=bulanan&o=-1&arah=Beli, #transaksi?hasil=loss&emosi=Takut. Hanya nilai yang dikenal diterapkan.
+  const TCS = { arah:'csw_filterArah', hasil:'csw_filterHasil', cat:'csw_filterCatatan', emosi:'csw_filterEmosi', trig:'csw_filterTrigger', jenis:'csw_filterJenis', setup:'csw_filterSetup', lg:'csw_filterLanggar', sesi:'csw_filterSesi', berita:'csw_filterBerita' };
+  const TIN = { q:'searchBox', lmin:'ledgerLotMin', lmax:'ledgerLotMax' };
+  function queryFor(name){
+    const p = [], add = (k, v) => { if(v !== '' && v != null) p.push(k + '=' + encodeURIComponent(v)); };
+    try{
+      if(name === 'laporan'){
+        if(lap2Gran !== 'all') add('p', lap2Gran); if(lap2Offset) add('o', lap2Offset);
+        if(lap2Arah !== 'semua') add('arah', lap2Arah); if(lap2Sesi !== 'semua') add('sesi', lap2Sesi);
+      }else if(name === 'transaksi'){
+        Object.keys(TIN).forEach(k => add(k, (document.getElementById(TIN[k]).value || '').trim().slice(0,60)));
+        Object.keys(TCS).forEach(k => add(k, CS.get(TCS[k])));
+        add('dari', DTP.get('ledgerFrom')); add('sampai', DTP.get('ledgerTo'));
+      }
+    }catch(e){}
+    return p.length ? '?' + p.join('&') : '';
+  }
+  function parseQuery(str){
+    const q = {}; if(!str) return q;
+    str.split('&').forEach(kv => { const i = kv.indexOf('='); if(i < 1) return; try{ q[kv.slice(0,i)] = decodeURIComponent(kv.slice(i+1)).slice(0,60); }catch(e){} });
+    return q;
+  }
+  function applyQuery(name, q){
+    if(name === 'laporan'){
+      lap2Gran = LAP2_GRANS.some(x => x.key === q.p) ? q.p : 'all';
+      lap2Offset = (/^-?\d{1,4}$/.test(q.o || '') && +q.o <= 0) ? +q.o : 0;
+      lap2Arah = (q.arah === 'Beli' || q.arah === 'Jual') ? q.arah : 'semua';
+      lap2Sesi = (/^\d$/.test(q.sesi || '') && +q.sesi < LAP_SESSIONS.length) ? q.sesi : 'semua';
+      const mark = (sel, attr, val) => document.querySelectorAll(sel).forEach(b => b.classList.toggle('active', b.dataset[attr] === val));
+      mark('#lapGranTabs .lap-gran-btn', 'gran', lap2Gran); mark('#lapArahFilter .lap-filter-chip', 'arah', lap2Arah); mark('#lapSesiFilter .lap-filter-chip', 'sesi', lap2Sesi);
+      if(typeof renderLap2 === 'function') renderLap2();
+    }else if(name === 'transaksi'){
+      Object.keys(TIN).forEach(k => { const el = document.getElementById(TIN[k]); el.value = (k === 'q' ? (q[k] || '') : (/^\d{0,4}(\.\d{0,3})?$/.test(q[k] || '') ? (q[k] || '') : '')); });
+      Object.keys(TCS).forEach(k => CS.set(TCS[k], q[k] || ''));
+      const dt = v => /^\d{4}-\d{2}-\d{2}$/.test(v || '') ? v : '';
+      DTP.set('ledgerFrom', dt(q.dari)); DTP.set('ledgerTo', dt(q.sampai));
+      document.querySelectorAll('.ledger-quick-range .quick-chip').forEach(b => b.classList.remove('active'));
+      if(typeof syncLedgerAllChip === 'function') syncLedgerAllChip();
+      if(window.renderTrades) window.renderTrades();
+    }
+  }
+  const fullHash = () => { const t = tokenNow(); return '#' + t + queryFor(t.split('-')[0]); };
   function parse(h){
-    const m = /^#\/?([a-z]+)(?:-([a-z]+))?$/.exec(h || ''); if(!m || !ROUTES[m[1]]) return null;
+    const qi = (h || '').indexOf('?'), qs = qi >= 0 ? h.slice(qi + 1) : null;
+    h = qi >= 0 ? h.slice(0, qi) : h;
+    const m = /^#\/?([a-z]+)(?:-([a-z0-9]+))?$/.exec(h || ''); if(!m || !ROUTES[m[1]]) return null;
     const sub = SUBS[m[1]], g = m[2];
-    return { name:m[1], tab:ROUTES[m[1]], group: (sub && g && sub.keys().includes(g)) ? g : null };
+    // Deep link ke satu transaksi (v1.1.203): #transaksi-<id>, id hanya huruf kecil/angka dan harus ada di jurnal.
+    const trade = (m[1] === 'transaksi' && g && (DATA.trades || []).some(t => String(t.id).toLowerCase() === g)) ? (DATA.trades.find(t => String(t.id).toLowerCase() === g).id) : null;
+    return { name:m[1], tab:ROUTES[m[1]], group: (sub && g && sub.keys().includes(g)) ? g : null, trade, query: qs !== null ? parseQuery(qs) : null };
   }
   let applying = false;
   function apply(r){
@@ -6226,19 +6918,23 @@ const USER_CHANGELOG = [
     try{
       if(window.goToTab) window.goToTab(r.tab);
       if(r.group) SUBS[r.name].show(r.group);
+      if(r.query && (r.name === 'laporan' || r.name === 'transaksi')) applyQuery(r.name, r.query);
+      if(r.trade && window.openTradeDetail) window.openTradeDetail(r.trade);
     }finally{ applying = false; }
     syncTitle();
   }
   function syncTitle(){ document.title = (NAMES[activeTab()] || 'Jurnal') + ' \u00b7 Jurnal XAUUSD'; }
   function setHash(push){
     if(applying) return;
-    const t = '#' + tokenNow();
+    const t = fullHash();
     if(location.hash !== t){ try{ (push ? history.pushState : history.replaceState).call(history, null, '', t); }catch(e){} }
     syncTitle();
   }
   document.querySelectorAll('.main-tab-btn, .bnav-btn, #settingsGearBtn').forEach(b => b.addEventListener('click', () => setTimeout(() => setHash(true), 0)));
   ['laporanSubnav','setelanSubnav'].forEach(id => { const n = document.getElementById(id); if(n) n.addEventListener('click', () => setTimeout(() => setHash(false), 0)); });
-  window.addEventListener('hashchange', () => { const r = parse(location.hash); if(r && (r.tab !== activeTab() || (r.group && tokenNow() !== r.name + '-' + r.group))) apply(r); });
+  let qTimer = null;
+  ['tabpanel-laporan','tabpanel-transaksi'].forEach(id => { const el = document.getElementById(id); if(el) ['click','input','change'].forEach(ev => el.addEventListener(ev, () => { clearTimeout(qTimer); qTimer = setTimeout(() => setHash(false), 200); }, true)); });
+  window.addEventListener('hashchange', () => { const r = parse(location.hash); if(r && (r.trade || r.tab !== activeTab() || (r.group && tokenNow() !== r.name + '-' + r.group) || (r.query && location.hash !== fullHash()))) apply(r); });
   window.routeSync = () => setHash(false);
   const first = parse(location.hash);
   if(first) apply(first); else syncTitle();
