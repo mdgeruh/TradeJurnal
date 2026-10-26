@@ -37,7 +37,7 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="style.css?v=1.1.217">
+<link rel="stylesheet" href="style.css?v=1.1.222">
 </head>
 <body>
 <div class="login-gate" id="loginGate" role="dialog" aria-modal="true" aria-labelledby="lgTitle">
@@ -120,7 +120,12 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
     </div>
   </section>
 
-  <section class="hero">
+  <section class="today-card" id="todayCard" aria-label="Ringkasan hari ini">
+    <div class="today-head"><h2>Hari ini</h2><span id="todayDate"></span></div>
+    <div class="today-grid" id="todayGrid"></div>
+  </section>
+
+  <section class="hero" id="heroSection">
     <p class="hero-label">Saldo akhir akun</p>
     <div class="hero-figure">
       <div class="hero-number" id="heroSaldo">—</div>
@@ -148,11 +153,12 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
       </div>
       <div class="hero-rp-sub" id="pnlTodayRp" hidden></div>
       <div class="day-limit" id="dayLimitBox" hidden></div>
+      <div class="pnl-spark" id="pnlSpark" hidden></div>
       <div class="pnl-grid" id="pnlGrid"></div>
     </div>
   </section>
 
-  <section>
+  <section id="eqSection">
     <div class="section-head">
       <h2>Kurva ekuitas</h2>
       <div class="section-note">Saldo berjalan dari transaksi pertama hingga saat ini, sudah termasuk deposit &amp; penarikan.</div>
@@ -167,12 +173,13 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
     <div class="eq-mode" id="eqMode" role="group" aria-label="Jenis kurva">
       <button type="button" class="quick-chip" data-eqmode="equity" title="Saldo akun termasuk deposit dan penarikan">Ekuitas</button>
       <button type="button" class="quick-chip" data-eqmode="pnl" title="Hasil trading saja, tanpa deposit dan penarikan">PNL kumulatif</button>
+      <button type="button" class="quick-chip" id="eqZoomBtn" aria-pressed="false" title="Sumbu tegak mengikuti rentang data tanpa memaksa titik nol. Otomatis aktif bila kurva hampir datar terhadap saldo.">Fokus rentang</button>
     </div>
     <div class="eq-dd-badge-row" id="eqDdBadge" aria-live="polite"></div>
     <div class="chart-box" id="chartBox"></div>
   </section>
 
-  <div class="stat-period" id="statPeriod"></div>
+  <div class="stat-period-row" id="statPeriodRow"><div class="stat-period" id="statPeriod"></div><div class="lap-gran-tabs" id="statPeriodChips" role="tablist" aria-label="Periode statistik"></div></div>
   <section class="stats" id="statStrip" aria-live="polite"></section>
 
   <section class="psy-prompt" id="psyPromptCard" hidden>
@@ -207,6 +214,7 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
   <section class="rules-card" id="rulesCard" aria-labelledby="rulesTitle">
     <div class="recent-head"><h2 id="rulesTitle">Aturan trading</h2><span class="rules-prog" id="rulesProg"></span><button type="button" class="recent-all" id="rulesEditBtn">Tambah aturan</button></div>
     <ul class="rules-list" id="rulesList"></ul>
+    <div class="rules-comp" id="rulesComp" hidden></div>
     <form class="rules-add" id="rulesAdd" hidden autocomplete="off">
       <input type="text" id="rulesAddInput" maxlength="120" placeholder="Tambah aturan baru…" aria-label="Aturan baru">
       <button type="submit" class="ledger-reset-btn has-ic" id="rulesAddBtn"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg><span>Tambah</span></button>
@@ -821,6 +829,15 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
     </div>
   </section>
 
+  <section id="rcSection" data-sgroup="tampilan" aria-labelledby="rcTitle">
+    <div class="section-head">
+      <h2 id="rcTitle">Kartu Ringkasan</h2>
+      <div class="section-note">Sembunyikan kartu yang tidak dipakai dan atur urutannya dengan tombol panah. Di ponsel, urutan bawaan: Saldo, Hari ini, Rilis berita, Statistik, Kurva ekuitas; sekali Anda mengatur urutan sendiri, urutan itu dipakai di semua ukuran layar. Tersimpan di perangkat ini dan tidak ikut sinkron cloud.</div>
+    </div>
+    <div class="rc-list" id="rcList"></div>
+    <div class="settings-row"><div class="settings-desc"><strong>Atur ulang</strong><span>Kembali ke urutan bawaan dan tampilkan semua kartu.</span></div><button type="button" class="ledger-reset-btn" id="rcReset">Atur ulang</button></div>
+  </section>
+
   <section data-sgroup="trading">
     <div class="section-head">
       <h2>Batas harian</h2>
@@ -832,6 +849,13 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
         <span id="limMaxLossHint">Hari dianggap melewati batas bila rugi kumulatif hari itu (urut waktu tutup) mencapai nilai ini.</span>
       </div>
       <input type="number" id="limMaxLoss" class="settings-input" min="0" step="1" placeholder="mis. 500" aria-label="Maks rugi harian dalam sen">
+    </div>
+    <div class="settings-row">
+      <div class="settings-desc">
+        <strong>Maks rugi harian (% saldo awal hari)</strong>
+        <span id="limMaxLossPctHint">Alternatif persen: batas dihitung ulang tiap hari dari saldo penutupan hari sebelumnya (GMT+8), jadi ikut membesar atau mengecil bersama saldo. Bila diisi, nilai persen dipakai dan kolom sen di atas diabaikan; hari pertama tanpa saldo sebelumnya memakai kolom sen bila ada.</span>
+      </div>
+      <input type="number" id="limMaxLossPct" class="settings-input" min="0" max="100" step="0.1" placeholder="mis. 5" aria-label="Maks rugi harian dalam persen saldo awal hari">
     </div>
     <div class="settings-row">
       <div class="settings-desc">
@@ -1514,11 +1538,11 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
 </div>
 
 <script id="journal-data" type="application/json">{"summary": {"total": 0, "win": 0, "loss": 0, "winrate": 0, "pl_cent": 0, "pl_rp": 0, "saldo_akhir": 0, "pct_pl": null}, "periods": [], "kurs": 0, "dashboard": {"update": "Update terakhir: -", "saldo": 0, "stats": {"total": 0, "winrate": 0, "pf": 0, "maxdd": 0, "expectancy": 0}, "top_win": [], "top_loss": [], "mm": {"equity": 0, "risk": 0.01, "sl": 150, "pipval": 10, "lot": 0, "tp_pips": 0, "tp_cent": 0}}, "maxdd_note": "", "equity": [], "months": [], "weeks": [], "trades": [], "deposit": {"total_deposit": 0, "total_penarikan": 0, "total_mc": 0, "modal_bersih": 0, "log": []}, "period_ranges": [], "modal_kumulatif": []}</script>
-<script src="config.js?v=1.1.217"></script>
-<script src="app.js?v=1.1.217"></script>
-<script src="kalender.js?v=1.1.217"></script>
-<script src="broker.js?v=1.1.217"></script>
-<script src="sync.js?v=1.1.217"></script>
-<script src="pwa.js?v=1.1.217"></script>
+<script src="config.js?v=1.1.222"></script>
+<script src="app.js?v=1.1.222"></script>
+<script src="kalender.js?v=1.1.222"></script>
+<script src="broker.js?v=1.1.222"></script>
+<script src="sync.js?v=1.1.222"></script>
+<script src="pwa.js?v=1.1.222"></script>
 </body>
 </html>

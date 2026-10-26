@@ -2,7 +2,7 @@
 
 Ringkasan perubahan untuk pengguna, terbaru di atas. Isinya sama dengan **Setelan → Tentang aplikasi → Lihat riwayat** di aplikasi (data `USER_CHANGELOG` di `app.js`). Rincian teknis per versi ada di `CHANGELOG.md`; rencana ke depan di `roadmap.md`.
 
-**Versi saat ini: 1.1.217** (14 Nov 2026)
+**Versi saat ini: 1.1.222** (19 Nov 2026)
 
 ## Sorotan
 - Ringkasan: kurva ekuitas yang jelas (modal, puncak berjalan, drawdown, tooltip), pilihan **Ekuitas / PNL kumulatif**, PNL Minggu/Bulan Ini, lencana DD saat ini.
@@ -14,6 +14,11 @@ Ringkasan perubahan untuk pengguna, terbaru di atas. Isinya sama dengan **Setela
 
 ## 1 Okt 2026 (v1.1.145 – v1.1.192)
 **Baru**
+- **Setelan Trading**: batas rugi harian bisa dalam persen saldo awal hari (dihitung ulang tiap hari).
+- **Ringkasan**: kartu bisa disembunyikan dan diurutkan lewat Setelan → Tampilan; urutan bawaan ponsel (saldo, hari ini, berita, statistik, grafik).
+- **Ringkasan**: lencana pelanggaran di transaksi terakhir, sparkline 7 hari + drawdown saat ini, kepatuhan aturan 7 hari dan streak.
+- **Grafik ekuitas**: legenda ringkas dan chip Fokus rentang (otomatis untuk kurva hampir datar).
+- **Ringkasan**: kartu Hari ini, chip periode di strip statistik, banner cadangan ramping (Nanti = 3 hari), angka nol netral.
 - **Tampilan**: efek kaca kini sakelar sendiri (Setelan → Tampilan → Efek kaca) yang bisa dipakai di semua skema warna.
 - **Tampilan**: skema Kaca Senja (kaca buram di atas gradasi hangat; gelap dan terang).
 - **Pengingat**: notifikasi berita dampak tinggi, batas harian, dan catatan psikologi (Setelan → Pengingat; berjalan saat aplikasi terbuka).

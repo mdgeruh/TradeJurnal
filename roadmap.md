@@ -2,7 +2,12 @@
 
 Satu-satunya daftar rencana dan todo proyek (dulu ada di `SUMMARY.md`). Prioritas: **P1** tinggi, **P2** sedang, **P3** rendah. Tidak ada tanggal tetap. Setiap butir yang mengubah kode mengikuti **Alur rilis** di `README.md`; saat selesai, hapus dari sini (centang bila perlu satu rilis), pindahkan tema barunya ke tabel "Sudah selesai", dan catat di `release_note.md` dan `CHANGELOG.md`. Jebakan bug tiap area ada di `SUMMARY.md`.
 
-## Sudah selesai (v1.1.217)
+## Sudah selesai (v1.1.222)
+- Batas rugi harian dalam persen saldo awal hari (v1.1.222).
+- Ringkasan: kartu bisa diatur (sembunyikan, urutkan) dan urutan bawaan ponsel (v1.1.221).
+- Ringkasan: transaksi terakhir lebih kaya, sparkline dan drawdown saat ini, kepatuhan aturan (v1.1.220).
+- Grafik ekuitas: legenda ringkas, Fokus rentang sumbu-Y (v1.1.219).
+- Ringkasan: kartu Hari ini, chip periode statistik, banner cadangan ramping, nol netral (v1.1.218).
 - Efek kaca sebagai sakelar terpisah untuk semua palet warna (v1.1.217).
 - Skema tampilan Kaca Senja (glass) gelap dan terang (v1.1.216).
 - Notifikasi pengingat berita dampak tinggi, batas harian, dan catatan psikologi (v1.1.215).
@@ -111,7 +116,14 @@ Hampir semua fitur baru hanya diuji di Chromium dengan data sintetis dan Supabas
 - [x] Format angka (Indonesia/Internasional) selesai v1.1.214. Terjemahan teks UI ke bahasa Inggris tidak dikerjakan (ribuan teks tetap di `index.html`/`app.js`; butuh pemisahan teks ke kamus). (Ukuran tampilan selesai v1.1.159.)
 - [x] Notifikasi pengingat (v1.1.215): berita dampak tinggi, batas harian, catatan psikologi; berjalan saat aplikasi terbuka. Push saat aplikasi tertutup butuh server (belum ada).
 
-**Ringkasan**
+**Ringkasan** (saran 24 Okt 2026)
+- [x] Kartu Hari ini (transaksi, sisa batas rugi, berita 24 jam, catatan belum diisi) (v1.1.218)
+- [x] Chip periode di strip statistik (v1.1.218)
+- [x] Banner cadangan ramping, Nanti menunda 3 hari (v1.1.218)
+- [x] Angka nol netral (v1.1.218)
+- [x] Grafik ekuitas: legenda ringkas, Fokus rentang sumbu-Y (v1.1.219)
+- [x] Transaksi terakhir lebih kaya, sparkline dan drawdown saat ini, kepatuhan aturan (v1.1.220)
+- [x] Atur kartu sendiri dan urutan di ponsel (v1.1.221)
 
 **Optimalisasi**
 - [ ] (Terblokir: jaringan sesi tidak bisa mengunduh font; kerjakan dari mesin dengan akses npm/CDN) Host sendiri font (Fraunces, IBM Plex Mono) sebagai `woff2` subset Latin + tambah ke `SHELL` di `sw.js` (offline penuh tanpa dependensi luar).

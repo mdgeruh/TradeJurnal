@@ -1718,3 +1718,73 @@ html[data-glass="1"] table.ledger thead th{background:var(--glass-th);}
   html[data-glass="1"] body{background:#fff !important;}
   html[data-glass="1"] section,html[data-glass="1"] .chart-card{-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:none;}
 }
+
+/* ---------- Ringkasan v1.1.218: kartu Hari ini, chip periode statistik, banner ramping, nol netral ---------- */
+.pnl-main-pct.flat,.pnl-pct.flat,.stat-val.flat,.hero-alltime .val.flat,.hero-alltime span.flat{color:var(--paper-dim);}
+.today-card{padding:14px 18px 16px;}
+.today-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;gap:8px;}
+.today-head h2{margin:0;font-size:15px;}
+.today-head span{font-size:11px;color:var(--paper-faint);text-transform:uppercase;letter-spacing:.06em;}
+.today-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;}
+@media (max-width:720px){.today-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.today-card{padding:14px 14px 14px;}}
+.today-cell{display:flex;flex-direction:column;gap:2px;align-items:flex-start;text-align:left;min-width:0;padding:10px 12px;border:1px solid var(--line-soft);border-radius:12px;background:transparent;color:var(--paper);font:inherit;}
+button.today-cell{cursor:pointer;transition:border-color .15s;}
+button.today-cell:hover,button.today-cell:focus-visible{border-color:var(--gold);}
+.tc-lbl{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--paper-faint);}
+.tc-val{font-family:'Fraunces',serif;font-size:22px;line-height:1.2;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tc-sub{font-size:11px;color:var(--paper-dim);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.today-cell.ok .tc-val{color:var(--gain);}
+.today-cell.warn .tc-val{color:var(--gold);}
+.today-cell.over .tc-val{color:var(--loss);}
+.today-card.hidden-values .tc-money{filter:blur(6px);user-select:none;}
+.stat-period-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin:14px 0 -6px;}
+.stat-period-row .stat-period{margin:0;}
+.stat-period-row .lap-gran-tabs{margin:0;}
+.backup-nudge{padding:10px 14px;}
+.backup-nudge .psy-prompt-text{flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:2px 10px;}
+.backup-nudge .psy-prompt-text strong{font-size:12.5px;}
+.backup-nudge .psy-prompt-text span{font-size:11px;}
+.backup-nudge-actions .ledger-reset-btn,.backup-nudge-actions .quick-chip{min-height:30px;padding-top:3px;padding-bottom:3px;}
+
+/* ---------- Grafik ekuitas v1.1.219: legenda ringkas dan Fokus rentang ---------- */
+.eq-legend{display:flex;flex-wrap:wrap;gap:2px 16px;}
+.eq-legend .eq-legend-wide{flex:0 1 auto;min-width:0;max-width:100%;white-space:normal;text-align:left;}
+.eq-legend-item{flex:0 1 auto;}
+button.eq-legend-item{min-height:26px;padding:2px 0;}
+
+
+/* Ringkasan v1.1.220: lencana transaksi terakhir, sparkline 7 hari + drawdown, kepatuhan aturan */
+.recent-flag{display:inline-block;margin-left:8px;padding:1px 6px;border-radius:999px;border:1px solid var(--loss);color:var(--loss);font-size:10.5px;letter-spacing:.02em;vertical-align:1px;}
+.recent-date .cat-ico{margin-left:6px;color:var(--paper-faint);}
+.pnl-spark{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-top:16px;padding-top:12px;border-top:1px solid var(--line-soft);}
+.pnl-spark[hidden]{display:none;}
+.pnl-spark-col{display:flex;flex-direction:column;gap:6px;min-width:0;}
+.pnl-spark-col .pnl-lbl{font-size:10px;color:var(--paper-faint);text-transform:uppercase;letter-spacing:.06em;}
+.pnl-spark-svg{display:block;max-width:100%;height:30px;}
+.pnl-spark-svg .sp-up{fill:var(--gain);} .pnl-spark-svg .sp-dn{fill:var(--loss);} .pnl-spark-svg .sp-0{fill:var(--line);}
+.pnl-spark-svg .sp-axis{stroke:var(--line);stroke-width:.5;}
+.pnl-spark-dd{align-items:flex-end;text-align:right;}
+.pnl-spark-ddv{font-size:12.5px;font-variant-numeric:tabular-nums;}
+.pnl-spark-ddv .up{color:var(--gain);} .pnl-spark-ddv .down{color:var(--loss);}
+.pnl-spark-pct{color:var(--paper-dim);font-size:11px;}
+.pnl-snapshot.hidden-values .pnl-spark-svg,.pnl-snapshot.hidden-values .pnl-spark-ddv{filter:blur(6px);user-select:none;}
+.rules-comp{display:flex;flex-wrap:wrap;gap:6px 24px;margin:10px 0 2px;padding:10px 0 0;border-top:1px solid var(--line-soft);}
+.rules-comp[hidden]{display:none;}
+.rc-item{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.rc-lbl{font-size:10px;color:var(--paper-faint);text-transform:uppercase;letter-spacing:.06em;}
+.rc-item strong{font-family:'Fraunces',serif;font-weight:500;font-size:20px;font-variant-numeric:tabular-nums;}
+.rc-item strong.up{color:var(--gain);} .rc-item strong.down{color:var(--loss);}
+.rc-sub{font-size:11.5px;color:var(--paper-dim);}
+.rc-note{flex:1 0 100%;font-size:11.5px;color:var(--paper-faint);font-style:italic;}
+
+
+/* Ringkasan v1.1.221: kartu bisa disembunyikan/diurutkan */
+.rc-off{display:none !important;}
+.rc-list{display:flex;flex-direction:column;}
+.rc-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line-soft);}
+.rc-name{display:flex;align-items:center;gap:10px;min-width:0;cursor:pointer;font-size:13px;}
+.rc-name input{width:18px;height:18px;flex:none;accent-color:var(--gold);}
+.rc-move{display:flex;gap:6px;flex:none;}
+.rc-move .quick-chip{min-width:40px;min-height:36px;padding:0 10px;}
+.rc-move .quick-chip[disabled]{opacity:.35;cursor:default;}
+@media screen and (min-width:1100px){ .tab-panel.active[data-panel="grafik"]{grid-auto-flow:row dense;} }

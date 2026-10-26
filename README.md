@@ -125,6 +125,25 @@ Tab Kalender → **Impor dan ekspor jadwal**. Ekspor menyimpan semua event (bawa
 ## Performa mingguan: rentang dan rata-rata (v1.1.180)
 Di bagian Performa mingguan pilih **12 minggu / 26 minggu / Semua**. Batang menampilkan garis putus-putus rata-rata per minggu, dengan ringkasan rata-rata dan jumlah minggu untung. Daftar mingguan mengikuti rentang, dan semuanya mengikuti filter arah/sesi. Pilihan diingat dan ikut ekspor pengaturan.
 
+## Batas rugi harian dalam persen (v1.1.222)
+Setelan → Trading: isi **Maks rugi harian (% saldo awal hari)** agar batas dihitung ulang tiap hari dari saldo penutupan hari sebelumnya (GMT+8). Persen menimpa kolom sen; hari pertama tanpa saldo sebelumnya memakai kolom sen. Tes: `t222.js`.
+
+
+## Ringkasan: atur kartu sendiri (v1.1.221)
+Setelan → Tampilan → **Kartu Ringkasan**: sembunyikan kartu dan ubah urutannya dengan panah; Atur ulang mengembalikan bawaan. Urutan bawaan ponsel: Saldo, Hari ini, Rilis berita, Statistik, Kurva ekuitas. Tersimpan per perangkat (`jurnalRingkasan`). Tes: `t221.js`.
+
+
+## Ringkasan: sparkline, drawdown, kepatuhan aturan (v1.1.220)
+Transaksi terakhir menampilkan lencana pelanggaran aturan, setup, dan tanda catatan. Kartu PNL punya sparkline 7 hari dan drawdown saat ini; kartu Aturan trading menampilkan kepatuhan 7 hari dan streak hari patuh. Tes: `t220.js`.
+
+
+## Grafik ekuitas: Fokus rentang (v1.1.219)
+Chip **Fokus rentang** di atas grafik memotong sumbu-Y ke rentang data. Otomatis aktif bila kurva bergerak < 30% dari puncaknya; ketuk untuk menyalakan/mematikan (diingat). Tidak tersedia pada PNL kumulatif.
+
+
+## Ringkasan: kartu Hari ini (v1.1.218)
+Kartu Hari ini (transaksi, sisa batas rugi, berita ≤ 24 jam, catatan belum diisi), chip periode di strip statistik, banner cadangan ramping, dan angka nol netral. Tes: `t218.js`.
+
 ## Efek kaca (v1.1.217)
 Setelan → Tampilan → Efek kaca: sakelar `jurnalGlass` (`html[data-glass="1"]`) yang bisa dipakai dengan semua skema warna; gradasi latar mengikuti aksen palet. Kaca Senja otomatis berkaca bila belum pernah memilih. Tes: `tglass.js`.
 
