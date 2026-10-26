@@ -3,7 +3,7 @@
 // Anti campur-versi (v1.1.170): berkas CSS/JS dipanggil index.html dengan ?v=<versi> dan di-precache dengan nama bertanda itu;
 // halaman (navigasi) diambil jaringan-dulu agar index.html selalu yang terbaru, baru jatuh ke cache bila offline.
 // Panggilan ke Supabase (domain lain) tidak pernah di-cache.
-const V = '1.1.217';
+const V = '1.1.222';
 const CACHE = 'jurnal-v' + V;
 const SHELL = ['./', 'index.html',
   ...['style.css', 'app.js', 'kalender.js', 'broker.js', 'sync.js', 'config.js', 'pwa.js'].map(f => f + '?v=' + V),
@@ -46,7 +46,7 @@ self.addEventListener('fetch', e => {
   }));
 });
 
-// Ketuk notifikasi pengingat (v1.1.217): fokuskan jendela aplikasi yang sudah terbuka, atau buka yang baru.
+// Ketuk notifikasi pengingat (v1.1.222): fokuskan jendela aplikasi yang sudah terbuka, atau buka yang baru.
 self.addEventListener('notificationclick', e => {
   e.notification.close();
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cs => {

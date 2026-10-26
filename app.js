@@ -289,7 +289,8 @@ function approxRp(cent){
   return `<span class="approx-rp">\u2248 ${fmtRp(cent/100*DATA.kurs)}</span>`;
 }
 let HERO_PNL = null; // diisi snapshot PNL (hari ini/7H/30H) begitu dihitung
-const heroSign = n => n>=0 ? '+' : '';
+const heroSign = n => n>0 ? '+' : '';
+const sgnCls = v => v>0 ? 'up' : (v<0 ? 'down' : 'flat');   // nol = netral (v1.1.218)
 // Nominal PNL bertanda dalam mata uang terpilih; USD/USC disertai estimasi rupiah.
 function heroPlTxt(plCent, plRp){
   if(HERO_CURRENCY==='IDR') return heroSign(plRp) + fmtRp(plRp);
@@ -311,16 +312,16 @@ function renderHeroMoney(){
 
   // PNL Kumulatif — pakai DATA.summary (selalu direcompute recomputeAll()), bukan DATA.periods.
   const pl = DATA.summary.pl_cent, pl_rp = DATA.summary.pl_rp;
-  const cls = pl>=0 ? 'up' : 'down';
+  const cls = sgnCls(pl);
   const pct = DATA.summary.pct_pl;
-  const pctTxt = (pct===null || pct===undefined) ? '' : `<span class="${cls}">${pct>=0?'+':''}${fmtPct(pct)}</span> · `;
+  const pctTxt = (pct===null || pct===undefined) ? '' : `<span class="${cls}">${pct>0?'+':''}${fmtPct(pct)}</span> · `;
   document.getElementById('heroAllTime').innerHTML = `<span class="lbl">PNL Kumulatif</span>${pctTxt}<span class="val ${cls}">${heroPlTxt(pl, pl_rp)}</span>${idr ? '' : `<span class="hero-rp-sub">${heroRpSub(pl_rp)}</span>`}`;
 
   if(!HERO_PNL) return;
-  const pctFmt = p => p===null ? '\u2013' : (p>=0?'+':'') + fmtPct(p);
+  const pctFmt = p => p===null ? '\u2013' : (p>0?'+':'') + fmtPct(p);
   const mainPctEl = document.getElementById('pnlTodayPct');
   mainPctEl.textContent = pctFmt(HERO_PNL.today.pct);
-  mainPctEl.className = 'pnl-main-pct ' + (HERO_PNL.today.pl>=0?'up':'down');
+  mainPctEl.className = 'pnl-main-pct ' + sgnCls(HERO_PNL.today.pl);
   document.getElementById('pnlTodayApprox').textContent = heroPlTxt(HERO_PNL.today.pl, HERO_PNL.today.pl_rp);
   const todayRpEl = document.getElementById('pnlTodayRp');
   todayRpEl.textContent = heroRpSub(HERO_PNL.today.pl_rp);
@@ -328,7 +329,7 @@ function renderHeroMoney(){
   document.getElementById('pnlGrid').innerHTML = [{lbl:'PNL 7H', m:HERO_PNL.d7},{lbl:'PNL 30H', m:HERO_PNL.d30},{lbl:'PNL Minggu Ini', m:HERO_PNL.week},{lbl:'PNL Bulan Ini', m:HERO_PNL.month}].map(r=>`
     <div class="pnl-cell">
       <div class="pnl-lbl">${r.lbl}</div>
-      <div class="pnl-pct ${r.m.pl>=0?'up':'down'}">${pctFmt(r.m.pct)}</div>
+      <div class="pnl-pct ${sgnCls(r.m.pl)}">${pctFmt(r.m.pct)}</div>
       <div class="pnl-val">${heroPlTxt(r.m.pl, r.m.pl_rp)}</div>
       ${idr ? '' : `<div class="hero-rp-sub">${heroRpSub(r.m.pl_rp)}</div>`}
     </div>
@@ -528,6 +529,7 @@ renderHeroMoney();
     eyeBtn.textContent = hidden ? '\u25cc' : '\u25c9';
     eyeBtn.setAttribute('aria-pressed', hidden ? 'true' : 'false');
     const rc = document.getElementById('recentCard'); if(rc) rc.classList.toggle('hidden-values', hidden);
+    const tc = document.getElementById('todayCard'); if(tc) tc.classList.toggle('hidden-values', hidden);
   }
   window.setPnlHidden = setPnlHidden;
   // Setelan → Preferensi "Angka PNL saat dibuka" (v1.1.145): jurnalHideNum = '1' → tersamar sejak muat
@@ -540,6 +542,11 @@ renderHeroMoney();
 // ---------- Periode Ringkasan: chip bulat (v1.1.134), default All ----------
 let currentPeriodRange = null;
 buildPeriodChips(document.getElementById('periodChips'), { items: PERIOD_PRESETS, active: 'all', onSelect: k=> selectPeriodKey(k) });
+// Chip periode kedua tepat di atas strip statistik (v1.1.218), terhubung dengan chip di atas kurva. 'Sesuaikan' hanya ada di chip kurva (kolom tanggalnya di sana).
+buildPeriodChips(document.getElementById('statPeriodChips'), { items: PERIOD_PRESETS.filter(p=>p.key!=='custom'), active: 'all', onSelect: k=> selectPeriodKey(k) });
+function markPeriodChips(key){
+  ['periodChips','statPeriodChips'].forEach(id => { const el = document.getElementById(id); if(!el) return; el.querySelectorAll('.lap-gran-btn').forEach(b => { const on = b.dataset.key === key; b.classList.toggle('active', on); b.setAttribute('aria-selected', String(on)); }); });
+}
 const customRangeEl = document.getElementById('customRange');
 const customNote = document.getElementById('customNote');
 
@@ -591,10 +598,10 @@ function renderStatStrip(st, periodLabel){
   document.getElementById('statStrip').innerHTML = `
     <div class="stat"><div class="stat-lbl">Transaksi</div><div class="stat-val">${st.total}</div></div>
     <div class="stat"><div class="stat-lbl">Win rate</div><div class="stat-val">${st.total? fmtPct(st.winrate) : '—'}</div></div>
-    <div class="stat"><div class="stat-lbl">Laba/Rugi</div><div class="stat-val ${st.pl>=0?'up':'down'}">${st.pl>=0?'+':''}${fmtMoney(st.pl)}</div>${approxRp(st.pl)}</div>
+    <div class="stat"><div class="stat-lbl">Laba/Rugi</div><div class="stat-val ${sgnCls(st.pl)}">${st.pl>0?'+':''}${fmtMoney(st.pl)}</div>${approxRp(st.pl)}</div>
     <div class="stat"><div class="stat-lbl">PF</div><div class="stat-val">${pfTxt}</div></div>
     <div class="stat"><div class="stat-lbl" title="Berbasis PNL (tanpa deposit/penarikan); beda dasar hitung dengan Drawdown ekuitas di kurva">Max DD (PNL)</div><div class="stat-val ${st.maxdd>0?'down':''}">-${fmtMoney(st.maxdd)}</div></div>
-    <div class="stat"><div class="stat-lbl">Expectancy</div><div class="stat-val ${st.expectancy>=0?'up':'down'}">${st.expectancy>=0?'+':''}${fmtMoney(st.expectancy)}</div></div>
+    <div class="stat"><div class="stat-lbl">Expectancy</div><div class="stat-val ${sgnCls(st.expectancy)}">${st.expectancy>0?'+':''}${fmtMoney(st.expectancy)}</div></div>
     <div class="stat"><div class="stat-lbl">Streak</div><div class="stat-val ${st.streak>0?'up':(st.streak<0?'down':'')}">${st.streak===0 ? '—' : Math.abs(st.streak) + (st.streak>0 ? ' menang' : ' rugi')}</div></div>
     <div class="stat"><div class="stat-lbl">Rata² menang</div><div class="stat-val up">${st.winCount ? '+' + fmtMoney(st.avgWin) : '—'}</div><span class="approx-rp">${st.rr>0 ? 'RR ' + st.rr.toFixed(2).replace('.', DEC()) + 'x' : ''}</span></div>
     <div class="stat"><div class="stat-lbl">Rata² rugi</div><div class="stat-val down">${st.lossCount ? '−' + fmtMoney(st.avgLoss) : '—'}</div></div>
@@ -688,7 +695,7 @@ function renderLaporan(matched, label, prev){
       noteEl.textContent = pv ? '▲/▼ = selisih dibanding periode sebelumnya (hijau = membaik).' : (lap2Gran==='all' ? 'All Time mencakup seluruh riwayat, jadi tidak ada periode pembanding. Pilih Harian/Mingguan/Bulanan untuk melihat selisih.' : 'Tidak ada transaksi di periode sebelumnya untuk dibandingkan.');
     }
     stripEl.innerHTML = `
-      <div class="stat"><div class="stat-lbl">Expectancy</div><div class="stat-val ${st.expectancy>=0?'up':'down'}">${st.expectancy>=0?'+':''}${fmtMoney(st.expectancy)}</div>${approxRp(st.expectancy)}</div>
+      <div class="stat"><div class="stat-lbl">Expectancy</div><div class="stat-val ${sgnCls(st.expectancy)}">${st.expectancy>0?'+':''}${fmtMoney(st.expectancy)}</div>${approxRp(st.expectancy)}</div>
       <div class="stat"><div class="stat-lbl">Rata-rata menang</div><div class="stat-val up">${st.winCount? '+'+fmtMoney(st.avgWin) : '—'}</div>${st.winCount? approxRp(st.avgWin) : ''}</div>
       <div class="stat"><div class="stat-lbl">Rata-rata kalah</div><div class="stat-val down">${st.lossCount? '-'+fmtMoney(st.avgLoss) : '—'}</div><span class="approx-rp">RR 1 : ${rrTxt} (menang ÷ kalah)</span></div>
     `;
@@ -1347,15 +1354,16 @@ function renderLapLanjut(matched, range){
     return {...psyRow(`${b[0]} \u00b7 ${ds.length} hari \u00b7 ${sg(avg)}/hari`, list), days:ds.length, avg};
   }).filter(r=>r.count);
   renderPsyGroup('lapDayBins', dayBins, null, true, 'Belum ada transaksi pada periode ini.');
-  const lim = DAY_LIMITS, hasLim = !!(lim.maxLoss || lim.maxTrades);
+  const lim = DAY_LIMITS, hasLim = !!(limLossOn() || lim.maxTrades);
   const overLoss = [], overTr = [], within = [], afterLim = [];
   for(const d of days){
     let cum = 0, hit = false, cnt = 0, crossed = false;
+    const mlD = dayMaxLoss(d.k);
     for(const t of d.list){
       cnt++;
       if(hit || (lim.maxTrades && cnt > lim.maxTrades)) afterLim.push(t);
       cum += t.laba;
-      if(lim.maxLoss && cum <= -lim.maxLoss) hit = true;
+      if(mlD && cum <= -mlD) hit = true;
     }
     const tooMany = !!(lim.maxTrades && d.list.length > lim.maxTrades);
     if(hit){ overLoss.push(d); crossed = true; }
@@ -1364,7 +1372,7 @@ function renderLapLanjut(matched, range){
   }
   const dayRow = (name, ds) => psyRow(`${name} \u00b7 ${ds.length} hari`, ds.flatMap(d=>d.list));
   renderPsyGroup('lapDayLimits', hasLim ? [
-    lim.maxLoss ? dayRow(`Rugi harian \u2265 ${fmtMoney(lim.maxLoss)}`, overLoss) : null,
+    limLossOn() ? dayRow(`Rugi harian \u2265 ${limLossLabel()}`, overLoss) : null,
     lim.maxTrades ? dayRow(`Lebih dari ${lim.maxTrades} trx/hari`, overTr) : null,
     dayRow('Hari dalam batas', within),
     psyRow('Transaksi setelah batas tercapai', afterLim)
@@ -1397,23 +1405,39 @@ function renderLapLanjut(matched, range){
 }
 
 // ---------- Batas harian pribadi (Setelan) untuk analisis overtrading di Laporan (L6) ----------
-let DAY_LIMITS = {maxLoss:null, maxTrades:null}; // maxLoss dalam sen (¢)
+let DAY_LIMITS = {maxLoss:null, maxLossPct:null, maxTrades:null}; // maxLoss dalam sen (¢); maxLossPct = % saldo awal hari (v1.1.222)
 try{
   const v = JSON.parse(localStorage.getItem(acctKey('jurnalDayLimits')) || 'null');
   if(v){
     if(v.maxLoss > 0) DAY_LIMITS.maxLoss = +v.maxLoss;
+    if(v.maxLossPct > 0 && v.maxLossPct <= 100) DAY_LIMITS.maxLossPct = +v.maxLossPct;
     if(v.maxTrades >= 1) DAY_LIMITS.maxTrades = Math.floor(+v.maxTrades);
   }
 }catch(e){}
+// Batas rugi per hari (v1.1.222): bila persen diisi, batas = persen x saldo penutupan hari sebelumnya (GMT+8); tanpa saldo sebelumnya
+// (hari pertama) dipakai batas sen bila ada. Kembali null = tidak ada batas rugi pada hari itu.
+const limLossOn = () => !!(DAY_LIMITS.maxLoss || DAY_LIMITS.maxLossPct);
+function dayStartBalance(key){
+  const eq = DATA.equity || [], cut = key + 'T00:00:00';
+  let lo = 0, hi = eq.length - 1, ans = -1;
+  while(lo <= hi){ const mid = (lo + hi) >> 1; if(String(eq[mid][0]) < cut){ ans = mid; lo = mid + 1; } else hi = mid - 1; }
+  return ans === -1 ? null : eq[ans][1];
+}
+function dayMaxLoss(key){
+  if(DAY_LIMITS.maxLossPct){ const b = dayStartBalance(key); if(b > 0) return Math.max(1, Math.round(b * DAY_LIMITS.maxLossPct / 100)); }
+  return DAY_LIMITS.maxLoss || null;
+}
+const limLossLabel = () => DAY_LIMITS.maxLossPct ? `${String(DAY_LIMITS.maxLossPct).replace('.', DEC())}% saldo awal hari` : fmtMoney(DAY_LIMITS.maxLoss);
 // ---------- Status batas harian di kartu PNL Hari Ini (v1.1.112) ----------
 // Memakai definisi yang sama dengan Laporan: hari = tanggal tutup GMT+8, urutan = waktu tutup, rugi = rugi kumulatif
 // terdalam hari itu. Tersembunyi bila kedua batas belum diisi. Halaman selalu reload setelah transaksi berubah, jadi
 // cukup digambar saat muat dan saat batas diubah di Setelan.
 function renderDayLimitStatus(){
+  if(window.renderTodayCard) window.renderTodayCard();
   const box = document.getElementById('dayLimitBox');
   if(!box) return;
   const lim = DAY_LIMITS;
-  if(!lim.maxLoss && !lim.maxTrades){ box.hidden = true; box.innerHTML = ''; return; }
+  if(!limLossOn() && !lim.maxTrades){ box.hidden = true; box.innerHTML = ''; return; }
   const r = LIVE_RANGES[0]; // Hari Ini
   const list = DATA.trades
     .filter(t=>{ const tt = parseGmt8(t.tanggal_gmt8); return tt>=r.start && tt<=r.end; })
@@ -1431,10 +1455,11 @@ function renderDayLimitStatus(){
       + `<div class="dl-note${m}">${note}</div></div>`;
   };
   const rows = [];
-  if(lim.maxLoss){
-    const ratio = worst / lim.maxLoss;
-    rows.push(row('Rugi harian', `${amt(worst)} / ${amt(lim.maxLoss)}`, ratio,
-      ratio>=1 ? 'Batas tercapai' : `Sisa ${amt(lim.maxLoss - worst)}`, true));
+  const mlT = dayMaxLoss(GMT8_TODAY_KEY);
+  if(mlT){
+    const ratio = worst / mlT;
+    rows.push(row('Rugi harian', `${amt(worst)} / ${amt(mlT)}`, ratio,
+      ratio>=1 ? 'Batas tercapai' : `Sisa ${amt(mlT - worst)}`, true));
   }
   if(lim.maxTrades){
     const n = list.length, ratio = n / lim.maxTrades;
@@ -1445,26 +1470,34 @@ function renderDayLimitStatus(){
   box.hidden = false;
 }
 (function setupDayLimits(){
-  const lossEl = document.getElementById('limMaxLoss'), trEl = document.getElementById('limMaxTrades'), hint = document.getElementById('limMaxLossHint');
-  if(!lossEl || !trEl) return;
+  const lossEl = document.getElementById('limMaxLoss'), trEl = document.getElementById('limMaxTrades'), hint = document.getElementById('limMaxLossHint'), pctEl = document.getElementById('limMaxLossPct'), pctHint = document.getElementById('limMaxLossPctHint');
+  if(!lossEl || !trEl || !pctEl) return;
+  const basePct = pctHint.textContent;
   const baseHint = hint.textContent;
   const showHint = ()=>{
     hint.textContent = DAY_LIMITS.maxLoss
       ? `= $${fmtCent(DAY_LIMITS.maxLoss/100)} \u2248 ${fmtRp(DAY_LIMITS.maxLoss/100*DATA.kurs)}. ` + baseHint
       : baseHint;
+    const ml = DAY_LIMITS.maxLossPct ? dayMaxLoss(GMT8_TODAY_KEY) : null, b0 = DAY_LIMITS.maxLossPct ? dayStartBalance(GMT8_TODAY_KEY) : null;
+    pctHint.textContent = DAY_LIMITS.maxLossPct && ml && b0 > 0
+      ? `Hari ini: ${DAY_LIMITS.maxLossPct}% dari saldo awal hari $${fmtCent(b0/100)} = batas $${fmtCent(ml/100)} (\u2248 ${fmtRp(ml/100*DATA.kurs)}). ` + basePct
+      : basePct;
+    lossEl.style.opacity = DAY_LIMITS.maxLossPct ? '.55' : '';
   };
   if(DAY_LIMITS.maxLoss) lossEl.value = DAY_LIMITS.maxLoss;
+  if(DAY_LIMITS.maxLossPct) pctEl.value = DAY_LIMITS.maxLossPct;
   if(DAY_LIMITS.maxTrades) trEl.value = DAY_LIMITS.maxTrades;
   showHint();
   const onChange = ()=>{
-    const l = parseFloat(lossEl.value), n = parseInt(trEl.value, 10);
-    DAY_LIMITS = {maxLoss: l>0 ? l : null, maxTrades: n>=1 ? n : null};
+    const l = parseFloat(lossEl.value), n = parseInt(trEl.value, 10), pc = parseFloat(pctEl.value);
+    DAY_LIMITS = {maxLoss: l>0 ? l : null, maxLossPct: (pc>0 && pc<=100) ? pc : null, maxTrades: n>=1 ? n : null};
     try{ localStorage.setItem(acctKey('jurnalDayLimits'), JSON.stringify(DAY_LIMITS)); }catch(e){}
     showHint();
     renderDayLimitStatus();
     if(typeof renderLap2 === 'function') renderLap2();
   };
   lossEl.addEventListener('input', onChange);
+  pctEl.addEventListener('input', onChange);
   trEl.addEventListener('input', onChange);
 })();
 renderDayLimitStatus();
@@ -2152,6 +2185,7 @@ function applyCustomRange(){
 
 
 function selectPeriodKey(key){
+  markPeriodChips(key);
   if(key === 'custom'){ selectCustom(); return; }
   customRangeEl.classList.remove('open');
   const preset = PERIOD_PRESETS.find(p=>p.key===key) || PERIOD_PRESETS[4];
@@ -2257,6 +2291,9 @@ function renderEqDdBadge(d){
 }
 let eqLegendHidden = { modal:false, peak:false };
 // Jenis kurva Ringkasan: 'equity' (saldo, termasuk deposit/penarikan) atau 'pnl' (PNL kumulatif trading saja). Tersimpan di localStorage `jurnalEqMode`.
+// Fokus rentang (v1.1.219): sumbu-Y mengikuti rentang data tanpa memaksa titik nol. null = otomatis (aktif bila data hampir datar terhadap saldo).
+let eqZoomPref = null; try{ const z = localStorage.getItem('jurnalEqZoom'); if(z==='1' || z==='0') eqZoomPref = z; }catch(e){}
+let eqZoomOn = false;
 let eqMode = 'equity';
 try{ if(localStorage.getItem('jurnalEqMode')==='pnl') eqMode = 'pnl'; }catch(e){}
 function renderEquityChart(){
@@ -2340,8 +2377,13 @@ function renderEquityChart(){
   // Pakai loop manual, bukan Math.min/max(...array) — spread argumen ke fungsi punya batas
   // jumlah argumen JS (~65rb); aman untuk data sekarang, tapi berisiko "Maximum call stack
   // size exceeded" kalau riwayat trading terus tumbuh bertahun-tahun.
-  let vMin = 0, vMax = -Infinity;
-  for(const v of allVals){ if(v < vMin) vMin = v; if(v > vMax) vMax = v; }
+  let vMin = 0, vMax = -Infinity, dMin = Infinity;
+  for(const v of allVals){ if(v < vMin) vMin = v; if(v > vMax) vMax = v; if(v < dMin) dMin = v; }
+  // Otomatis: bila selisih data < 30% dari nilai tertinggi (dan semuanya positif), titik nol hanya membuang ruang grafik.
+  const eqCanZoom = dMin > 0;   // kurva yang menyentuh atau melewati nol (mis. PNL kumulatif) tidak bisa difokuskan
+  eqZoomOn = eqCanZoom && (eqZoomPref === null ? (vMax - dMin) < 0.3 * vMax : eqZoomPref === '1');
+  if(eqZoomOn) vMin = dMin;
+  if(window.syncEqZoom) window.syncEqZoom(eqCanZoom);
   const vPad = (vMax-vMin)*0.08 || 1;
   const yLo = vMin - vPad, yHi = vMax + vPad;
 
@@ -3074,11 +3116,11 @@ function weekWorstGroup(list, field){
   return arr[0] || null;
 }
 function weekDayCompliance(list){
-  const lim = DAY_LIMITS; if(!lim.maxLoss && !lim.maxTrades) return null;
+  const lim = DAY_LIMITS; if(!limLossOn() && !lim.maxTrades) return null;
   const byDay = new Map();
   list.slice().sort((a,b) => String(a.tanggal_gmt8) < String(b.tanggal_gmt8) ? -1 : 1).forEach(t => { const k = String(t.tanggal_gmt8).slice(0,10); (byDay.get(k) || byDay.set(k, []).get(k)).push(t); });
   let days = 0, overLoss = 0, overTr = 0;
-  byDay.forEach(ts => { days++; let cum = 0, worst = 0; ts.forEach(t => { cum += t.laba; if(-cum > worst) worst = -cum; }); if(lim.maxLoss && worst > lim.maxLoss) overLoss++; if(lim.maxTrades && ts.length > lim.maxTrades) overTr++; });
+  byDay.forEach((ts, dk) => { days++; let cum = 0, worst = 0; ts.forEach(t => { cum += t.laba; if(-cum > worst) worst = -cum; }); const mlW = dayMaxLoss(dk); if(mlW && worst > mlW) overLoss++; if(lim.maxTrades && ts.length > lim.maxTrades) overTr++; });
   return { days, overLoss, overTr, lim };
 }
 function renderWeekReview(){
@@ -3096,7 +3138,7 @@ function renderWeekReview(){
   const we = weekWorstGroup(list, 'emosi'), wt = weekWorstGroup(list, 'trigger'), comp = weekDayCompliance(list);
   const worstTxt = (g, nm) => g ? `${nm} <b>${escapeHtml(g.k)}</b>: ${g.n}\u00d7, <span class="down">${sg(g.pl)}</span>` : `${nm}: belum ada yang merugi berulang`;
   let compTxt = 'Batas harian belum diatur (Setelan \u2192 Trading).';
-  if(comp){ const bad = [comp.lim.maxLoss && `${comp.overLoss} hari melewati batas rugi`, comp.lim.maxTrades && `${comp.overTr} hari melewati batas transaksi`].filter(Boolean); compTxt = (comp.overLoss + comp.overTr === 0 ? `<span class="up">Patuh</span> di semua ${comp.days} hari trading.` : `<span class="down">${bad.join(', ')}</span> dari ${comp.days} hari trading.`); }
+  if(comp){ const bad = [limLossOn() && `${comp.overLoss} hari melewati batas rugi`, comp.lim.maxTrades && `${comp.overTr} hari melewati batas transaksi`].filter(Boolean); compTxt = (comp.overLoss + comp.overTr === 0 ? `<span class="up">Patuh</span> di semua ${comp.days} hari trading.` : `<span class="down">${bad.join(', ')}</span> dari ${comp.days} hari trading.`); }
   const refl = weekReflLoad()[w.from] || [];
   el.innerHTML = `
     <div class="wr-nav"><button type="button" class="ledger-reset-btn" id="wrPrev" ${idx <= 0 ? 'disabled' : ''} aria-label="Minggu sebelumnya">\u25c0</button><b>Minggu ${w.minggu} \u00b7 ${rng}</b><button type="button" class="ledger-reset-btn" id="wrNext" ${idx >= W.length - 1 ? 'disabled' : ''} aria-label="Minggu berikutnya">\u25b6</button></div>
@@ -3612,7 +3654,7 @@ window.renderDepositLog = renderDepositLog;
 
 // ---------- Trades ledger ----------
 const allTrades = [...DATA.trades].reverse(); // newest first
-// ---------- Ringkasan: 5 transaksi terakhir (v1.1.149) ----------
+// ---------- Ringkasan: 5 transaksi terakhir (v1.1.149; lencana & setup v1.1.220) ----------
 (function(){
   const card = document.getElementById('recentCard'), list = document.getElementById('recentList');
   if(!card || !list) return;
@@ -3620,10 +3662,13 @@ const allTrades = [...DATA.trades].reverse(); // newest first
   if(!rows.length) return;
   list.innerHTML = rows.map(t => {
     const win = t.laba > 0, flat = t.laba === 0;
-    const meta = [t.emosi, t.trigger].filter(Boolean).join(' · ');
+    const meta = [t.emosi, t.trigger, t.setup].filter(Boolean).join(' \u00b7 ');
+    const nL = isLanggar(t) ? t.langgar.length : 0;
+    const flag = nL ? `<span class="recent-flag" title="${escapeHtml('Melanggar: ' + t.langgar.join(', '))}">Langgar ${nL}</span>` : '';
+    const note = t.catatan ? `<span class="cat-ico" title="${escapeHtml(String(t.catatan).slice(0,160))}">\u270e</span>` : '';
     return `<li><button type="button" class="recent-row" data-id="${escapeHtml(t.id)}">
       <span class="recent-dir ${t.arah==='Beli'?'buy':'sell'}">${escapeHtml(t.arah||'')}</span>
-      <span class="recent-mid"><span class="recent-date">${fmtDateTime(t.tanggal)} · ${escapeHtml(String(t.lot))} lot</span>
+      <span class="recent-mid"><span class="recent-date">${fmtDateTime(t.tanggal)} \u00b7 ${escapeHtml(String(t.lot))} lot${flag}${note}</span>
       <span class="recent-meta${meta?'':' none'}">${meta ? escapeHtml(meta) : 'Belum ada catatan psikologi'}</span></span>
       <span class="recent-pnl ${flat?'':win?'gain':'loss'}">${win?'+':''}${fmtMoney(t.laba)}</span></button></li>`;
   }).join('');
@@ -4111,6 +4156,14 @@ window.renderTrades = renderTrades;
     sync(); renderEquityChart();
   }));
   sync();
+  const zb = document.getElementById('eqZoomBtn');
+  window.syncEqZoom = can => { if(zb){ if(can !== undefined) zb.disabled = !can; zb.classList.toggle('active', eqZoomOn); zb.setAttribute('aria-pressed', eqZoomOn ? 'true' : 'false'); } };
+  if(zb) zb.addEventListener('click', () => {
+    eqZoomPref = eqZoomOn ? '0' : '1';
+    try{ localStorage.setItem('jurnalEqZoom', eqZoomPref); }catch(e){}
+    renderEquityChart();
+  });
+  window.syncEqZoom();
 })();
 
 // ---------- Tema: mode (gelap/terang/otomatis) + skema warna (v1.1.121) ----------
@@ -4406,7 +4459,7 @@ const SETTINGS_VALIDATORS = {
   jurnalTzOffset: v => [180,420,480,540].includes(Number(v)),
   jurnalDateFmt: v => v==='teks' || v==='angka',
   jurnalEqMode: v => v==='equity' || v==='pnl',
-  jurnalDayLimits: v => { try{ const o = JSON.parse(v); return !!o && typeof o==='object' && ['maxLoss','maxTrades'].every(k => o[k]===null || o[k]===undefined || (typeof o[k]==='number' && isFinite(o[k]) && o[k]>=0)); }catch(e){ return false; } },
+  jurnalDayLimits: v => { try{ const o = JSON.parse(v); return !!o && typeof o==='object' && ['maxLoss','maxLossPct','maxTrades'].every(k => o[k]===null || o[k]===undefined || (typeof o[k]==='number' && isFinite(o[k]) && o[k]>=0 && (k!=='maxLossPct' || o[k]<=100))); }catch(e){ return false; } },
   jurnalBigLossPct: v => v==='off' || (isFinite(+v) && +v>=1 && +v<=50),
   jurnalPerfCfg: v => { try{ const o = JSON.parse(v); return !!o && typeof o==='object' && !Array.isArray(o) && (o.minWr===undefined || (typeof o.minWr==='number' && o.minWr>=0 && o.minWr<=100)) && (o.target===null || o.target===undefined || (typeof o.target==='number' && o.target>0 && o.target<=1000)); }catch(e){ return false; } },
   jurnalNewsWin: v => v==='15' || v==='30' || v==='60',
@@ -4416,6 +4469,7 @@ const SETTINGS_VALIDATORS = {
   jurnalFontSize: v => v==='kecil' || v==='besar',
   jurnalNumFmt: v => v==='id' || v==='en',
   jurnalGlass: v => v==='0' || v==='1',
+  jurnalRingkasan: v => { try{ const o = JSON.parse(v); const ids = ['today','saldo','ekuitas','statistik','berita','chart','terakhir','aturan']; const okA = x => Array.isArray(x) && x.length<=8 && x.every((k,i) => ids.includes(k) && x.indexOf(k)===i); return !!o && typeof o==='object' && !Array.isArray(o) && (o.o===undefined || okA(o.o)) && (o.h===undefined || okA(o.h)); }catch(e){ return false; } },
   jurnalNotif: v => { try{ const o = JSON.parse(v); return !!o && typeof o === 'object' && !Array.isArray(o) && Object.keys(o).every(k => ['event','limit','note'].includes(k) && (o[k] === 0 || o[k] === 1)); }catch(e){ return false; } },
   jurnalCustomOpts: v => { try{ const o = JSON.parse(v); return !!o && typeof o==='object' && !Array.isArray(o) && ['trigger','exit'].every(k => o[k]===undefined || (Array.isArray(o[k]) && o[k].length<=20 && o[k].every(x => typeof x==='string' && x.length>0 && x.length<=40))); }catch(e){ return false; } },
   'kal-prefs': v => { try{ const o = JSON.parse(v); return !!o && typeof o==='object' && !Array.isArray(o); }catch(e){ return false; } },
@@ -5999,7 +6053,7 @@ function renderBackupStatus(){
   txt.textContent = msg;
   document.getElementById('backupStatusRow').classList.toggle('warn', warn);
   const nudge = document.getElementById('backupNudge');
-  let hidden = false; try{ hidden = sessionStorage.getItem('jurnalBackupNudgeHide') === '1'; }catch(e){}
+  let hidden = false; try{ hidden = sessionStorage.getItem('jurnalBackupNudgeHide') === '1' || Date.now() < (+localStorage.getItem('jurnalBackupNudgeSnooze') || 0); }catch(e){}   // 'Nanti' menunda 3 hari (v1.1.218)
   document.getElementById('backupNudgeText').textContent = msg;
   nudge.hidden = !(warn && has && !hidden);
 }
@@ -6008,7 +6062,7 @@ function renderBackupStatus(){
   document.getElementById('backupNowBtn').addEventListener('click', now);
   document.getElementById('backupNudgeBtn').addEventListener('click', now);
   document.getElementById('backupNudgeLater').addEventListener('click', ()=>{
-    try{ sessionStorage.setItem('jurnalBackupNudgeHide', '1'); }catch(e){}
+    try{ sessionStorage.setItem('jurnalBackupNudgeHide', '1'); localStorage.setItem('jurnalBackupNudgeSnooze', String(Date.now() + 3*86400000)); }catch(e){}
     document.getElementById('backupNudge').hidden = true;
   });
   window.addEventListener('jurnalBackupChanged', renderBackupStatus); // dikirim sync.js setelah sinkron/pulihkan
@@ -6255,9 +6309,24 @@ function renderBackupStatus(){
   sync();
 })();
 
-const APP_VERSION = '1.1.217';
-const APP_BUILD_DATE = '2026-11-14';   // ikut diganti tiap rilis (ISO), tampil di Setelan → Tentang
+const APP_VERSION = '1.1.222';
+const APP_BUILD_DATE = '2026-11-19';   // ikut diganti tiap rilis (ISO), tampil di Setelan → Tentang
 const USER_CHANGELOG = [
+  { date:'2026-11-19', items:[
+    'Setelan → Trading: batas rugi harian kini bisa diatur dalam persen saldo awal hari (saldo penutupan hari sebelumnya, GMT+8), selain nominal sen. Batas dihitung ulang tiap hari sehingga ikut naik atau turun mengikuti saldo. Bila persen diisi, nilai persen yang dipakai dan kolom sen diabaikan; hari pertama tanpa saldo sebelumnya memakai kolom sen bila ada. Berlaku di kartu Hari ini, status PNL, notifikasi batas, Laporan (analisis hari melewati batas) dan tinjauan mingguan.',
+  ]},
+  { date:'2026-11-18', items:[
+    'Ringkasan: kartu bisa diatur sendiri. Di Setelan → Tampilan ada bagian "Kartu Ringkasan" untuk menyembunyikan kartu yang tidak dipakai (Hari ini, Saldo & PNL, Kurva ekuitas, Statistik, Rilis berita, Chart, Transaksi terakhir, Aturan) dan mengubah urutannya dengan tombol panah, plus tombol Atur ulang. Di ponsel, urutan bawaan kini: Saldo, Hari ini, Rilis berita, Statistik, Kurva ekuitas. Pengaturan ini tersimpan di perangkat dan tidak ikut sinkron cloud.',
+  ]},
+  { date:'2026-11-17', items:[
+    'Ringkasan: transaksi terakhir kini menampilkan lencana "Langgar N" bila ada aturan yang dilanggar (arahkan atau ketuk untuk melihat daftarnya), nama setup di baris catatan, dan tanda ✎ bila ada catatan bebas; ketuk baris untuk membuka detail. Kartu PNL punya sparkline PNL harian 7 hari terakhir dan "Drawdown saat ini" (jarak dari puncak PNL kumulatif). Kartu Aturan trading menampilkan kepatuhan aturan 7 hari dan streak hari patuh.',
+  ]},
+  { date:'2026-11-16', items:[
+    'Grafik ekuitas: legenda lebih ringkas (mengalir dalam beberapa baris, tidak lagi melebar di ponsel) dan chip baru "Fokus rentang" yang memotong sumbu-Y ke rentang data sehingga kurva yang hampir datar tetap terbaca. Aktif otomatis saat kurva bergerak kurang dari 30% dari puncaknya, bisa dinyalakan atau dimatikan manual dan pilihan diingat. Tidak tersedia untuk PNL kumulatif karena kurva itu melewati nol.',
+  ]},
+  { date:'2026-11-15', items:[
+    'Ringkasan: kartu baru "Hari ini" di bagian atas dengan empat sel: jumlah transaksi (dan batas per hari), sisa batas rugi, hitung mundur rilis berita dampak tinggi bila kurang dari 24 jam, dan jumlah transaksi hari ini yang belum bercatatan (ketuk untuk langsung membuka daftarnya). Strip statistik punya chip periode sendiri (7H, 1B, 3B, 1T, All) yang terhubung dengan chip di atas kurva ekuitas. Banner cadangan lebih ramping dan tombol Nanti menunda 3 hari. Angka nol kini berwarna netral (abu-abu) dan tanpa tanda plus, bukan hijau.',
+  ]},
   { date:'2026-11-14', items:[
     'Efek kaca kini berupa sakelar sendiri di Setelan → Tampilan → Efek kaca (Mati/Aktif), terpisah dari skema warna. Semua palet (Emas Klasik, Blue Ocean, Teal Green, Grafit, Kontras Tinggi, Midnight, Ungu Senja, Kertas Putih, Kaca Senja) bisa memakainya, gelap maupun terang: latar gradasi mengikuti warna aksen palet yang dipilih. Skema Kaca Senja tetap otomatis berkaca bila Anda belum pernah memilih; bisa dimatikan. Atur ulang tampilan ikut mematikan efek kaca.',
   ]},
@@ -6747,9 +6816,10 @@ const JNOTIF = (function(){
     if(c.limit && list.length){
       let cum = 0, worst = 0;
       list.forEach(t => { cum += t.laba; if(-cum > worst) worst = -cum; });
-      if(DAY_LIMITS.maxLoss && worst >= DAY_LIMITS.maxLoss && !s['lim:' + day + ':loss']){
+      const mlN = dayMaxLoss(day);
+      if(mlN && worst >= mlN && !s['lim:' + day + ':loss']){
         mark('lim:' + day + ':loss', now);
-        out.push(['lim-loss', 'Batas rugi harian tercapai', `Rugi hari ini ${fmtMoney(worst)} dari batas ${fmtMoney(DAY_LIMITS.maxLoss)}. Pertimbangkan berhenti trading hari ini.`]);
+        out.push(['lim-loss', 'Batas rugi harian tercapai', `Rugi hari ini ${fmtMoney(worst)} dari batas ${fmtMoney(mlN)}. Pertimbangkan berhenti trading hari ini.`]);
       }
       if(DAY_LIMITS.maxTrades && list.length >= DAY_LIMITS.maxTrades && !s['lim:' + day + ':n']){
         mark('lim:' + day + ':n', now);
@@ -6804,6 +6874,171 @@ window.JNOTIF = JNOTIF;
   pBtn.addEventListener('click', async () => { await JNOTIF.request(); paint(); });
   if(tBtn) tBtn.addEventListener('click', () => { JNOTIF.deliver('uji', 'Pengingat Jurnal XAUUSD aktif', 'Beginilah tampilan notifikasi pengingat.'); });
   paint();
+})();
+
+// ---------- Kartu "Hari ini" di Ringkasan (v1.1.218) ----------
+// Empat sel: transaksi hari ini (dan batasnya), sisa batas rugi, rilis berita dampak tinggi dalam 24 jam, dan catatan psikologi yang belum
+// diisi. Hari = GMT+8, sama dengan kartu PNL Hari Ini dan batas harian. Diperbarui tiap menit (hitung mundur berita) dan saat batas diubah.
+function renderTodayCard(){
+  const grid = document.getElementById('todayGrid'); if(!grid) return;
+  const r = LIVE_RANGES[0];
+  const dayStr = new Date(r.start + 8*3600000).toISOString().slice(0,10);
+  document.getElementById('todayDate').textContent = (+dayStr.slice(8)) + ' ' + ID_BULAN[+dayStr.slice(5,7)-1];
+  const list = DATA.trades.filter(t => { const tt = parseGmt8(t.tanggal_gmt8); return tt >= r.start && tt <= r.end; })
+    .sort((x,y) => parseGmt8(x.tanggal_gmt8) - parseGmt8(y.tanggal_gmt8));
+  const n = list.length, lim = DAY_LIMITS;
+  let cum = 0, worst = 0; list.forEach(t => { cum += t.laba; if(-cum > worst) worst = -cum; });
+  const money = c => `<span class="tc-money">${fmtMoney(c)}</span>`;
+  const cell = (id, lbl, val, sub, cls, act) => { const tag = act ? 'button' : 'div'; return `<${tag}${act ? ` type="button" data-act="${act}"` : ''} class="today-cell ${cls||''}" id="${id}"><span class="tc-lbl">${lbl}</span><span class="tc-val">${val}</span><span class="tc-sub">${sub}</span></${tag}>`; };
+  const ratioCls = q => q > 1 ? 'over' : (q >= 0.8 ? 'warn' : 'ok');
+  const out = [];
+  out.push(cell('tcTrades', 'Transaksi', String(n),
+    !n ? 'Belum ada transaksi' : (lim.maxTrades ? `dari maks ${lim.maxTrades}` : 'transaksi hari ini'), lim.maxTrades && n ? ratioCls(n/lim.maxTrades) : ''));
+  const mlC = dayMaxLoss(dayStr);
+  if(mlC){
+    const q = worst / mlC;
+    out.push(cell('tcLimit', 'Batas rugi', q >= 1 ? 'Tercapai' : 'Sisa ' + money(mlC - worst), `rugi ${money(worst)} dari ${money(mlC)}` + (lim.maxLossPct ? ` (${String(lim.maxLossPct).replace('.', DEC())}%)` : ''), q >= 1 ? 'over' : ratioCls(q)));
+  } else out.push(cell('tcLimit', 'Batas rugi', '—', 'Belum diatur • ketuk untuk mengatur', '', 'limit'));
+  let nv = '—', ns = 'Kalender belum siap', nc = '';
+  if(window.KAL){
+    const now = Date.now(), e = KAL.nextHigh(now), ms = e ? e.ts - now : Infinity;
+    if(ms <= 24*3600000){
+      const h = Math.floor(ms/3600000), m = Math.max(1, Math.floor(ms%3600000/60000));
+      nv = h ? `${h} j ${m} m` : `${m} m`; ns = escapeHtml(String(e.name).slice(0, 40)); nc = ms <= 15*60000 ? 'over' : (ms <= 2*3600000 ? 'warn' : '');
+    } else { nv = 'Aman'; ns = 'Tak ada rilis besar 24 jam'; nc = 'ok'; }
+  }
+  out.push(cell('tcNews', 'Berita', nv, ns, nc, 'news'));
+  const miss = list.filter(t => !hasNote(t)).length;
+  out.push(!n ? cell('tcNotes', 'Catatan', '—', 'Belum ada transaksi', '')
+    : miss ? cell('tcNotes', 'Catatan', String(miss), 'belum bercatatan • ketuk untuk mengisi', 'warn', 'notes')
+    : cell('tcNotes', 'Catatan', 'Lengkap', 'semua bercatatan', 'ok'));
+  grid.innerHTML = out.join('');
+  grid.dataset.day = dayStr;
+}
+window.renderTodayCard = renderTodayCard;
+(function(){
+  const grid = document.getElementById('todayGrid'); if(!grid) return;
+  grid.addEventListener('click', e => {
+    const b = e.target.closest('[data-act]'); if(!b) return;
+    const act = b.dataset.act, day = grid.dataset.day;
+    if(act === 'notes') location.hash = '#transaksi?cat=belum&dari=' + day + '&sampai=' + day;
+    else if(act === 'news') window.goToTab('kalender');
+    else if(act === 'limit'){ window.goToTab('setelan'); if(window.showSetelanGroup) window.showSetelanGroup('trading'); }
+  });
+  renderTodayCard();
+  window.addEventListener('kalReady', renderTodayCard);
+  setInterval(renderTodayCard, 60000);
+})();
+
+// ---------- Ringkasan: sparkline 7 hari, drawdown saat ini, kepatuhan aturan (v1.1.220) ----------
+// Hari = tanggal tutup GMT+8. Drawdown = puncak PNL kumulatif trading dikurangi PNL sekarang (tanpa deposit/penarikan),
+// sama dengan definisi drawdown di kurva ekuitas dan statistik.
+function renderRingkasanExtras(){
+  const trades = (DATA.trades || []).filter(t => t.tanggal_gmt8);
+  const keys = [];
+  for(let i = 6; i >= 0; i--) keys.push(gmt8DateKeyFromParts(GMT8_NOW.y, GMT8_NOW.m, GMT8_NOW.d - i));
+  const byDay = {};
+  for(const t of trades){ const k = t.tanggal_gmt8.slice(0,10); (byDay[k] || (byDay[k] = [])).push(t); }
+  // --- sparkline + drawdown
+  const sp = document.getElementById('pnlSpark');
+  if(sp){
+    const vals = keys.map(k => (byDay[k] || []).reduce((s,t) => s + t.laba, 0));
+    const has = keys.map(k => !!(byDay[k] && byDay[k].length));
+    let run = 0, peak = 0;
+    for(const t of trades.slice().sort((x,y) => parseGmt8(x.tanggal_gmt8) - parseGmt8(y.tanggal_gmt8))){ run += t.laba; if(run > peak) peak = run; }
+    const dd = Math.max(0, peak - run);
+    if(!trades.length){ sp.hidden = true; sp.innerHTML = ''; }
+    else {
+      const W = 112, H = 30, mid = H / 2, bw = 11, gap = (W - 7 * bw) / 6;
+      const mx = Math.max(1, ...vals.map(Math.abs));
+      const bars = vals.map((v,i) => {
+        const x = (i * (bw + gap)).toFixed(1), h = has[i] && v !== 0 ? Math.max(2, Math.abs(v) / mx * (mid - 1)) : 1.5;
+        const cls = !has[i] || v === 0 ? 'sp-0' : v > 0 ? 'sp-up' : 'sp-dn';
+        return `<rect class="${cls}" x="${x}" y="${(has[i] && v < 0 ? mid : (has[i] && v > 0 ? mid - h : mid - 0.75)).toFixed(1)}" width="${bw}" height="${h.toFixed(1)}" rx="1.5"><title>${keys[i]}: ${has[i] ? (v > 0 ? '+' : '') + fmtMoney(v) : 'tidak ada transaksi'}</title></rect>`;
+      }).join('');
+      const eq = DATA.summary.saldo_akhir, pct = (eq + dd) > 0 ? dd / (eq + dd) : 0;
+      const ddTxt = dd > 0 ? `<span class="down">\u2212${fmtMoney(dd)}</span> <span class="pnl-spark-pct">(${fmtPct(pct)} dari puncak)</span>` : '<span class="up">Di puncak, tanpa drawdown</span>';
+      sp.innerHTML = `<div class="pnl-spark-col"><span class="pnl-lbl">PNL harian 7 hari</span><svg class="pnl-spark-svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="PNL harian tujuh hari terakhir">${bars}<line x1="0" x2="${W}" y1="${mid}" y2="${mid}" class="sp-axis"/></svg></div>
+        <div class="pnl-spark-col pnl-spark-dd"><span class="pnl-lbl">Drawdown saat ini</span><span class="pnl-spark-ddv">${ddTxt}</span></div>`;
+      sp.hidden = false;
+    }
+  }
+  // --- kepatuhan aturan 7 hari + streak hari patuh
+  const rc = document.getElementById('rulesComp');
+  if(rc){
+    const week = keys.flatMap(k => byDay[k] || []);
+    if(!week.length){ rc.hidden = true; rc.innerHTML = ''; }
+    else {
+      const ok = week.filter(t => !isLanggar(t)).length, pct = ok / week.length;
+      const days = Object.keys(byDay).sort().reverse();
+      let streak = 0;
+      for(const k of days){ if(byDay[k].some(isLanggar)) break; streak++; }
+      const anyLog = trades.some(isLanggar);
+      rc.innerHTML = `<div class="rc-item"><span class="rc-lbl">Kepatuhan 7 hari</span><strong class="${pct >= 0.8 ? 'up' : pct >= 0.5 ? '' : 'down'}">${Math.round(pct * 100)}%</strong><span class="rc-sub">${ok} dari ${week.length} transaksi</span></div>
+        <div class="rc-item"><span class="rc-lbl">Streak hari patuh</span><strong>${streak}</strong><span class="rc-sub">${streak === 1 ? 'hari' : 'hari'} berturut-turut</span></div>${anyLog ? '' : '<div class="rc-note">Belum ada pelanggaran yang dicatat. Centang aturan yang dilanggar saat menambah atau mengedit transaksi.</div>'}`;
+      rc.hidden = false;
+    }
+  }
+}
+window.renderRingkasanExtras = renderRingkasanExtras;
+try{ renderRingkasanExtras(); }catch(e){}
+
+// ---------- Ringkasan: kartu bisa disembunyikan dan diurutkan (v1.1.221) ----------
+// Pref 'jurnalRingkasan' = {o:[id...], h:[id tersembunyi]}. Tanpa 'o' dipakai urutan bawaan menurut lebar layar (ponsel: saldo, hari ini,
+// berita, statistik, grafik). Tersimpan per perangkat (tidak ikut sinkron). backupNudge tetap paling atas; prompt psikologi ikut grup statistik.
+const RC_CARDS = [
+  {id:'today', label:'Hari ini', els:['todayCard']},
+  {id:'saldo', label:'Saldo & PNL', els:['heroSection']},
+  {id:'ekuitas', label:'Kurva ekuitas', els:['eqSection']},
+  {id:'statistik', label:'Statistik periode', els:['statPeriodRow','statStrip','psyPromptCard']},
+  {id:'berita', label:'Rilis berita berikutnya', els:['kalMini']},
+  {id:'chart', label:'Chart XAUUSD', els:['chartCard']},
+  {id:'terakhir', label:'Transaksi terakhir', els:['recentCard']},
+  {id:'aturan', label:'Aturan trading', els:['rulesCard']}
+];
+const RC_MOBILE = ['saldo','today','berita','statistik','ekuitas','chart','terakhir','aturan'];
+const rcMQ = window.matchMedia ? window.matchMedia('(max-width: 700px)') : {matches:false};
+function rcLoad(){
+  try{ const o = JSON.parse(localStorage.getItem('jurnalRingkasan') || 'null'); if(o && typeof o==='object') return { o: Array.isArray(o.o) ? o.o : null, h: Array.isArray(o.h) ? o.h : [] }; }catch(e){}
+  return { o:null, h:[] };
+}
+function rcSave(p){ try{ if(!p.o && !p.h.length) localStorage.removeItem('jurnalRingkasan'); else localStorage.setItem('jurnalRingkasan', JSON.stringify(Object.assign({}, p.o ? {o:p.o} : {}, p.h.length ? {h:p.h} : {}))); }catch(e){} }
+function rcOrder(p){
+  const all = RC_CARDS.map(c => c.id), base = p.o ? p.o.filter(k => all.includes(k)) : (rcMQ.matches ? RC_MOBILE : all);
+  return base.concat(all.filter(k => !base.includes(k)));
+}
+function applyRingkasan(){
+  const panel = document.getElementById('tabpanel-grafik'); if(!panel) return;
+  const p = rcLoad();
+  for(const id of rcOrder(p)){
+    const c = RC_CARDS.find(x => x.id === id), off = p.h.includes(id);
+    for(const eid of c.els){ const el = document.getElementById(eid); if(!el) continue; panel.appendChild(el); el.classList.toggle('rc-off', off); }
+  }
+  renderRcList();
+}
+function renderRcList(){
+  const box = document.getElementById('rcList'); if(!box) return;
+  const p = rcLoad(), ord = rcOrder(p);
+  box.innerHTML = ord.map((id,i) => { const c = RC_CARDS.find(x => x.id === id);
+    return `<div class="rc-row"><label class="rc-name"><input type="checkbox" data-rc="${id}"${p.h.includes(id)?'':' checked'}><span>${c.label}</span></label><span class="rc-move"><button type="button" class="quick-chip" data-rcmove="${id}" data-d="-1" aria-label="Naikkan ${c.label}"${i===0?' disabled':''}>\u2191</button><button type="button" class="quick-chip" data-rcmove="${id}" data-d="1" aria-label="Turunkan ${c.label}"${i===ord.length-1?' disabled':''}>\u2193</button></span></div>`; }).join('');
+}
+(function(){
+  const box = document.getElementById('rcList'); if(!box) return;
+  box.addEventListener('change', e => {
+    const cb = e.target.closest('input[data-rc]'); if(!cb) return;
+    const p = rcLoad(), id = cb.dataset.rc; p.h = p.h.filter(k => k !== id); if(!cb.checked) p.h.push(id);
+    rcSave(p); applyRingkasan();
+  });
+  box.addEventListener('click', e => {
+    const b = e.target.closest('button[data-rcmove]'); if(!b) return;
+    const p = rcLoad(), ord = rcOrder(p), i = ord.indexOf(b.dataset.rcmove), j = i + (+b.dataset.d);
+    if(i < 0 || j < 0 || j >= ord.length) return;
+    [ord[i], ord[j]] = [ord[j], ord[i]]; p.o = ord; rcSave(p); applyRingkasan();
+    const nb = box.querySelector(`button[data-rcmove="${b.dataset.rcmove}"][data-d="${b.dataset.d}"]`); if(nb && !nb.disabled) nb.focus();
+  });
+  const rs = document.getElementById('rcReset'); if(rs) rs.addEventListener('click', () => { try{ localStorage.removeItem('jurnalRingkasan'); }catch(e){} applyRingkasan(); });
+  if(rcMQ.addEventListener) rcMQ.addEventListener('change', () => { if(!rcLoad().o) applyRingkasan(); });
+  applyRingkasan();
 })();
 
 // ---------- Esc global: tutup modal teratas (v1.1.160) ----------
