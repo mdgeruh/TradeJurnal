@@ -3,6 +3,57 @@
 Perubahan Jurnal XAUUSD, terbaru di atas. Semua rilis 22 Sep – 1 Okt 2026. Versi berbahasa pengguna akhir ada di aplikasi (Setelan → Tentang aplikasi). v1.1.144 ke atas dicatat per versi; sebelumnya diringkas per tema. Status dan jebakan bug: `SUMMARY.md`; rencana dan todo: `roadmap.md`.
 
 ## Rilis terbaru
+### 1.1.232 — 29 Nov
+- **Kurva ekuitas.** SVG memakai lebar kontainer asli (viewBox = lebar nyata, render ulang via ResizeObserver) sehingga font sumbu 10,5 px tidak lagi tertarik; tinggi 330/320 px; label sumbu-X 4/6.
+- **Penanda & anotasi.** ▲/▼ deposit, penarikan, kompensasi MC (hanya mode Ekuitas); ◆ hari terbaik/terburuk periode (≥3 hari bertransaksi).
+- **Mode Return %.** `jurnalEqMode='ret'` = PNL kumulatif ÷ modal kumulatif ×100 (bukan TWR); validator Setelan diperluas.
+- **Detail hari.** Baris `#eqInfo`: PNL hari itu, jumlah trade, DD, peristiwa deposit, tombol Lihat transaksi; klik/ketuk memilih, panah/Home/End/Enter/Esc di papan ketik.
+- **Brush.** Seret mouse/pena memilih rentang → `#eqBrush` (PNL, trade, WR, DD maks) + Lihat transaksi / Terapkan ke statistik; layar sentuh tidak memakai brush agar gulir tidak terganggu.
+- **Strip drawdown & legenda.** Strip underwater 30 px menggantikan pita merah; DD terbesar periode digabung ke baris badge DD; legenda satu baris (bisa digeser di ponsel); `Fokus rentang` → `Zoom sumbu` (+ "otomatis").
+- **Tes.** `t232.js`: skala 1:1, font efektif, legenda satu baris, penanda, anotasi, strip DD, info hover/klik/tombol, panah, mode Return %, brush + terapkan; t219 dan tes lain disesuaikan.
+
+### 1.1.231 — 28 Nov
+- **Kartu saldo ringkas.** Padding `.hero` 24/22 (20/18 di ≤480 px), `.pnl-snapshot`, `.pnl-grid`, `.pnl-cell` dirapatkan; `.hrs-inline` menaruh estimasi Rp sebaris (nowrap) pada PNL kumulatif; label spark `PNL harian 7H`; garis pemisah baris kedua grid PNL.
+- **Tes.** `t231.js`: tinggi kartu ≤520 px di ponsel, estimasi Rp satu baris, elemen lengkap, blur PNL tetap, mode Rp tanpa baris ganda.
+
+### 1.1.230 — 27 Nov
+- **Pembagian peran.** Performa = hasil per waktu; Laporan = analisis pola. Dihapus: `perfHeat2`/`renderPerfHeat2` (Jam & hari buka di Performa; versi Laporan → Lanjutan tetap) dan `lapArahSplit`/`renderLapArahSplit`/`lapArahStat` (Beli vs Jual di Laporan; Split arah di Performa tetap, `lap2NoArah` tetap dipakai Temuan otomatis).
+- **Tautan antar halaman.** Kartu `#perfMore` di Performa (`data-go-lap`) dan petunjuk di Laporan → Lanjutan (`data-go-perf`), memakai `goToTab` dan `showLaporanGroup`.
+- **Tes.** `tperf5.js` (khusus heatmap Performa) dipindahkan ke `old/`; ditambah `t230.js`.
+
+### 1.1.229 — 26 Nov
+- **Deposit di ponsel.** `#tabpanel-modal table.ledger` ≤700 px menjadi grid per baris (tanggal + jumlah, jenis + tipe), header pengurut menjadi chip, `min-width` tabel dibuang.
+- **Area sentuh.** Min-height 38 px untuk `.quick-chip`, `.lap-gran-btn`, `.kal-chip`, `.lap-filter-chip`, `.hm-btn`; `.eye-toggle` dan panah kalender ≥38 px; heatmap 30 hari 6 kolom di ponsel.
+- **Kalender.** `#kalFoldBtn` melipat `#kalFilters` (kelas `kfold-open`) di ≤700 px.
+- **FAB.** `fab-away` saat menggulir turun >120 px, kembali saat menggulir naik, tidak aktif bila menu FAB terbuka.
+- **Teks.** `.recent-meta` dan `.tc-sub` boleh dua baris di ponsel; kartu spark saldo membungkus di ≤480 px.
+- **Label Analisis PNL.** `Hari Menang (% semua hari)` dengan tooltip dasar hitung (hari kalender, termasuk akhir pekan) dan `Hari Impas / Tanpa Transaksi`.
+
+### 1.1.228 — 25 Nov
+- **Ringkasan dirapikan.** Hapus `#dayLimitBox` (batas harian cukup di kartu Hari ini), sel `tcNews` (kartu `kalMini` tetap), 7H/30H di `#pnlGrid` disembunyikan bila `pl` dan `pct` sama dengan Minggu/Bulan Ini; label "Drawdown PNL saat ini" vs "DD ekuitas saat ini"; sel "Catatan" menjadi "Catatan trade"; grid Hari ini 3 kolom.
+- **Performa.** Bagian Bandingkan dua periode (`perfCmp`, `csw_perfCmpA/B`, `renderPerfCmp`) dihapus; pembanding tetap ada di Laporan → Bandingkan.
+- **Filter lipat di ponsel.** Transaksi: `#ledgerFoldBtn` + kelas `lfold-open` pada `#ledgerSec` (pencarian tetap tampil, badge jumlah filter). Laporan: `lapFilterSec` terlipat bawaan di ≤700 px bila belum ada preferensi tersimpan.
+- **Persen aman.** `fmtPctCap` membatasi tampilan di atas ±300% (Performa bulanan dan mingguan).
+- **Seragamkan label.** Setelan → Data: `lblCounts`, `lblPairs` (nama sama diabaikan huruf/tanda baca + sinonim greedy/serakah, fvg/fair value gap, dll.), mengganti label pada emosi, trigger entry/exit, jenis entry, dan setup lalu menyimpan lewat `saveActiveData`.
+- **Teks Setelan** (urutan bawaan ponsel, Target performa) diperbarui.
+
+### 1.1.227 — 24 Nov
+- **Kartu Ringkasan baru.** `targetCard` (progres = PNL bulan ini ÷ target `getPerfCfg().target`, sisa hari trading Senin–Jumat GMT+8, kebutuhan PNL per hari; tersembunyi tanpa target), `sessCard` (PNL hari ini per sesi menurut jam buka via `lapSessionIdx`, plus 7H), `insightCard` (`insightSentence()`: langgar vs patuh, emosi paling merugikan n≥3, setup terbaik n≥5), `heatCard` (30 sel, intensitas warna, klik → `#transaksi?dari=&sampai=`), `noteCard` (`jurnalDayNotes` per akun, maks 200 karakter dan 60 catatan, lokal saja, tidak ikut ekspor atau sinkron). Semuanya terdaftar di `RC_CARDS`, `RC_MOBILE`, dan validator `jurnalRingkasan` (13 id); angka ikut tersamar bila angka PNL disembunyikan (`.rg-card.hidden-values`).
+- **Selisih vs periode sebelumnya.** `renderStatStrip(st, label, prev)` menampilkan `.stat-vs` untuk Transaksi, Win rate, dan Laba/Rugi; pembanding = periode sama panjang tepat sebelumnya (preset 7H/1B/3B/1T dan Kustom), tidak ada untuk All atau bila periode sebelumnya kosong.
+- **Mode fokus ponsel.** `#focusBar`/`#focusBtn`, kelas `rc-focus` pada `#tabpanel-grafik`, pref per perangkat `jurnalFokus` (validator, masuk `SETELAN_SKIP`).
+
+### 1.1.226 — 23 Nov
+- **Kontrol bawaan browser diganti komponen kustom.** `kalender.js`: `CS.build('csw_kalTz')` (6 zona), `CS.build('csw_kalImp')`, `DTP.build('kalWaktu')` menggantikan `#kalTz`, `#kalImp`, `#kalDate`, `#kalTime`; submit membaca `DTP.get('kalWaktu')` (dipecah menjadi tanggal dan jam untuk `zonedToUtc`) dan `CS.get('csw_kalImp')`, form kosong menampilkan pesan lewat `ioNote`, form direset setelah simpan. `app.js`: `csw_ledgerSort` (+ `window.syncLedgerSortUi`, dibangun setelah `CS` karena TDZ) menggantikan `#ledgerSortSel`; `csw_prefTz` menggantikan `#prefTz` (memanggil handler zona waktu header). Gaya: `.kal-field`, `.kal-flbl`, `.dt-picker-btn` berbentuk kapsul di mode kaca. Tes: `t226.js`; `tkal.js` dan `tkal5.js` disesuaikan (zona lewat daftar kustom, tanggal-jam lewat `DTP.set`).
+
+### 1.1.225 — 22 Nov
+- **Pemilih tanggal berupa lembar bawah (bottom sheet) di ponsel.** `DTP.build`: pada `matchMedia('(max-width:700px)')` panel `.dt-picker-panel` dipindah sementara ke `<body>` (kelas `dt-sheet`) bersama `.dt-backdrop`, lalu dikembalikan ke `root` saat ditutup; dipicu `MutationObserver` pada kelas `open` sehingga semua jalur penutupan (OK, ketuk latar, pemilih lain, klik di luar) ikut terurus. Dipindah ke body karena `position:fixed` terjebak di dalam kartu kaca (`backdrop-filter`) dan modal (`transform`). Penutupan klik-luar memeriksa `root` dan `panel`. CSS: sheet `fixed` bawah, `border-radius:22px 22px 0 0`, `padding-bottom` + `env(safe-area-inset-bottom)`, `max-height:88dvh`, sel tanggal 42px, animasi naik (dimatikan bila `prefers-reduced-motion`), latar kaca bila efek kaca aktif. Tes: `t225.js` (Setelan/kartu kaca dan modal transaksi, 390 px dengan kaca hidup dan mati, 1280 px tetap popup).
+
+### 1.1.224 — 21 Nov
+- **Perbaikan: chip periode tertimpa kartu statistik, dan "-$0,00" pada Max DD.** `.stat-period-row` memakai `margin:14px 0 -6px` (sisa dari saat baris hanya berisi label), sehingga kartu `#statStrip` menimpa chip yang lebih tinggi; kini `margin:14px 0 10px`. Tanda minus Max DD diberi syarat nilai > 0 di strip statistik, tabel perbandingan periode (Max DD dan Rata-rata rugi), KPI Laporan dan persen drawdown di ringkasan. Tes: `t224.js` (tanpa tumpang tindih di 360/390/1280 px, kaca hidup dan mati).
+
+### 1.1.223 — 20 Nov
+- **Perbaikan: popup tanggal dan daftar pilihan tertutup kartu kaca.** `backdrop-filter` pada efek kaca membuat tiap kartu menjadi stacking context sendiri sehingga kartu berikutnya menimpa `.dt-picker-panel` / `.custom-select-list`. CSS: `html[data-glass="1"] :is(section,.chart-card,.recent-card,.rules-card,.today-card):has(.dt-picker.open,.custom-select.open){position:relative;z-index:40}`. Tes: `t223.js` (termasuk kontrol negatif).
+
 ### 1.1.222 — 19 Nov
 - **Batas rugi harian dalam persen saldo awal hari.** `DAY_LIMITS.maxLossPct` (0–100, disimpan di `jurnalDayLimits` per akun; validator ikut diperluas), `dayStartBalance(key)` (pencarian biner pada `DATA.equity`, titik terakhir sebelum 00:00 GMT+8 hari itu), `dayMaxLoss(key)` = persen × saldo awal hari, jatuh ke `maxLoss` (sen) bila tidak ada saldo sebelumnya, `limLossOn()`, `limLossLabel()`. Dipakai oleh `renderDayLimitStatus`, `renderTodayCard` (sub-teks menampilkan persen), notifikasi batas, Laporan (batas dihitung per hari memakai `d.k`), dan `weekDayCompliance`. Setelan: `#limMaxLossPct` + petunjuk batas hari ini. Tes: `t222.js`.
 

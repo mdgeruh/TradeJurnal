@@ -125,6 +125,46 @@ Tab Kalender → **Impor dan ekspor jadwal**. Ekspor menyimpan semua event (bawa
 ## Performa mingguan: rentang dan rata-rata (v1.1.180)
 Di bagian Performa mingguan pilih **12 minggu / 26 minggu / Semua**. Batang menampilkan garis putus-putus rata-rata per minggu, dengan ringkasan rata-rata dan jumlah minggu untung. Daftar mingguan mengikuti rentang, dan semuanya mengikuti filter arah/sesi. Pilihan diingat dan ikut ekspor pengaturan.
 
+## Kurva ekuitas (v1.1.232)
+Sumbu 1:1 (terbaca di ponsel), mode Return %, penanda ▲▼ deposit/penarikan, ◆ hari terbaik/terburuk, strip drawdown, baris detail hari + Lihat transaksi, brush mouse untuk memilih rentang, Zoom sumbu. Tes: `t232.js`.
+
+
+## Kartu saldo ringkas (v1.1.231)
+Kartu Saldo akhir akun lebih rapat di ponsel (±14% lebih pendek), estimasi Rp sebaris dengan angkanya. Tes: `t231.js`.
+
+
+## Performa dan Laporan (v1.1.230)
+Performa menampilkan hasil per waktu; Laporan menampilkan analisis pola. Jam & hari buka hanya di Laporan → Lanjutan, Beli vs Jual rinci hanya di Performa, dengan tautan antar halaman. Tes: `t230.js`.
+
+
+## Perbaikan sisa ponsel (v1.1.229)
+Log Deposit berupa baris ringkas di ponsel, area sentuh tombol kecil diperbesar, filter Kalender terlipat, tombol + menyingkir saat menggulir turun, dan label Analisis PNL diperjelas. Tes: `t229.js`.
+
+
+## Perapian halaman (v1.1.228)
+Pengulangan antarhalaman dikurangi (batas harian, Berita, PNL 7H/30H, Bandingkan di Performa). Filter Transaksi dan Laporan terlipat di ponsel. Setelan → Data → Seragamkan label catatan menggabungkan penulisan kembar. Tes: `t228.js`.
+
+
+## Upgrade Ringkasan (v1.1.227)
+Kartu baru: Target bulan ini, PNL per sesi hari ini, Wawasan, PNL harian 30 hari (heatmap), Catatan harian. Statistik periode menampilkan selisih vs periode sebelumnya; di ponsel ada Mode fokus. Catatan harian hanya tersimpan di perangkat. Tes: `t227.js`.
+
+
+## Komponen kustom di Kalender dan Setelan (v1.1.226)
+Zona waktu, Dampak, dan Tanggal-jam di form Kalender, dropdown Urutkan transaksi, dan Zona waktu di Setelan kini memakai komponen kustom (bukan `<select>`/input tanggal bawaan browser). Tes: `t226.js`.
+
+
+## Pemilih tanggal: lembar bawah di ponsel (v1.1.225)
+Di layar ≤ 700 px kalender muncul sebagai lembar di bawah layar dengan latar redup (ketuk latar untuk menutup); desktop tetap popup. Tes: `t225.js`.
+
+
+## Perbaikan chip periode dan Max DD nol (v1.1.224)
+Baris chip periode di atas statistik tidak lagi tertimpa kartu; Max DD bertanda minus hanya bila drawdown > 0. Tes: `t224.js`.
+
+
+## Perbaikan popup di mode kaca (v1.1.223)
+Kalender tanggal dan daftar pilihan kini selalu di atas kartu lain saat efek kaca aktif (kartu yang membuka popup dinaikkan dengan `:has()`). Tes: `t223.js`.
+
+
 ## Batas rugi harian dalam persen (v1.1.222)
 Setelan → Trading: isi **Maks rugi harian (% saldo awal hari)** agar batas dihitung ulang tiap hari dari saldo penutupan hari sebelumnya (GMT+8). Persen menimpa kolom sen; hari pertama tanpa saldo sebelumnya memakai kolom sen. Tes: `t222.js`.
 

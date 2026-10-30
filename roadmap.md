@@ -2,7 +2,17 @@
 
 Satu-satunya daftar rencana dan todo proyek (dulu ada di `SUMMARY.md`). Prioritas: **P1** tinggi, **P2** sedang, **P3** rendah. Tidak ada tanggal tetap. Setiap butir yang mengubah kode mengikuti **Alur rilis** di `README.md`; saat selesai, hapus dari sini (centang bila perlu satu rilis), pindahkan tema barunya ke tabel "Sudah selesai", dan catat di `release_note.md` dan `CHANGELOG.md`. Jebakan bug tiap area ada di `SUMMARY.md`.
 
-## Sudah selesai (v1.1.222)
+## Sudah selesai (v1.1.232)
+- Perbaikan & peningkatan kurva ekuitas (10 saran) (v1.1.232).
+- Optimalisasi kartu saldo akhir akun (lebih ringkas) (v1.1.231).
+- Pembagian peran Performa (hasil per waktu) dan Laporan (analisis pola) (v1.1.230).
+- Perbaikan sisa ponsel (Deposit ringkas, area sentuh, filter Kalender lipat, FAB, label Analisis) (v1.1.229).
+- Rapikan pengulangan antarhalaman + alat seragamkan label catatan (v1.1.228).
+- Tujuh upgrade Ringkasan (target, sesi, wawasan, heatmap, catatan harian, selisih periode, mode fokus) (v1.1.227).
+- Kontrol bawaan browser diganti komponen kustom (form Kalender, Urutkan, Zona waktu Setelan) (v1.1.226).
+- Pemilih tanggal di ponsel menjadi lembar bawah layar (bottom sheet) (v1.1.225).
+- Perbaikan chip periode tertimpa kartu statistik dan -$0,00 pada Max DD (v1.1.224).
+- Perbaikan popup tanggal dan daftar pilihan tertutup kartu kaca (v1.1.223).
 - Batas rugi harian dalam persen saldo awal hari (v1.1.222).
 - Ringkasan: kartu bisa diatur (sembunyikan, urutkan) dan urutan bawaan ponsel (v1.1.221).
 - Ringkasan: transaksi terakhir lebih kaya, sparkline dan drawdown saat ini, kepatuhan aturan (v1.1.220).

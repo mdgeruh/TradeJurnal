@@ -236,6 +236,8 @@ const fmtCent = n => (n<0?'-':'') + nf(2,2).format(Math.abs(n));
 // Tanda minus SEBELUM simbol ("-Rp 1.234"), sama seperti "-$1,00" di fmtMoney; pembulatan ke 0 tidak menampilkan "-Rp 0".
 const fmtRp = n => { const r = Math.round(n); return (r<0?'-':'') + 'Rp ' + nf(0,3).format(Math.abs(r)); };
 const fmtPct = n => nf(1,1).format(n*100) + '%';
+// v1.1.228: persen terhadap saldo yang sangat kecil tidak bermakna; di atas ±300% ditampilkan sebagai ">+300%" / "<\u2212300%".
+const fmtPctCap = n => Math.abs(n) > 3 ? (n > 0 ? '>+300%' : '<\u2212300%') : (n >= 0 ? '+' : '') + fmtPct(n);
 
 // ---------- Mata uang tampilan kartu hero (USD / USC / Rp) ----------
 // Data internal tetap dalam sen (¢); 100¢ = 1 USD. USC = US cent (satuan asli akun cent), BUKAN USD Coin.
@@ -315,7 +317,7 @@ function renderHeroMoney(){
   const cls = sgnCls(pl);
   const pct = DATA.summary.pct_pl;
   const pctTxt = (pct===null || pct===undefined) ? '' : `<span class="${cls}">${pct>0?'+':''}${fmtPct(pct)}</span> · `;
-  document.getElementById('heroAllTime').innerHTML = `<span class="lbl">PNL Kumulatif</span>${pctTxt}<span class="val ${cls}">${heroPlTxt(pl, pl_rp)}</span>${idr ? '' : `<span class="hero-rp-sub">${heroRpSub(pl_rp)}</span>`}`;
+  document.getElementById('heroAllTime').innerHTML = `<span class="lbl">PNL Kumulatif</span>${pctTxt}<span class="val ${cls}">${heroPlTxt(pl, pl_rp)}</span>${idr ? '' : `<span class="hero-rp-sub hrs-inline">${heroRpSub(pl_rp)}</span>`}`;
 
   if(!HERO_PNL) return;
   const pctFmt = p => p===null ? '\u2013' : (p>0?'+':'') + fmtPct(p);
@@ -326,12 +328,13 @@ function renderHeroMoney(){
   const todayRpEl = document.getElementById('pnlTodayRp');
   todayRpEl.textContent = heroRpSub(HERO_PNL.today.pl_rp);
   todayRpEl.hidden = idr;
-  document.getElementById('pnlGrid').innerHTML = [{lbl:'PNL 7H', m:HERO_PNL.d7},{lbl:'PNL 30H', m:HERO_PNL.d30},{lbl:'PNL Minggu Ini', m:HERO_PNL.week},{lbl:'PNL Bulan Ini', m:HERO_PNL.month}].map(r=>`
+  const same = (x, y) => x.pl === y.pl && x.pct === y.pct;   // v1.1.228: 7H/30H disembunyikan bila angkanya identik dengan Minggu/Bulan Ini
+  document.getElementById('pnlGrid').innerHTML = [{lbl:'PNL 7H', m:HERO_PNL.d7, skip:same(HERO_PNL.d7, HERO_PNL.week)},{lbl:'PNL 30H', m:HERO_PNL.d30, skip:same(HERO_PNL.d30, HERO_PNL.month)},{lbl:'PNL Minggu Ini', m:HERO_PNL.week},{lbl:'PNL Bulan Ini', m:HERO_PNL.month}].filter(r=>!r.skip).map(r=>`
     <div class="pnl-cell">
       <div class="pnl-lbl">${r.lbl}</div>
       <div class="pnl-pct ${sgnCls(r.m.pl)}">${pctFmt(r.m.pct)}</div>
       <div class="pnl-val">${heroPlTxt(r.m.pl, r.m.pl_rp)}</div>
-      ${idr ? '' : `<div class="hero-rp-sub">${heroRpSub(r.m.pl_rp)}</div>`}
+      ${idr ? '' : `<div class="hero-rp-sub hrs-inline">${heroRpSub(r.m.pl_rp)}</div>`}
     </div>
   `).join('');
 }
@@ -530,6 +533,7 @@ renderHeroMoney();
     eyeBtn.setAttribute('aria-pressed', hidden ? 'true' : 'false');
     const rc = document.getElementById('recentCard'); if(rc) rc.classList.toggle('hidden-values', hidden);
     const tc = document.getElementById('todayCard'); if(tc) tc.classList.toggle('hidden-values', hidden);
+    document.querySelectorAll('.rg-card').forEach(el => el.classList.toggle('hidden-values', hidden));
   }
   window.setPnlHidden = setPnlHidden;
   // Setelan → Preferensi "Angka PNL saat dibuka" (v1.1.145): jurnalHideNum = '1' → tersamar sejak muat
@@ -591,16 +595,26 @@ function computePeriodStats(matched){
 // Satu kartu stat strip: Transaksi & Win rate digabung dengan Laba/Rugi (+ sub-baris ≈ Rp),
 // PF, Max DD, Expectancy — sebelumnya Transaksi & Win rate juga tampil terpisah di kartu
 // period-detail di atas kurva ekuitas, jadi dobel dengan kartu ini.
-function renderStatStrip(st, periodLabel){
+function renderStatStrip(st, periodLabel, prev){
   const pe = document.getElementById('statPeriod');
   if(pe && periodLabel) pe.textContent = 'Periode: ' + periodLabel;
   const pfTxt = st.total===0 ? '—' : (st.pf===Infinity ? '∞' : st.pf.toFixed(2).replace('.', DEC())+'x');
+  // v1.1.227: selisih terhadap periode sebelumnya yang sama panjang (kosong bila tak ada pembanding atau periode itu tanpa transaksi).
+  const hasPrev = !!(prev && prev.total > 0);
+  const dl = (cur, old, fmt, goodUp) => {
+    if(!hasPrev || !isFinite(cur) || !isFinite(old)) return '';
+    const d = cur - old; if(Math.abs(d) < 1e-9) return '<span class="stat-vs">sama seperti sebelumnya</span>';
+    return `<span class="stat-vs ${(d > 0) === (goodUp !== false) ? 'up' : 'down'}">${d > 0 ? '\u25b2 +' : '\u25bc \u2212'}${fmt(Math.abs(d))} vs sebelumnya</span>`;
+  };
+  const dN = dl(st.total, prev && prev.total, x => String(Math.round(x)), true);
+  const dW = st.total && prev && prev.total ? dl(st.winrate, prev.winrate, x => nf(1,1).format(x*100) + ' poin', true) : '';
+  const dP = dl(st.pl, prev && prev.pl, x => fmtMoney(x), true);
   document.getElementById('statStrip').innerHTML = `
-    <div class="stat"><div class="stat-lbl">Transaksi</div><div class="stat-val">${st.total}</div></div>
-    <div class="stat"><div class="stat-lbl">Win rate</div><div class="stat-val">${st.total? fmtPct(st.winrate) : '—'}</div></div>
-    <div class="stat"><div class="stat-lbl">Laba/Rugi</div><div class="stat-val ${sgnCls(st.pl)}">${st.pl>0?'+':''}${fmtMoney(st.pl)}</div>${approxRp(st.pl)}</div>
+    <div class="stat"><div class="stat-lbl">Transaksi</div><div class="stat-val">${st.total}</div>${dN}</div>
+    <div class="stat"><div class="stat-lbl">Win rate</div><div class="stat-val">${st.total? fmtPct(st.winrate) : '—'}</div>${dW}</div>
+    <div class="stat"><div class="stat-lbl">Laba/Rugi</div><div class="stat-val ${sgnCls(st.pl)}">${st.pl>0?'+':''}${fmtMoney(st.pl)}</div>${approxRp(st.pl)}${dP}</div>
     <div class="stat"><div class="stat-lbl">PF</div><div class="stat-val">${pfTxt}</div></div>
-    <div class="stat"><div class="stat-lbl" title="Berbasis PNL (tanpa deposit/penarikan); beda dasar hitung dengan Drawdown ekuitas di kurva">Max DD (PNL)</div><div class="stat-val ${st.maxdd>0?'down':''}">-${fmtMoney(st.maxdd)}</div></div>
+    <div class="stat"><div class="stat-lbl" title="Berbasis PNL (tanpa deposit/penarikan); beda dasar hitung dengan Drawdown ekuitas di kurva">Max DD (PNL)</div><div class="stat-val ${st.maxdd>0?'down':''}">${st.maxdd>0?'-':''}${fmtMoney(st.maxdd)}</div></div>
     <div class="stat"><div class="stat-lbl">Expectancy</div><div class="stat-val ${sgnCls(st.expectancy)}">${st.expectancy>0?'+':''}${fmtMoney(st.expectancy)}</div></div>
     <div class="stat"><div class="stat-lbl">Streak</div><div class="stat-val ${st.streak>0?'up':(st.streak<0?'down':'')}">${st.streak===0 ? '—' : Math.abs(st.streak) + (st.streak>0 ? ' menang' : ' rugi')}</div></div>
     <div class="stat"><div class="stat-lbl">Rata² menang</div><div class="stat-val up">${st.winCount ? '+' + fmtMoney(st.avgWin) : '—'}</div><span class="approx-rp">${st.rr>0 ? 'RR ' + st.rr.toFixed(2).replace('.', DEC()) + 'x' : ''}</span></div>
@@ -955,21 +969,6 @@ function drawLapRoll(){
     touchPreventDefault: true
   });
 }
-// ---------- L13: Beli vs Jual berdampingan (mengabaikan filter Arah; periode dan filter lain tetap berlaku) ----------
-function lapArahStat(list){
-  let gw = 0, gl = 0, lots = 0, nl = 0;
-  for(const t of list){ if(t.laba>0) gw += t.laba; else if(t.laba<0) gl -= t.laba; if(+t.lot>0){ lots += +t.lot; nl++; } }
-  return {pf: gl>0 ? gw/gl : (gw>0 ? Infinity : null), lot: nl ? lots/nl : null};
-}
-function renderLapArahSplit(){
-  const beli = lap2NoArah.filter(t=>t.arah==='Beli'), jual = lap2NoArah.filter(t=>t.arah==='Jual');
-  renderPsyGroup('lapArahSplit', [psyRow('Beli', beli), psyRow('Jual', jual)].filter(r=>r.count), lap2NoArah.length, true, 'Belum ada transaksi pada periode ini.');
-  const sb = lapArahStat(beli), sj = lapArahStat(jual);
-  const pf = v => v==null ? '\u2014' : (v===Infinity ? '\u221e' : v.toFixed(2).replace('.', DEC()) + 'x'), lot = v => v==null ? '\u2014' : v.toFixed(2).replace('.', DEC());
-  const c = (l,v)=>`<div class="stat"><div class="stat-lbl">${l}</div><div class="stat-val">${v}</div></div>`;
-  document.getElementById('lapArahStats').innerHTML = c('PF Beli', pf(sb.pf)) + c('PF Jual', pf(sj.pf)) + c('Lot rata-rata Beli', lot(sb.lot)) + c('Lot rata-rata Jual', lot(sj.lot));
-  document.getElementById('lapArahNote').textContent = lap2Arah==='semua' ? '' : 'Blok ini membandingkan kedua arah, jadi filter Arah di atas tidak berlaku di sini (periode dan filter lain tetap).';
-}
 // ---------- L14: distribusi hasil per transaksi (PNL; 10% terbaik/terburuk = ceil(10% x n) transaksi, n >= 10) ----------
 let lapDistData = null, lapDistPipsData = null, lapDistUnit = 'pnl';   // unit tampilan histogram: 'pnl' | 'pips'
 const fmtPipsV = v => (v<0?'-':'') + Math.abs(v).toLocaleString(NUM_LOCALE,{minimumFractionDigits:1,maximumFractionDigits:1}) + ' pips';
@@ -1180,7 +1179,6 @@ function renderLapLanjut(matched, range){
   const pairs = matched.map(t=>({t, tt:parseGmt8(t.tanggal_gmt8)})).sort((a,b)=>a.tt-b.tt);
   const arr = pairs.map(x=>x.t);
   lapRollData = computeLapRoll(arr, lapRollWin); lapRollData.arr = arr; drawLapRoll();
-  renderLapArahSplit();
   lapDistData = computeLapDist(arr); lapDistPipsData = computeLapDist(arr, 'pips'); drawLapDist();
   // B1: streak + kondisi setelah menang/rugi
   let bestW=0, bestL=0, cur=0, curType=0;
@@ -1252,7 +1250,7 @@ function renderLapLanjut(matched, range){
   if(ddPctEl) ddPctEl.textContent = (ok && ddPct > 0) ? '-' + fmtPct(ddPct) + ' dari puncak ekuitas' : '';
   document.getElementById('lapReturn').innerHTML = `
     <div class="stat"><div class="stat-lbl">Return periode</div><div class="stat-val ${st.pl>=0?'up':'down'}">${ok ? (st.pl>=0?'+':'')+fmtPct(st.pl/modal) : '—'}</div></div>
-    <div class="stat"><div class="stat-lbl">Max DD</div><div class="stat-val ${st.maxdd>0?'down':''}">${ok ? '-'+fmtPct(ddPct) : '—'}</div></div>
+    <div class="stat"><div class="stat-lbl">Max DD</div><div class="stat-val ${st.maxdd>0?'down':''}">${ok ? (ddPct>0?'-':'')+fmtPct(ddPct) : '—'}</div></div>
     <div class="stat"><div class="stat-lbl">Modal bersih</div><div class="stat-val">${modal>0 ? fmtMoney(modal) : '—'}</div></div>`;
   // L7: drawdown (underwater) + durasi & waktu pulih
   lapDDData = computeLapDD(range);
@@ -1871,9 +1869,9 @@ function cmpBuild(rA, rB, lA, lB){
     ['Profit factor', st=>st.total?st.pf:null, v=>v===Infinity?'\u221e':v.toFixed(2).replace('.', DEC())+'x', d=>sg(d)+Math.abs(d).toFixed(2).replace('.', DEC())+'x', 'up'],
     ['Expectancy', st=>st.total?st.expectancy:null, moneyS, d=>moneyS(d), 'up'],
     ['Rata-rata menang', st=>st.winCount?st.avgWin:null, money, d=>moneyS(d), 'up'],
-    ['Rata-rata rugi', st=>st.lossCount?st.avgLoss:null, v=>'-'+money(v), d=>moneyS(d), 'down'],
+    ['Rata-rata rugi', st=>st.lossCount?st.avgLoss:null, v=>(v>0?'-':'')+money(v), d=>moneyS(d), 'down'],
     ['Rasio menang/rugi', st=>st.rr>0?st.rr:null, v=>v.toFixed(2).replace('.', DEC()), d=>sg(d)+Math.abs(d).toFixed(2).replace('.', DEC()), 'up'],
-    ['Max DD (PNL)', st=>st.total?st.maxdd:null, v=>'-'+money(v), d=>moneyS(d), 'down']
+    ['Max DD (PNL)', st=>st.total?st.maxdd:null, v=>(v>0?'-':'')+money(v), d=>moneyS(d), 'down']
   ];
   let better = 0, worse = 0, judged = 0;
   const body = rows.map(([lbl, get, fmt, dfmt, dir])=>{
@@ -1928,7 +1926,7 @@ function renderLapCmp(){
     sum.textContent = parts.concat(extra).join(' \u00b7 ');
   };
   btn.addEventListener('click', () => setOpen(sec.classList.contains('lf-closed'), true));
-  let open = true; try{ open = localStorage.getItem(KEY) !== '0'; }catch(e){}
+  let open = !(window.matchMedia && window.matchMedia('(max-width: 700px)').matches); try{ const sv = localStorage.getItem(KEY); if(sv === '0') open = false; else if(sv === '1') open = true; }catch(e){}   // v1.1.228: default terlipat di ponsel
   setOpen(open, false);
 })();
 function renderLap2(){
@@ -2178,7 +2176,8 @@ function applyCustomRange(){
   const pl = matched.reduce((s,t)=>s+t.laba,0);
   customNote.textContent = matched.length ? '' : 'Tidak ada transaksi di rentang ini';
   currentPeriodRange = {start: rs, end: re};
-  renderStatStrip(computePeriodStats(matched), 'Kustom ' + fromV + ' – ' + toV);
+  const span = re - rs + 1, prevM = DATA.trades.filter(t=>{ const tt = parseGmt8(t.tanggal_gmt8); return tt>=rs-span && tt<rs; });
+  renderStatStrip(computePeriodStats(matched), 'Kustom ' + fromV + ' – ' + toV, computePeriodStats(prevM));
   if(window.updateChartHighlight) window.updateChartHighlight(currentPeriodRange, 'Kustom ' + fromV + ' – ' + toV, pl);
   if(window.renderTrades) window.renderTrades();
 }
@@ -2202,7 +2201,12 @@ function selectPeriodKey(key){
     return tt>=range.start && tt<=range.end;
   });
   const pl = matched.reduce((s,t)=>s+t.laba, 0);
-  renderStatStrip(computePeriodStats(matched), preset.long);
+  let prevSt = null;
+  if(preset.days){
+    const ps = range.start - preset.days*86400000;
+    prevSt = computePeriodStats(DATA.trades.filter(t=>{ const tt = parseGmt8(t.tanggal_gmt8); return tt>ps && tt<=range.start; }));
+  }
+  renderStatStrip(computePeriodStats(matched), preset.long, prevSt);
   if(window.updateChartHighlight) window.updateChartHighlight(range, preset.long, pl);
 }
 
@@ -2284,21 +2288,31 @@ function renderEqDdBadge(d){
   if(!d || !d.last){ el.innerHTML = ''; return; }
   if(d.now){
     const nominal = d.last.peak - d.last.bal;
-    el.innerHTML = `<span class="eq-dd-badge down" title="Dihitung dari seluruh riwayat (sama dengan Laporan \u2192 Drawdown), tidak mengikuti pemilih periode."><span>DD saat ini</span><b>-${fmtPct(d.now.pct)}</b><span>dari puncak</span><span class="eq-dd-sub">-${fmtMoney(nominal)} \u00b7 sejak ${lapFmtDate(d.now.since)}</span></span>`;
+    el.innerHTML = `<span class="eq-dd-badge down" title="Dihitung dari seluruh riwayat (sama dengan Laporan \u2192 Drawdown), tidak mengikuti pemilih periode."><span>DD ekuitas saat ini</span><b>-${fmtPct(d.now.pct)}</b><span>dari puncak</span><span class="eq-dd-sub">-${fmtMoney(nominal)} \u00b7 sejak ${lapFmtDate(d.now.since)}</span></span>`;
   } else {
     el.innerHTML = `<span class="eq-dd-badge up" title="Dihitung dari seluruh riwayat (sama dengan Laporan \u2192 Drawdown), tidak mengikuti pemilih periode."><span>Ekuitas</span><b>di puncak</b></span>`;
   }
 }
 let eqLegendHidden = { modal:false, peak:false };
-// Jenis kurva Ringkasan: 'equity' (saldo, termasuk deposit/penarikan) atau 'pnl' (PNL kumulatif trading saja). Tersimpan di localStorage `jurnalEqMode`.
-// Fokus rentang (v1.1.219): sumbu-Y mengikuti rentang data tanpa memaksa titik nol. null = otomatis (aktif bila data hampir datar terhadap saldo).
+// Jenis kurva Ringkasan: 'equity' (saldo, termasuk deposit/penarikan), 'pnl' (PNL kumulatif trading saja) atau 'ret' (Return % = PNL kumulatif / modal kumulatif). Tersimpan di localStorage `jurnalEqMode`.
+// Zoom sumbu (v1.1.219, diganti nama v1.1.232): sumbu-Y mengikuti rentang data tanpa memaksa titik nol. null = otomatis (aktif bila data hampir datar terhadap saldo).
 let eqZoomPref = null; try{ const z = localStorage.getItem('jurnalEqZoom'); if(z==='1' || z==='0') eqZoomPref = z; }catch(e){}
 let eqZoomOn = false;
 let eqMode = 'equity';
-try{ if(localStorage.getItem('jurnalEqMode')==='pnl') eqMode = 'pnl'; }catch(e){}
+try{ const m = localStorage.getItem('jurnalEqMode'); if(m==='pnl' || m==='ret') eqMode = m; }catch(e){}
+let eqLastW = 0;
+// Kurva memakai Date lokal dari string GMT+8 (konvensi lama); dua helper ini membalik/menyamakan konvensi itu.
+function eqDayKeyLocal(t){ const d = new Date(t); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function eqBrokerToGmt8Iso(iso){ return new Date(baseToUtcMs(iso) + 8*3600000).toISOString().slice(0,19); }
 function renderEquityChart(){
-  const pnlMode = eqMode==='pnl' && !!DATA.equity && !!DATA.pnl_kumulatif && DATA.pnl_kumulatif.length===DATA.equity.length;
-  const eqFull = pnlMode ? DATA.equity.map((p,i)=>[p[0], DATA.pnl_kumulatif[i]]) : DATA.equity;
+  const hasPnl = !!DATA.equity && !!DATA.pnl_kumulatif && DATA.pnl_kumulatif.length===DATA.equity.length;
+  const retMode = eqMode==='ret' && hasPnl && !!DATA.modal_kumulatif && DATA.modal_kumulatif.length===DATA.equity.length;
+  const pnlMode = (eqMode==='pnl' && hasPnl) || retMode;
+  const eqFull = retMode ? DATA.equity.map((p,i)=>{ const m = DATA.modal_kumulatif[i]; return [p[0], m > 0 ? DATA.pnl_kumulatif[i]/m*100 : 0]; })
+               : pnlMode ? DATA.equity.map((p,i)=>[p[0], DATA.pnl_kumulatif[i]]) : DATA.equity;
+  const fv = v => retMode ? (v>0 ? '+' : (v<0 ? '−' : '')) + nf(2,2).format(Math.abs(v)) + '%' : fmtMoney(v);
+  const fdd = v => retMode ? nf(2,2).format(v) + ' poin' : fmtMoney(v);
+  const sgnMoney = v => (v>0 ? '+' : '') + fmtMoney(v);
   const box = document.getElementById('chartBox');
   const ddAll = (eqFull && eqFull.length) ? eqDrawdownAllTime() : null;
   renderEqDdBadge(ddAll ? ddAll.d : null);
@@ -2314,8 +2328,15 @@ function renderEquityChart(){
     return;
   }
   const modalFull = pnlMode ? null : (DATA.modal_kumulatif || null);
-  const W = 880, H = 260, padL = 54, padR = 22, padT = 12, padB = 26;
-  const plotW = W - padL - padR, plotH = H - padT - padB;
+  // v1.1.232: SVG digambar 1:1 dengan lebar kontainer sebenarnya (dulu viewBox 880 ditarik ke lebar ponsel sehingga teks gepeng & kecil).
+  const cw = box.clientWidth || 0;
+  const W = cw >= 200 ? Math.round(cw) : 880;
+  eqLastW = W;
+  const narrow = W < 560;
+  const H = narrow ? 330 : 320;
+  const padL = narrow ? 46 : 56, padR = narrow ? 12 : 22, padT = 16, padB = 26, stripH = 30, stripGap = 8;
+  const plotW = W - padL - padR, plotH = H - padT - padB - stripH - stripGap;
+  const stripTop = padT + plotH + stripGap, hoverH = plotH + stripGap + stripH;
   const goldColor = cssVar('--gold');
   const gainColor = cssVar('--gain');
   const lossColor = cssVar('--loss');
@@ -2365,7 +2386,8 @@ function renderEquityChart(){
 
   // ---------- Tarik kurva mendatar sampai akhir rentang (hari ini / akhir periode) ----------
   // Tanpa ini, garis berhenti persis di transaksi terakhir walau periodenya masih berjalan.
-  if(times[times.length-1] < scopeEnd){
+  const tailExtra = times[times.length-1] < scopeEnd;
+  if(tailExtra){
     times.push(scopeEnd);
     vals.push(vals[vals.length-1]);
     if(modalVals) modalVals.push(modalVals[modalVals.length-1]);
@@ -2390,12 +2412,14 @@ function renderEquityChart(){
   const x = t => padL + (t-tMin)/(tMax-tMin) * plotW;
   const y = v => padT + plotH - (v-yLo)/(yHi-yLo) * plotH;
 
-  // ---------- Max drawdown dalam rentang yang ditampilkan (trading-only, exclude deposit/penarikan) ----------
+  // ---------- Max drawdown dalam rentang yang ditampilkan (trading-only, exclude deposit/penarikan) + kedalaman per titik ----------
   const ddSeries = modalVals ? vals.map((v,i)=>v-modalVals[i]) : vals;
   let peakIdx = 0, troughIdx = 0, maxDD = 0, runPeakIdx = 0;
+  const uw = [0];   // kedalaman drawdown per titik (untuk strip "underwater" & tooltip)
   for(let i=1;i<ddSeries.length;i++){
     if(ddSeries[i] > ddSeries[runPeakIdx]) runPeakIdx = i;
     const dd = ddSeries[runPeakIdx] - ddSeries[i];
+    uw.push(dd);
     if(dd > maxDD){ maxDD = dd; peakIdx = runPeakIdx; troughIdx = i; }
   }
 
@@ -2408,6 +2432,42 @@ function renderEquityChart(){
   const athPx = x(times[athIdx]), athPy = y(vals[athIdx]);
   const bottomPx = x(times[bottomIdx]), bottomPy = y(vals[bottomIdx]);
   const showBottomLabel = bottomIdx !== athIdx;
+  const pctL = px => Math.min(92, Math.max(8, px/W*100));
+
+  // ---------- Data harian: PNL & jumlah transaksi per hari (GMT+8), peristiwa deposit, hari terbaik/terburuk ----------
+  const ptDay = idxs.map(i => String(eqFull[i][0]).slice(0,10));
+  const dayAgg = {};
+  for(const t of DATA.trades){ const k = String(t.tanggal_gmt8).slice(0,10); const a = dayAgg[k] || (dayAgg[k] = {pnl:0, n:0}); a.pnl += t.laba; a.n++; }
+  const k0 = eqDayKeyLocal(scopeStart), k1 = eqDayKeyLocal(scopeEnd);
+  let bestDay = null, worstDay = null, nDays = 0;
+  for(const k in dayAgg){
+    if(k < k0 || k > k1) continue;
+    nDays++;
+    if(dayAgg[k].pnl > 0 && (bestDay === null || dayAgg[k].pnl > dayAgg[bestDay].pnl)) bestDay = k;
+    if(dayAgg[k].pnl < 0 && (worstDay === null || dayAgg[k].pnl < dayAgg[worstDay].pnl)) worstDay = k;
+  }
+  if(nDays < 3){ bestDay = null; worstDay = null; }
+  const lastIdxOfDay = day => { for(let i = ptDay.length - 1 - (tailExtra ? 1 : 0); i >= 0; i--) if(ptDay[i] === day) return i; return -1; };
+  let annos = '';
+  [[bestDay, gainColor, 'Hari terbaik'], [worstDay, lossColor, 'Hari terburuk']].forEach(([day, col, nm]) => {
+    if(!day) return;
+    const i = lastIdxOfDay(day); if(i < 0) return;
+    const cx = x(times[i]), cy = y(vals[i]);
+    annos += `<path class="eq-anno" d="M${cx} ${cy-5.5} L${cx+5.5} ${cy} L${cx} ${cy+5.5} L${cx-5.5} ${cy} Z" fill="${col}" stroke="${cssVar('--ink')}" stroke-width="1"><title>${nm}: ${fmtDateKey(parseGmt8(day+'T12:00:00'))} (${sgnMoney(dayAgg[day].pnl)})</title></path>`;
+  });
+  // Peristiwa deposit / penarikan / kompensasi MC (hanya kurva Ekuitas; di PNL & Return keduanya tidak memengaruhi kurva)
+  const depByDay = {}; let depMarks = '', depCount = 0;
+  if(!pnlMode && DATA.deposit && Array.isArray(DATA.deposit.log)){
+    for(const e of DATA.deposit.log){
+      const g8 = eqBrokerToGmt8Iso(e.tanggal), day = g8.slice(0,10), out = e.tipe === 'Penarikan';
+      (depByDay[day] || (depByDay[day] = [])).push({out, tipe: e.tipe, cent: Math.abs(e.cent || 0)});
+      const t = new Date(g8).getTime();
+      if(!(t >= scopeStart && t <= scopeEnd)) continue;
+      depCount++;
+      const cx = x(t), cy = padT + plotH - 8;
+      depMarks += `<path class="eq-dep ${out ? 'out' : 'in'}" d="${out ? `M${cx-4.5} ${cy-4} L${cx+4.5} ${cy-4} L${cx} ${cy+4} Z` : `M${cx} ${cy-4} L${cx+4.5} ${cy+4} L${cx-4.5} ${cy+4} Z`}" fill="${out ? lossColor : gainColor}" opacity="0.9"><title>${e.tipe} ${fmtMoney(Math.abs(e.cent || 0))} · ${fmtDateKey(parseGmt8(day+'T12:00:00'))}</title></path>`;
+    }
+  }
 
   const eqPts = times.map((t,i)=>({x:x(t), y:y(vals[i])}));
   // Garis puncak berjalan (putus-putus), hanya digambar bila ada jarak dari kurva (ada drawdown di rentang ini).
@@ -2427,14 +2487,24 @@ function renderEquityChart(){
     areaD = d + ` L ${x(times[times.length-1])} ${yBase} L ${x(times[0])} ${yBase} Z`;
   }
 
+  // Strip drawdown (underwater): kedalaman drawdown dari puncak berjalan, skala 0..maxDD
+  let uwArea = '', uwLine = '';
+  if(maxDD > 0){
+    const uy = v => stripTop + (v/maxDD) * (stripH - 4);
+    const pts = times.map((t,k)=>`${x(t).toFixed(1)},${uy(uw[k]).toFixed(1)}`);
+    uwLine = pts.join(' ');
+    uwArea = `M${x(times[0]).toFixed(1)},${stripTop} L${pts.join(' L')} L${x(times[times.length-1]).toFixed(1)},${stripTop} Z`;
+  }
+
   // Sumbu Y: tick "cantik" (kelipatan 1/2/2,5/5 x 10^k) dalam satuan tampilan (USD/USC/Rp), garis nol tegas
-  const dispF = HERO_CURRENCY==='USD' ? 0.01 : (HERO_CURRENCY==='IDR' ? (DATA.kurs||0)/100 : 1);
+  const dispF = retMode ? 1 : (HERO_CURRENCY==='USD' ? 0.01 : (HERO_CURRENCY==='IDR' ? (DATA.kurs||0)/100 : 1));
   const axisF = dispF > 0 ? dispF : 1;
   const rawStep = (yHi-yLo)*axisF/5;
   const mag = Math.pow(10, Math.floor(Math.log10(rawStep || 1)));
   const stepD = [1,2,2.5,5,10].map(m=>m*mag).find(v=>v >= rawStep) || 10*mag;
   const fmtTick = vd => {
     const a = Math.abs(vd), sg = vd<0 ? '-' : '';
+    if(retMode) return sg + a.toLocaleString(NUM_LOCALE,{maximumFractionDigits: stepD<1 ? 2 : 1});
     if(HERO_CURRENCY==='USD') return sg + a.toLocaleString(NUM_LOCALE,{minimumFractionDigits:0,maximumFractionDigits:stepD<1?2:0});
     if(a>=1e6) return sg + (a/1e6).toLocaleString(NUM_LOCALE,{maximumFractionDigits:2}) + 'jt';
     if(a>=1e3) return sg + (a/1e3).toLocaleString(NUM_LOCALE,{maximumFractionDigits:2}) + 'rb';
@@ -2445,13 +2515,11 @@ function renderEquityChart(){
     const vd = Math.round(k*stepD*1e6)/1e6, yy = y(vd/axisF);
     if(k===0) zeroLine = `<line x1="${padL}" y1="${yy}" x2="${W-padR}" y2="${yy}" stroke="${cssVar('--paper-faint')}" stroke-width="1" opacity="0.7"/>`;
     else gridLines += `<line x1="${padL}" y1="${yy}" x2="${W-padR}" y2="${yy}"/>`;
-    yLabels += `<text x="${padL-8}" y="${yy+3}" text-anchor="end">${fmtTick(vd)}</text>`;
+    yLabels += `<text x="${padL-6}" y="${yy+3.5}" text-anchor="end">${fmtTick(vd)}</text>`;
   }
-  yLabels += `<text x="2" y="7" text-anchor="start">${curUnitSymbol()}</text>`;
-  // x labels: pick ~6 evenly spaced points. Format mengikuti rentang tampilan (spanMs) supaya
-  // tidak lagi selalu "bulan+tahun" — untuk periode pendek (Hari Ini/Minggu Ini dst.) itu bikin
-  // semua label sama persis (mis. "Sep 26" berulang 7x), tidak menunjukkan progres waktu sama sekali.
-  const nXLabels = 6;
+  yLabels += `<text x="2" y="9" text-anchor="start">${retMode ? '%' : curUnitSymbol()}</text>`;
+  // x labels: format mengikuti rentang tampilan (spanMs); jumlah label dikurangi di layar sempit supaya tidak bertabrakan.
+  const nXLabels = narrow ? 4 : 6;
   const spanMs = tMax - tMin;
   const DAY_MS = 86400000;
   let xLabels = '';
@@ -2468,16 +2536,17 @@ function renderEquityChart(){
     } else {
       lbl = dt.toLocaleDateString('id-ID',{year:'numeric'});
     }
-    xLabels += `<text x="${x(t)}" y="${H-6}" text-anchor="${i===nXLabels ? 'end' : (i===0 ? 'start' : 'middle')}">${lbl}</text>`;
+    xLabels += `<text x="${x(t)}" y="${H-7}" text-anchor="${i===nXLabels ? 'end' : (i===0 ? 'start' : 'middle')}">${lbl}</text>`;
   }
 
   // Kunci tampil/sembunyi legenda (bertahan antar render)
   const hid = eqLegendHidden;
   const noteLabel = periodLabel && periodLabel.indexOf(' — ') >= 0 ? periodLabel : ''; // label periode hanya bila ada catatan (periode sudah terlihat di pemilih)
-  const bandH = 5, bandY = padT + plotH - bandH;
+  const bandH = stripH, bandY = stripTop;
+  const serName = retMode ? 'Return % (PNL ÷ modal)' : (pnlMode ? 'PNL kumulatif (tanpa deposit)' : (modalD ? 'Saldo / Ekuitas' : 'Saldo'));
   box.innerHTML = `
     <div class="eq-plot">
-    <svg id="equityChart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:260px;">
+    <svg id="equityChart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:${H}px;" tabindex="0" role="img" aria-label="Kurva ${retMode ? 'return persen' : (pnlMode ? 'PNL kumulatif' : 'ekuitas')}. Gunakan panah kiri/kanan untuk menelusuri titik.">
       <defs>
         <linearGradient id="eqFill" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stop-color="${lineColor}" stop-opacity="0.26"/>
@@ -2489,44 +2558,59 @@ function renderEquityChart(){
       ${zeroLine}
       <path d="${areaD}" fill="url(#eqFill)" stroke="none" clip-path="url(#eqPlotClip)"/>
       ${modalD ? `<path id="eqModalLine" d="${modalD}" fill="none" stroke="${modalColor}" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round" opacity="0.7" style="${hid.modal ? 'display:none' : ''}"/>` : ''}
-      <path d="${d}" fill="none" stroke="${lineColor}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"${eqAnimated ? '' : `
+      <path d="${d}" fill="none" stroke="${lineColor}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"${eqAnimated ? '' : `
             stroke-dasharray="3000" stroke-dashoffset="3000"`}>${eqAnimated ? '' : `
         <animate attributeName="stroke-dashoffset" from="3000" to="0" dur="1.1s" fill="freeze" calcMode="spline" keySplines="0.2 0 0.1 1"/>`}
       </path>
       ${showPeak ? `<polyline id="eqPeakLine" points="${peakPtsStr}" fill="none" stroke="${peakColor}" stroke-width="1.3" stroke-dasharray="5 3" opacity="0.95" clip-path="url(#eqPlotClip)" style="pointer-events:none;${hid.peak ? 'display:none;' : ''}"/>` : ''}
       <g class="eq-axis">${yLabels}${xLabels}</g>
-      <rect id="eqDrawdownRect" x="${x(times[peakIdx])}" y="${bandY}" width="${Math.max(1.5, x(times[troughIdx])-x(times[peakIdx]))}" height="${bandH}" fill="${lossColor}" opacity="0.6" style="pointer-events:none;"/>
-      <line class="eq-dd-edge" x1="${x(times[peakIdx])}" y1="${padT}" x2="${x(times[peakIdx])}" y2="${padT+plotH}" stroke="${lossColor}" stroke-width="1" stroke-dasharray="3 3" opacity="0" style="pointer-events:none;"/>
-      <line class="eq-dd-edge" x1="${x(times[troughIdx])}" y1="${padT}" x2="${x(times[troughIdx])}" y2="${padT+plotH}" stroke="${lossColor}" stroke-width="1" stroke-dasharray="3 3" opacity="0" style="pointer-events:none;"/>
+      <line class="eq-strip-base" x1="${padL}" y1="${stripTop}" x2="${W-padR}" y2="${stripTop}" stroke="${cssVar('--line')}" stroke-width="1"/>
+      <text class="eq-strip-lbl" x="${padL-6}" y="${stripTop+10}" text-anchor="end">DD</text>
+      ${maxDD > 0 ? `<path id="eqUwArea" d="${uwArea}" fill="${lossColor}" opacity="0.3" stroke="none" style="pointer-events:none;"/><polyline id="eqUwLine" points="${uwLine}" fill="none" stroke="${lossColor}" stroke-width="1" opacity="0.85" style="pointer-events:none;"/><text class="eq-strip-lbl" x="${padL+3}" y="${stripTop+stripH-3}">maks −${fdd(maxDD)}</text>` : `<text class="eq-strip-lbl" x="${padL+3}" y="${stripTop+stripH-3}">tanpa drawdown</text>`}
+      <rect id="eqDrawdownRect" x="${x(times[peakIdx])}" y="${bandY}" width="${Math.max(1.5, x(times[troughIdx])-x(times[peakIdx]))}" height="${bandH}" fill="${lossColor}" opacity="${maxDD > 0 ? 0.12 : 0}" style="pointer-events:none;"/>
+      <line class="eq-dd-edge" x1="${x(times[peakIdx])}" y1="${padT}" x2="${x(times[peakIdx])}" y2="${padT+hoverH}" stroke="${lossColor}" stroke-width="1" stroke-dasharray="3 3" opacity="0" style="pointer-events:none;"/>
+      <line class="eq-dd-edge" x1="${x(times[troughIdx])}" y1="${padT}" x2="${x(times[troughIdx])}" y2="${padT+hoverH}" stroke="${lossColor}" stroke-width="1" stroke-dasharray="3 3" opacity="0" style="pointer-events:none;"/>
+      <g class="eq-deps" style="pointer-events:none;">${depMarks}</g>
       <circle id="eqAthDot" cx="${athPx}" cy="${athPy}" r="3" fill="${gainColor}"/>
       ${showBottomLabel ? `<circle id="eqBottomDot" cx="${bottomPx}" cy="${bottomPy}" r="3" fill="${lossColor}"/>` : ''}
-      <line class="eq-hover-line" id="eqHoverLine" x1="0" y1="${padT}" x2="0" y2="${padT+plotH}"/>
+      <g class="eq-annos" style="pointer-events:none;">${annos}</g>
+      <rect id="eqBrushRect" x="0" y="${padT}" width="0" height="${hoverH}" fill="${goldColor}" opacity="0.16" stroke="${goldColor}" stroke-width="1" style="display:none;pointer-events:none;"/>
+      <line class="eq-hover-line" id="eqHoverLine" x1="0" y1="${padT}" x2="0" y2="${padT+hoverH}"/>
       <circle class="eq-hover-dot" id="eqHoverDot" r="3.5"/>
-      <rect x="${padL}" y="${padT}" width="${plotW}" height="${plotH}" fill="transparent" id="eqHoverArea"/>
+      <rect x="${padL}" y="${padT}" width="${plotW}" height="${hoverH}" fill="transparent" id="eqHoverArea"/>
     </svg>
     <div class="eq-tooltip" id="eqTooltip"></div>
-    <div class="eq-extreme-label ath" id="eqAthLabel" style="left:${athPx/W*100}%;top:${athPy/H*100}%;">${fmtMoney(vals[athIdx])}</div>
-    ${showBottomLabel ? `<div class="eq-extreme-label bottom" id="eqBottomLabel" style="left:${bottomPx/W*100}%;top:${bottomPy/H*100}%;">${fmtMoney(vals[bottomIdx])}</div>` : ''}
+    <div class="eq-extreme-label ath" id="eqAthLabel" style="left:${pctL(athPx)}%;top:${athPy/H*100}%;">${fv(vals[athIdx])}</div>
+    ${showBottomLabel ? `<div class="eq-extreme-label bottom" id="eqBottomLabel" style="left:${pctL(bottomPx)}%;top:${bottomPy/H*100}%;">${fv(vals[bottomIdx])}</div>` : ''}
     <div class="eq-period-label" id="eqPeriodLabel">${noteLabel ? 'Menampilkan: ' + noteLabel : ''}</div>
     </div>
     <div class="eq-legend">
-      <button type="button" class="eq-legend-item eq-legend-wide" data-eqleg="dd" aria-pressed="false" title="Ketuk untuk menyorot periode drawdown di kurva"><span class="eq-legend-swatch" style="background:${lossColor};opacity:0.6;height:5px"></span>Drawdown ekuitas terbesar: ${fmtMoney(maxDD)} (${fmtDate(eqFull[idxs[peakIdx]][0])} &rarr; ${fmtDate(eqFull[idxs[troughIdx]][0])})</button>
-      <span class="eq-legend-item"><span class="eq-legend-swatch" style="background:${lineColor}"></span>${pnlMode ? 'PNL kumulatif (tanpa deposit)' : (modalD ? 'Saldo / Ekuitas' : 'Saldo')}</span>
+      <span class="eq-legend-item"><span class="eq-legend-swatch" style="background:${lineColor}"></span>${serName}</span>
       ${modalD ? `<button type="button" class="eq-legend-item${hid.modal ? ' off' : ''}" data-eqleg="modal" aria-pressed="${!hid.modal}" title="Ketuk untuk tampil/sembunyi"><span class="eq-legend-swatch" style="background:${modalColor};opacity:0.7"></span>Modal kumulatif</button>` : ''}
       ${showPeak ? `<button type="button" class="eq-legend-item${hid.peak ? ' off' : ''}" data-eqleg="peak" aria-pressed="${!hid.peak}" title="Ketuk untuk tampil/sembunyi"><span class="eq-legend-swatch eq-legend-dash" style="border-top-color:${peakColor}"></span>Puncak berjalan</button>` : ''}
-      <span class="eq-legend-item"><span class="eq-legend-dot" style="background:${gainColor}"></span>Titik tertinggi</span>
-      ${showBottomLabel ? `<span class="eq-legend-item"><span class="eq-legend-dot" style="background:${lossColor}"></span>Titik terendah</span>` : ''}
+      ${depCount ? `<span class="eq-legend-item" id="eqLegDep"><span class="eq-legend-tri up">▲</span><span class="eq-legend-tri down">▼</span>Deposit / penarikan</span>` : ''}
+      ${(bestDay || worstDay) ? `<span class="eq-legend-item" id="eqLegAnno"><span class="eq-legend-dia" style="background:${gainColor}"></span><span class="eq-legend-dia" style="background:${lossColor}"></span>Hari terbaik / terburuk</span>` : ''}
+      <span class="eq-legend-item"><span class="eq-legend-dot" style="background:${gainColor}"></span>Tertinggi</span>
+      ${showBottomLabel ? `<span class="eq-legend-item"><span class="eq-legend-dot" style="background:${lossColor}"></span>Terendah</span>` : ''}
     </div>
+    <div class="eq-info" id="eqInfo" aria-live="polite"></div>
+    <div class="eq-brush" id="eqBrush" hidden></div>
   `;
+  // Pil drawdown terbesar periode ini digabung ke baris badge DD (satu baris, bukan dua pernyataan terpisah)
+  const bdRow = document.getElementById('eqDdBadge');
+  if(bdRow && maxDD > 0){
+    bdRow.insertAdjacentHTML('beforeend', `<button type="button" class="eq-dd-badge eq-dd-btn" data-eqleg="dd" aria-pressed="false" title="Ketuk untuk menyorot periode drawdown di kurva"><span>Terbesar periode ini</span><b>−${fdd(maxDD)}</b><span class="eq-dd-sub">${fmtDate(eqFull[idxs[peakIdx]][0])} → ${fmtDate(eqFull[idxs[troughIdx]][0])}</span></button>`);
+  }
   // Legenda bisa diketuk: sembunyikan/tampilkan garis modal & puncak; sorot penuh periode drawdown
-  box.querySelectorAll('[data-eqleg]').forEach(btn=>{
+  const legBtns = [...box.querySelectorAll('[data-eqleg]'), ...(bdRow ? bdRow.querySelectorAll('[data-eqleg]') : [])];
+  legBtns.forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const k = btn.getAttribute('data-eqleg');
       if(k === 'dd'){
         const on = btn.getAttribute('aria-pressed') !== 'true';
         btn.setAttribute('aria-pressed', on);
         const r = document.getElementById('eqDrawdownRect');
-        r.setAttribute('y', on ? padT : bandY); r.setAttribute('height', on ? plotH : bandH); r.setAttribute('opacity', on ? 0.14 : 0.6);
+        r.setAttribute('y', on ? padT : bandY); r.setAttribute('height', on ? hoverH : bandH); r.setAttribute('opacity', on ? 0.14 : 0.12);
         box.querySelectorAll('.eq-dd-edge').forEach(l=> l.setAttribute('opacity', on ? 0.5 : 0));
         return;
       }
@@ -2546,6 +2630,9 @@ function renderEquityChart(){
   const athLabel = document.getElementById('eqAthLabel');
   const bottomLabel = document.getElementById('eqBottomLabel');
   const periodLbl = document.getElementById('eqPeriodLabel');
+  const infoEl = document.getElementById('eqInfo');
+  const brushEl = document.getElementById('eqBrush');
+  const brushRect = document.getElementById('eqBrushRect');
 
   function nearestIndex(t){
     let lo=0, hi=times.length-1;
@@ -2553,9 +2640,36 @@ function renderEquityChart(){
     return lo;
   }
 
+  // ---------- Baris detail di bawah kurva: PNL hari itu, jumlah transaksi, DD, peristiwa deposit ----------
+  let selIdx = -1, lastIdx = -1;
+  const infoHint = '<span class="eq-hint eq-hint-fine">Arahkan kursor ke kurva untuk detail hari · klik untuk memilih · seret untuk memilih rentang</span><span class="eq-hint eq-hint-touch">Ketuk kurva untuk detail hari</span>';
+  function infoHtml(i, withBtn){
+    const isTail = tailExtra && i === times.length - 1;
+    const k = ptDay[i], a = dayAgg[k];
+    const p = [];
+    p.push(isTail ? '<b>Akhir rentang</b>' : `<b>${fmtDate(eqFull[idxs[i]][0])}</b>`);
+    p.push(`${retMode ? 'Return' : (pnlMode ? 'PNL' : 'Saldo')} <b>${fv(vals[i])}</b>`);
+    if(!isTail){
+      p.push(a ? `Hari itu <span class="${sgnCls(a.pnl)}">${sgnMoney(a.pnl)}</span> · ${a.n} trade` : 'Tanpa transaksi hari itu');
+      (depByDay[k] || []).forEach(ev => p.push(`<span class="${ev.out ? 'down' : 'up'}">${ev.out ? '▼' : '▲'} ${ev.tipe} ${fmtMoney(ev.cent)}</span>`));
+      if(k === bestDay) p.push('<span class="up">◆ hari terbaik periode ini</span>');
+      if(k === worstDay) p.push('<span class="down">◆ hari terburuk periode ini</span>');
+    }
+    p.push(uw[i] > 1e-9 ? `DD <span class="down">−${fdd(uw[i])}</span>` : 'di puncak');
+    let h = p.join('<span class="eq-sep">·</span>');
+    if(withBtn && a && !isTail) h += ` <button type="button" class="eq-link" data-eqgo="${k}">Lihat transaksi</button>`;
+    return h;
+  }
+  function renderInfo(){ infoEl.innerHTML = selIdx >= 0 ? infoHtml(selIdx, true) : infoHint; }
+  renderInfo();
+  infoEl.addEventListener('click', e => {
+    const b = e.target.closest('[data-eqgo]'); if(!b) return;
+    location.hash = '#transaksi?dari=' + b.dataset.eqgo + '&sampai=' + b.dataset.eqgo;
+  });
+
   // Saat hover/klik di titik manapun: label ATH & Bottom memudar (opacity 0),
   // digantikan tooltip nilai titik yang ditunjuk. Saat dilepas, ATH & Bottom muncul lagi.
-  ChartHover.attach({
+  const hov = ChartHover.attach({
     svg, hoverArea, W, H,
     resolveIndex(px){
       const t = tMin + (px-padL)/plotW * (tMax-tMin);
@@ -2569,15 +2683,99 @@ function renderEquityChart(){
       top: i => 0,
       html: i => {
         const modalPart = modalVals ? `<span style="color:${modalColor}">Modal: ${fmtMoney(modalVals[i])}</span>` : '';
-        return `<span class="t-date">${fmtDate(eqFull[idxs[i]][0])}</span>` + ttJoin([fmtMoney(vals[i]), modalPart]);
+        return `<span class="t-date">${fmtDate(eqFull[idxs[i]][0])}</span>` + ttJoin([fv(vals[i]), modalPart]);
       }
     },
     enableClick: true,
     autoHideMs: 3000,
     outsideHideContainer: box,
-    onShow(){ if(athLabel) athLabel.style.opacity = 0; if(bottomLabel) bottomLabel.style.opacity = 0; if(periodLbl) periodLbl.style.opacity = 0; },
-    onHide(){ if(athLabel) athLabel.style.opacity = 1; if(bottomLabel) bottomLabel.style.opacity = 1; if(periodLbl) periodLbl.style.opacity = 1; }
+    onShow(i){ lastIdx = i; infoEl.innerHTML = infoHtml(i, i === selIdx); if(athLabel) athLabel.style.opacity = 0; if(bottomLabel) bottomLabel.style.opacity = 0; if(periodLbl) periodLbl.style.opacity = 0; },
+    onHide(){ renderInfo(); if(athLabel) athLabel.style.opacity = 1; if(bottomLabel) bottomLabel.style.opacity = 1; if(periodLbl) periodLbl.style.opacity = 1; }
   });
+
+  // Klik / ketuk memilih hari (baris detail menampilkan tombol "Lihat transaksi"); klik pada titik yang sama melepas pilihan
+  let brushed = false;
+  hoverArea.addEventListener('click', () => {
+    if(brushed || lastIdx < 0) return;
+    selIdx = (selIdx === lastIdx) ? -1 : lastIdx;
+    if(selIdx >= 0) infoEl.innerHTML = infoHtml(selIdx, true); else renderInfo();
+  });
+  // Navigasi papan ketik: panah kiri/kanan (Shift = 10 titik), Home/End, Enter memilih, Esc membersihkan
+  svg.addEventListener('keydown', e => {
+    const n = times.length;
+    let i = lastIdx >= 0 ? lastIdx : n - 1;
+    if(e.key === 'ArrowLeft') i -= e.shiftKey ? 10 : 1;
+    else if(e.key === 'ArrowRight') i += e.shiftKey ? 10 : 1;
+    else if(e.key === 'Home') i = 0;
+    else if(e.key === 'End') i = n - 1;
+    else if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); if(lastIdx >= 0){ selIdx = selIdx === lastIdx ? -1 : lastIdx; if(selIdx >= 0) infoEl.innerHTML = infoHtml(selIdx, true); else renderInfo(); } return; }
+    else if(e.key === 'Escape'){ selIdx = -1; lastIdx = -1; hov.hide(); return; }
+    else return;
+    e.preventDefault();
+    i = Math.max(0, Math.min(n - 1, i));
+    const r = svg.getBoundingClientRect();
+    hov.showAt(r.left + x(times[i]) / W * r.width);
+    lastIdx = i; infoEl.innerHTML = infoHtml(i, i === selIdx);
+  });
+
+  // ---------- Brush: seret (mouse/pena) untuk memilih rentang → ringkasan + aksi ----------
+  let br = null;
+  const toSvgX = cx => { const r = svg.getBoundingClientRect(); return Math.max(padL, Math.min(padL + plotW, (cx - r.left) / r.width * W)); };
+  hoverArea.addEventListener('pointerdown', e => {
+    if(e.pointerType === 'touch' || e.button !== 0) return;
+    const px = toSvgX(e.clientX);
+    br = {x0: px, x1: px, moved: false, id: e.pointerId};
+    try{ hoverArea.setPointerCapture(e.pointerId); }catch(_){}
+  });
+  hoverArea.addEventListener('pointermove', e => {
+    if(!br) return;
+    br.x1 = toSvgX(e.clientX);
+    if(Math.abs(br.x1 - br.x0) > 5){
+      br.moved = true;
+      const a = Math.min(br.x0, br.x1), b = Math.max(br.x0, br.x1);
+      brushRect.setAttribute('x', a); brushRect.setAttribute('width', b - a); brushRect.style.display = '';
+    }
+  });
+  const endBrush = (e, cancel) => {
+    if(!br) return;
+    const b = br; br = null;
+    try{ hoverArea.releasePointerCapture(b.id); }catch(_){}
+    if(cancel || !b.moved){ brushRect.style.display = 'none'; return; }
+    brushed = true; setTimeout(() => { brushed = false; }, 350);
+    const a = Math.min(b.x0, b.x1), c = Math.max(b.x0, b.x1);
+    const ta = tMin + (a - padL) / plotW * (tMax - tMin), tb = tMin + (c - padL) / plotW * (tMax - tMin);
+    const ka = eqDayKeyLocal(ta), kb = eqDayKeyLocal(tb);
+    const rows = DATA.trades.filter(t => { const k = String(t.tanggal_gmt8).slice(0,10); return k >= ka && k <= kb; })
+      .sort((p, q) => parseGmt8(p.tanggal_gmt8) - parseGmt8(q.tanggal_gmt8));
+    let pnl = 0, wins = 0, run = 0, pk = 0, mdd = 0;
+    rows.forEach(t => { pnl += t.laba; if(t.laba > 0) wins++; run += t.laba; if(run > pk) pk = run; if(pk - run > mdd) mdd = pk - run; });
+    const lbl = ka === kb ? fmtDateKey(parseGmt8(ka + 'T12:00:00')) : fmtDateKey(parseGmt8(ka + 'T12:00:00')) + ' – ' + fmtDateKey(parseGmt8(kb + 'T12:00:00'));
+    brushEl.hidden = false;
+    brushEl.innerHTML = `<span class="eq-brush-t"><b>${lbl}</b></span>` + (rows.length
+      ? `<span>PNL <b class="${sgnCls(pnl)}">${sgnMoney(pnl)}</b></span><span>${rows.length} trade</span><span>WR <b>${Math.round(wins / rows.length * 100)}%</b></span><span>DD maks <b class="${mdd > 0 ? 'down' : ''}">${mdd > 0 ? '−' : ''}${fmtMoney(mdd)}</b></span>`
+      : '<span>Tidak ada transaksi di rentang ini</span>')
+      + `<span class="eq-brush-acts"><button type="button" class="eq-link" data-eqb="go">Lihat transaksi</button><button type="button" class="eq-link" data-eqb="apply">Terapkan ke statistik</button><button type="button" class="eq-link" data-eqb="clear" aria-label="Hapus pilihan rentang">✕</button></span>`;
+    brushEl.dataset.ka = ka; brushEl.dataset.kb = kb;
+  };
+  hoverArea.addEventListener('pointerup', e => endBrush(e, false));
+  hoverArea.addEventListener('pointercancel', e => endBrush(e, true));
+  brushEl.addEventListener('click', e => {
+    const b = e.target.closest('[data-eqb]'); if(!b) return;
+    const ka = brushEl.dataset.ka, kb = brushEl.dataset.kb, act = b.dataset.eqb;
+    if(act === 'clear'){ brushEl.hidden = true; brushRect.style.display = 'none'; return; }
+    if(act === 'go'){ location.hash = '#transaksi?dari=' + ka + '&sampai=' + kb; return; }
+    if(act === 'apply'){ DTP.set('customFrom', ka); DTP.set('customTo', kb); selectPeriodKey('custom'); }
+  });
+
+  // Render ulang saat lebar kontainer berubah (rotasi, ubah ukuran jendela, tab baru terlihat)
+  if(!box._eqRO && window.ResizeObserver){
+    let tm = null;
+    box._eqRO = new ResizeObserver(() => {
+      clearTimeout(tm);
+      tm = setTimeout(() => { const w = box.clientWidth; if(w >= 200 && Math.abs(w - eqLastW) > 6 && box.querySelector('#equityChart')) renderEquityChart(); }, 150);
+    });
+    box._eqRO.observe(box);
+  }
   eqAnimated = true;
 }
 
@@ -2732,8 +2930,8 @@ window.renderEquityChart = renderEquityChart;
       <div class="stat"><div class="stat-lbl">Laba/Rugi Bersih</div><div class="stat-val ${netPl>=0?'up':'down'}">${netPl>=0?'+':''}${fmtMoney(netPl)}</div></div>
       <div class="stat"><div class="stat-lbl">Hari Menang</div><div class="stat-val up">${winDays} Hari</div></div>
       <div class="stat"><div class="stat-lbl">Hari Rugi</div><div class="stat-val down">${lossDays} Hari</div></div>
-      <div class="stat"><div class="stat-lbl">Hari Titik Impas</div><div class="stat-val">${breakevenDays} Hari</div></div>
-      <div class="stat"><div class="stat-lbl">Tingkat Kemenangan</div><div class="stat-val">${fmtPct(winRateOfDays)}</div></div>
+      <div class="stat"><div class="stat-lbl">Hari Impas / Tanpa Transaksi</div><div class="stat-val">${breakevenDays} Hari</div></div>
+      <div class="stat" title="Hari menang dibagi seluruh hari kalender pada rentang (termasuk akhir pekan dan hari tanpa transaksi). Bukan win rate per transaksi."><div class="stat-lbl">Hari Menang (% semua hari)</div><div class="stat-val">${fmtPct(winRateOfDays)}</div></div>
     `;
   }
 
@@ -2882,7 +3080,7 @@ function renderMonths(){
     row.tabIndex = 0; row.setAttribute('role', 'button'); row.setAttribute('aria-label', `Lihat transaksi ${m.bulan}`);
     const barPct = Math.min(100, Math.abs(m.pl)/maxAbsPl*100);
     const pos = m.pl>=0;
-    const pctTxt = (m.pct===null || m.pct===undefined) ? '\u2013' : `${m.pct>=0?'+':''}${fmtPct(m.pct)}`;
+    const pctTxt = (m.pct===null || m.pct===undefined) ? '\u2013' : fmtPctCap(m.pct);
     const prev = ms2[idx+1];   // bulan sebelumnya (daftar terbaru dulu)
     const dPl = prev ? m.pl - prev.pl : null;
     let tgtHtml = '';
@@ -2995,7 +3193,7 @@ stripEl.appendChild(weekTooltip);
 
 const bestWk = weeks.length ? weeks.reduce((x,w)=>w.pl>x.pl?w:x) : null, worstWk = weeks.length ? weeks.reduce((x,w)=>w.pl<x.pl?w:x) : null;
 weeks.forEach(w=>{
-  const pctTxt = (w.pct===null || w.pct===undefined) ? '\u2013' : `${w.pct>=0?'+':''}${fmtPct(w.pct)}`;
+  const pctTxt = (w.pct===null || w.pct===undefined) ? '\u2013' : fmtPctCap(w.pct);
   const wrap = document.createElement('div');
   wrap.className = 'week-bar-wrap';
   const pos = w.pl>=0;
@@ -3035,7 +3233,7 @@ document.querySelector('.week-strip-scroll').scrollLeft = 999999;
   function draw(){
     const show = all ? rows : rows.slice(0, 8);
     box.innerHTML = show.map((w,i) => {
-      const pctTxt = (w.pct===null || w.pct===undefined) ? '\u2013' : `${w.pct>=0?'+':''}${fmtPct(w.pct)}`;
+      const pctTxt = (w.pct===null || w.pct===undefined) ? '\u2013' : fmtPctCap(w.pct);
       return `<div class="wk-row perf-click" role="button" tabindex="0" data-i="${i}">
         <span class="wk-name">W${w.minggu}<small>${w.periode}</small></span>
         <span class="wk-pl ${w.pl>=0?'up':'down'}">${w.pl>=0?'+':''}${fmtMoney(w.pl)}<small>${pctTxt}</small></span>
@@ -3184,17 +3382,6 @@ function renderPerfRisk(){
     c('Rugi terbesar', r.big ? '-' + fmtMoney(-r.big.laba) : '\u2014', r.big ? 'down' : '', r.big ? (r.bigPct !== null ? `${fmtPct(r.bigPct)} dari saldo sebelumnya` : 'saldo sebelumnya tidak tersedia') : 'Belum ada transaksi rugi') +
     c('Lot naik setelah rugi', upPct === null ? '\u2014' : fmtPct(upPct), upPct !== null && upPct >= 0.3 ? 'down' : '', upPct === null ? 'Butuh data lot berurutan' : `${r.up} dari ${r.after} entri setelah rugi (lot \u2265 1,25\u00d7)`);
 }
-// Perbandingan dua periode di Performa (v1.1.198): memakai tabel yang sama dengan Laporan, disaring oleh filter Performa.
-const PERF_CMP_PRESETS = CMP_PRESETS.filter(p => p.value !== 'kustom');
-const perfCmpSel = { A:'bulan-lalu', B:'bulan-ini' };
-try{ ['A','B'].forEach(k => { const v = localStorage.getItem('jurnalPerfCmp' + k); if(PERF_CMP_PRESETS.some(p => p.value === v)) perfCmpSel[k] = v; }); }catch(e){}
-function renderPerfCmp(){
-  const el = document.getElementById('perfCmp'), noteEl = document.getElementById('perfCmpNote'); if(!el) return;
-  const rA = cmpRange('A', perfCmpSel.A), rB = cmpRange('B', perfCmpSel.B);
-  const pick = r => r.empty ? [] : DATA.trades.filter(t => { const tt = parseGmt8(t.tanggal_gmt8); return tt >= r.start && tt <= r.end && perfPass(t); });
-  const r = cmpBuild(rA, rB, pick(rA), pick(rB));
-  el.innerHTML = r.html; if(noteEl) noteEl.textContent = r.note;
-}
 // Rincian per akun di tampilan Total (v1.1.198): laba, win rate, PF, drawdown tiap akun, dari transaksi yang lolos filter Performa.
 function renderPerfAcct(){
   const sec = document.getElementById('perfAcctSec'); if(!sec) return;
@@ -3213,21 +3400,6 @@ function renderPerfAcct(){
   el.innerHTML = `<div class="lap-tbl-scroll"><table class="lap-cmp-tbl perf-acct-tbl"><thead><tr><th>Akun</th><th>Transaksi</th><th>Laba</th><th>Win rate</th><th>PF</th><th>Max DD</th></tr></thead><tbody>` +
     rows.map(r => `<tr><td class="lbl">${escapeHtml(r.name)}</td><td>${r.n}</td><td class="${r.pl>=0?'up':'down'}">${r.pl>=0?'+':''}${fmtMoney(r.pl)}</td><td>${fmtPct(r.wr)}</td><td>${pf(r.pf)}</td><td class="down">${r.dd>0?'-'+fmtMoney(r.dd):'\u2013'}</td></tr>`).join('') + `</tbody></table></div>`;
 }
-// Heatmap jam \u00d7 hari di Performa (v1.1.199): waktu buka (GMT+8), bin 2 jam, dari transaksi yang lolos filter Performa (semua periode).
-let perfHeat2Mode = 'pnl';
-function renderPerfHeat2(){
-  const el = document.getElementById('perfHeat2'), info = document.getElementById('perfHeat2Info'); if(!el || !info) return;
-  const cell = {}; let used = 0, total = 0;
-  DATA.trades.forEach(t => {
-    if(!perfPass(t)) return; total++;
-    if(!t.waktu_buka) return;
-    const d = new Date(parseGmt8(t.waktu_buka) + 8*3600000); if(isNaN(d)) return;
-    const k = ((d.getUTCDay()+6)%7)*12 + Math.floor(d.getUTCHours()/2);
-    const c = cell[k] || (cell[k] = {n:0, pl:0, win:0, list:[]});
-    c.n++; c.pl += t.laba; if(t.laba > 0) c.win++; c.list.push(t); used++;
-  });
-  drawHeatGrid({cell, used, total}, el, info, perfHeat2Mode, m => { perfHeat2Mode = m; }, renderPerfHeat2);
-}
 // Filter Performa: arah (Semua/Beli/Jual) dan sesi pasar. Menghitung ulang kartu bulanan dan daftar mingguan.
 (function(){
   const el = document.getElementById('perfArahTabs'); if(!el) return;
@@ -3239,7 +3411,7 @@ function renderPerfHeat2(){
     note.hidden = !bag.length;
     note.textContent = bag.length ? `Hanya ${bag.join(', ')}. Penilaian, win rate dan profit factor dihitung dari transaksi tersaring saja; % thd saldo tetap memakai saldo seluruh akun.` + (perfSesi ? ' Transaksi tanpa waktu buka tidak ikut.' : '') : '';
   };
-  const redraw = () => { upd(); renderMonths(); renderWeeks(); renderYearHeat(); renderPerfRisk(); renderPerfAcct(); renderPerfCmp(); renderPerfHeat2(); if(window.renderSplitArah) window.renderSplitArah(); };
+  const redraw = () => { upd(); renderMonths(); renderWeeks(); renderYearHeat(); renderPerfRisk(); renderPerfAcct(); if(window.renderSplitArah) window.renderSplitArah(); };
   window.perfRedraw = redraw;
   const save = (k, v) => { try{ if(v) localStorage.setItem(k, v); else localStorage.removeItem(k); }catch(e){} };
   buildPeriodChips(el, { items:[{key:'',label:'Semua arah'},{key:'Beli',label:'Beli'},{key:'Jual',label:'Jual'}], active: perfArah, onSelect: k => { perfArah = k; save('jurnalPerfArah', k); redraw(); } });
@@ -3248,7 +3420,7 @@ function renderPerfHeat2(){
   if(wEl) buildPeriodChips(wEl, { items:[{key:'12',label:'12 minggu'},{key:'26',label:'26 minggu'},{key:'0',label:'Semua'}], active: String(perfWkRange), onSelect: k => { perfWkRange = +k; save('jurnalPerfWeeks', +k ? String(k) : ''); renderWeeks(); } });
   upd();
 })();
-renderPerfRisk(); renderPerfAcct(); renderPerfCmp(); renderPerfHeat2(); renderWeekReview();
+renderPerfRisk(); renderPerfAcct(); renderWeekReview();
 
 // ---------- Records ----------
 document.getElementById('maxddNote').textContent = convCentText(DATA.maxdd_note);
@@ -3803,7 +3975,7 @@ function renderTrades(){
   const gw = wn.reduce((a,t)=>a+t.laba,0), gl = ls.reduce((a,t)=>a+t.laba,0), stEl = document.getElementById('ledgerStats');
   if(stEl) stEl.textContent = filtered.length ? `Seluruh hasil filter: ${wn.length} menang · ${ls.length} rugi · WR ${(wn.length/filtered.length*100).toFixed(1).replace('.', DEC())}%` + (wn.length ? ` · rata-rata menang ${fmtMoney(gw/wn.length)}` : '') + (ls.length ? ` · rata-rata rugi ${fmtMoney(gl/ls.length)}` + (wn.length ? ` · PF ${(gw/Math.abs(gl)).toFixed(2).replace('.', DEC())}` : '') : '') : '';
   lastFilteredTrades = filtered;
-  { const ss = document.getElementById('ledgerSortSel'); if(ss){ const v = currentSort.key + ':' + currentSort.dir; ss.value = [...ss.options].some(o=>o.value===v) ? v : ''; } }
+  if(window.syncLedgerSortUi) window.syncLedgerSortUi();   // dropdown Urutkan (kustom, dibangun setelah CS)
   const moreBtn = document.getElementById('ledgerMoreBtn');
   if(moreBtn){ const rest = filtered.length - ledgerLimit; moreBtn.style.display = rest>0 ? '' : 'none'; if(rest>0) moreBtn.textContent = `Tampilkan ${Math.min(LEDGER_STEP,rest)} lagi (${rest} tersisa)`; }
   saveLedgerState({ q, arah, hasil, catatan, fEmosi, fTrig, fJenis, fSesi, fBerita, from:fromV||'', to:toV||'', lotMin:lotMinV, lotMax:lotMaxV });
@@ -3829,6 +4001,7 @@ function renderTrades(){
     badgeEl.textContent = '';
     badgeEl.classList.remove('show');
   }
+  { const fb = document.getElementById('ledgerFoldBadge'); if(fb){ fb.textContent = activeFilters > 0 ? String(activeFilters) : ''; fb.classList.toggle('show', activeFilters > 0); } }
 }
 
 // ---------- Sort header (klik atau keyboard untuk sortir) ----------
@@ -3867,19 +4040,8 @@ function renderTrades(){
   updateHeaderIndicators();
   window.updateLedgerSortInd = updateHeaderIndicators;
 })();
-(function(){
-  const sel = document.getElementById('ledgerSortSel'); if(!sel) return;
-  const sync = ()=>{ const v = currentSort.key + ':' + currentSort.dir; sel.value = [...sel.options].some(o=>o.value===v) ? v : ''; };
-  sel.addEventListener('change', ()=>{
-    if(!sel.value) return;
-    const [k,d] = sel.value.split(':'); currentSort.key = k; currentSort.dir = +d;
-    if(window.updateLedgerSortInd) window.updateLedgerSortInd();
-    renderTrades();
-  });
-  const orig = window.updateLedgerSortInd;
-  window.updateLedgerSortInd = function(){ if(orig) orig(); sync(); };
-  sync();
-})();
+// Dropdown Urutkan (ponsel) dibangun setelah CS didefinisikan: lihat 'csw_ledgerSort' di bawah.
+
 document.getElementById('searchBox').addEventListener('input', renderTrades);
 document.getElementById('ledgerLotMin').addEventListener('input', renderTrades);
 document.getElementById('ledgerLotMax').addEventListener('input', renderTrades);
@@ -4151,13 +4313,13 @@ window.renderTrades = renderTrades;
   const btns = [...document.querySelectorAll('#eqMode [data-eqmode]')];
   const sync = () => btns.forEach(b => { const on = b.dataset.eqmode===eqMode; b.classList.toggle('active', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
   btns.forEach(b => b.addEventListener('click', () => {
-    eqMode = b.dataset.eqmode==='pnl' ? 'pnl' : 'equity';
+    eqMode = (b.dataset.eqmode==='pnl' || b.dataset.eqmode==='ret') ? b.dataset.eqmode : 'equity';
     try{ localStorage.setItem('jurnalEqMode', eqMode); }catch(e){}
     sync(); renderEquityChart();
   }));
   sync();
   const zb = document.getElementById('eqZoomBtn');
-  window.syncEqZoom = can => { if(zb){ if(can !== undefined) zb.disabled = !can; zb.classList.toggle('active', eqZoomOn); zb.setAttribute('aria-pressed', eqZoomOn ? 'true' : 'false'); } };
+  window.syncEqZoom = can => { if(zb){ if(can !== undefined) zb.disabled = !can; zb.textContent = 'Zoom sumbu' + (eqZoomOn && eqZoomPref === null ? ' \u00b7 otomatis' : ''); zb.classList.toggle('active', eqZoomOn); zb.setAttribute('aria-pressed', eqZoomOn ? 'true' : 'false'); } };
   if(zb) zb.addEventListener('click', () => {
     eqZoomPref = eqZoomOn ? '0' : '1';
     try{ localStorage.setItem('jurnalEqZoom', eqZoomPref); }catch(e){}
@@ -4458,7 +4620,7 @@ const SETTINGS_VALIDATORS = {
   jurnalHeroCurrency: v => ['USD','USC','IDR'].includes(v),
   jurnalTzOffset: v => [180,420,480,540].includes(Number(v)),
   jurnalDateFmt: v => v==='teks' || v==='angka',
-  jurnalEqMode: v => v==='equity' || v==='pnl',
+  jurnalEqMode: v => v==='equity' || v==='pnl' || v==='ret',
   jurnalDayLimits: v => { try{ const o = JSON.parse(v); return !!o && typeof o==='object' && ['maxLoss','maxLossPct','maxTrades'].every(k => o[k]===null || o[k]===undefined || (typeof o[k]==='number' && isFinite(o[k]) && o[k]>=0 && (k!=='maxLossPct' || o[k]<=100))); }catch(e){ return false; } },
   jurnalBigLossPct: v => v==='off' || (isFinite(+v) && +v>=1 && +v<=50),
   jurnalPerfCfg: v => { try{ const o = JSON.parse(v); return !!o && typeof o==='object' && !Array.isArray(o) && (o.minWr===undefined || (typeof o.minWr==='number' && o.minWr>=0 && o.minWr<=100)) && (o.target===null || o.target===undefined || (typeof o.target==='number' && o.target>0 && o.target<=1000)); }catch(e){ return false; } },
@@ -4469,7 +4631,8 @@ const SETTINGS_VALIDATORS = {
   jurnalFontSize: v => v==='kecil' || v==='besar',
   jurnalNumFmt: v => v==='id' || v==='en',
   jurnalGlass: v => v==='0' || v==='1',
-  jurnalRingkasan: v => { try{ const o = JSON.parse(v); const ids = ['today','saldo','ekuitas','statistik','berita','chart','terakhir','aturan']; const okA = x => Array.isArray(x) && x.length<=8 && x.every((k,i) => ids.includes(k) && x.indexOf(k)===i); return !!o && typeof o==='object' && !Array.isArray(o) && (o.o===undefined || okA(o.o)) && (o.h===undefined || okA(o.h)); }catch(e){ return false; } },
+  jurnalFokus: v => v==='0' || v==='1',
+  jurnalRingkasan: v => { try{ const o = JSON.parse(v); const ids = ['today','saldo','ekuitas','statistik','berita','chart','terakhir','aturan','target','sesi','wawasan','heat','catatan']; const okA = x => Array.isArray(x) && x.length<=13 && x.every((k,i) => ids.includes(k) && x.indexOf(k)===i); return !!o && typeof o==='object' && !Array.isArray(o) && (o.o===undefined || okA(o.o)) && (o.h===undefined || okA(o.h)); }catch(e){ return false; } },
   jurnalNotif: v => { try{ const o = JSON.parse(v); return !!o && typeof o === 'object' && !Array.isArray(o) && Object.keys(o).every(k => ['event','limit','note'].includes(k) && (o[k] === 0 || o[k] === 1)); }catch(e){ return false; } },
   jurnalCustomOpts: v => { try{ const o = JSON.parse(v); return !!o && typeof o==='object' && !Array.isArray(o) && ['trigger','exit'].every(k => o[k]===undefined || (Array.isArray(o[k]) && o[k].length<=20 && o[k].every(x => typeof x==='string' && x.length>0 && x.length<=40))); }catch(e){ return false; } },
   'kal-prefs': v => { try{ const o = JSON.parse(v); return !!o && typeof o==='object' && !Array.isArray(o); }catch(e){ return false; } },
@@ -5005,6 +5168,21 @@ const JENIS_ENTRY_OPTIONS = ['Konservatif','Agresif'];
 ['entrySetup','editSetup'].forEach(id=> CS.build('csw_'+id, SETUP_OPTIONS, '- Pilih -'));
 CS.set('csw_entryArah', 'Beli');
 CS.set('csw_editArah', 'Beli');
+// Dropdown Urutkan transaksi di ponsel (v1.1.226): dulu <select> bawaan browser, kini komponen kustom yang sama dengan filter lain.
+(function(){
+  const OPTS = [['tanggal:-1','Terbaru dulu'],['tanggal:1','Terlama dulu'],['laba:-1','Laba terbesar'],['laba:1','Rugi terbesar'],['lot:-1','Lot terbesar'],['pips:-1','Pips tertinggi'],['pips:1','Pips terendah'],['durasi:-1','Durasi terlama']].map(([value,label]) => ({value,label}));
+  CS.build('csw_ledgerSort', OPTS, 'Urutkan', v => {
+    if(!v) return;
+    const [k,d] = v.split(':'); currentSort.key = k; currentSort.dir = +d;
+    if(window.updateLedgerSortInd) window.updateLedgerSortInd();
+    renderTrades();
+  });
+  const sync = () => { const v = currentSort.key + ':' + currentSort.dir; CS.set('csw_ledgerSort', OPTS.some(o => o.value === v) ? v : ''); };
+  window.syncLedgerSortUi = sync;
+  const orig = window.updateLedgerSortInd;
+  window.updateLedgerSortInd = function(){ if(orig) orig(); sync(); };
+  sync();
+})();
 
 // ---------- Date-time picker kustom (bukan <input type="datetime-local"> bawaan browser) ----------
 // Kalender bulan + dropdown jam/menit (memakai list yang sama gayanya dengan .custom-select).
@@ -5184,6 +5362,25 @@ const DTP = (function(){
       if(onChange) onChange(getValue());
     });
 
+    // Ponsel (v1.1.225): panel menjadi lembar di bawah layar. Dipindah sementara ke <body> supaya position:fixed tidak terjebak
+    // di kartu kaca (backdrop-filter) atau modal (transform); dikembalikan ke root saat ditutup.
+    const panel = root.querySelector('.dt-picker-panel');
+    const sheetMQ = window.matchMedia ? window.matchMedia('(max-width: 700px)') : {matches:false};
+    let backdrop = null;
+    function openSheet(){
+      if(!sheetMQ.matches || panel.parentNode === document.body) return;
+      backdrop = document.createElement('div'); backdrop.className = 'dt-backdrop';
+      backdrop.addEventListener('click', e => { e.stopPropagation(); root.classList.remove('open'); });
+      document.body.appendChild(backdrop);
+      panel.classList.add('dt-sheet'); document.body.appendChild(panel);
+    }
+    function closeSheet(){
+      if(panel.parentNode !== root) root.appendChild(panel);
+      panel.classList.remove('dt-sheet');
+      if(backdrop){ backdrop.remove(); backdrop = null; }
+    }
+    new MutationObserver(() => { if(root.classList.contains('open')) openSheet(); else closeSheet(); }).observe(root, {attributes:true, attributeFilter:['class']});
+
     btn.addEventListener('click', (e)=>{
       e.stopPropagation();
       const wasOpen = root.classList.contains('open');
@@ -5195,7 +5392,7 @@ const DTP = (function(){
       }
     });
     document.addEventListener('click', (e)=>{
-      if(!root.contains(e.target)){
+      if(!root.contains(e.target) && !panel.contains(e.target)){
         root.classList.remove('open');
       }
     });
@@ -5268,11 +5465,6 @@ CS.build('csw_filterSesi', [{value:'',label:'Semua sesi'}, ...LAP_SESSIONS.map((
 CS.build('csw_filterCatatan', [{value:'',label:'Semua catatan'}, {value:'belum',label:'Belum ada catatan psikologi'}, {value:'sudah',label:'Sudah ada catatan'}], 'Semua catatan', ()=>{ if(window.renderTrades) window.renderTrades(); });
 [['csw_lapEmosi','Semua emosi',EMOSI_OPTIONS,v=>{lap2Emosi=v;}],['csw_lapTrigger','Semua trigger',TRIGGER_OPTIONS,v=>{lap2Trigger=v;}],['csw_lapJenis','Semua jenis',JENIS_ENTRY_OPTIONS,v=>{lap2Jenis=v;}]].forEach(([id,ph,opts,set])=>{
   CS.build(id, [{value:'semua',label:ph},...opts.map(o=>({value:o,label:o})),{value:'-',label:'Belum dicatat'}], ph, ()=>{ set(CS.get(id)); renderLap2(); });
-});
-['A','B'].forEach(sd => {
-  const id = 'csw_perfCmp' + sd, lbl = (PERF_CMP_PRESETS.find(p => p.value === perfCmpSel[sd]) || {}).label || '';
-  CS.build(id, PERF_CMP_PRESETS, lbl, () => { perfCmpSel[sd] = CS.get(id); try{ localStorage.setItem('jurnalPerfCmp' + sd, perfCmpSel[sd]); }catch(e){} renderPerfCmp(); });
-  CS.set(id, perfCmpSel[sd]);
 });
 PERF_PSY.forEach(([nm, f, k]) => {
   const id = 'csw_perf' + nm, opts = f === 'emosi' ? EMOSI_OPTIONS : (f === 'trigger' ? TRIGGER_OPTIONS : JENIS_ENTRY_OPTIONS), ph = f === 'emosi' ? 'Semua emosi' : (f === 'trigger' ? 'Semua trigger' : 'Semua jenis');
@@ -6248,12 +6440,16 @@ function renderBackupStatus(){
 // ---------- Setelan → Preferensi: mata uang, zona waktu, format tanggal (v1.1.138) ----------
 // Kontrol di header/hero tetap ada; Setelan memanggil fungsi/handler yang sama (satu sumber kebenaran).
 (function(){
-  const curEl = document.getElementById('prefCurrency'), tzEl = document.getElementById('prefTz'), dEl = document.getElementById('prefDate');
+  const curEl = document.getElementById('prefCurrency'), tzEl = document.getElementById('csw_prefTz'), dEl = document.getElementById('prefDate');
   if(!curEl || !tzEl || !dEl) return;
   const chip = (v,l) => `<button type="button" class="quick-chip" data-v="${v}">${l}</button>`;
   curEl.innerHTML = HERO_CURRENCIES.map(o=>chip(o.value,o.label)).join('');
   dEl.innerHTML = chip('teks','30 Sep 2026') + chip('angka','30/09/2026');
-  tzEl.innerHTML = TZ_OPTIONS.map(o=>`<option value="${o.value}">${o.label}</option>`).join('');
+  CS.build('csw_prefTz', TZ_OPTIONS.map(o => ({value:String(o.value), label:o.label})), '', v => {   // dulu <select> bawaan browser
+    const li = document.querySelector('#tzSelectList li[data-value="' + v + '"]');
+    if(li) li.click();   // handler header: terapkan offset, simpan, render ulang
+    sync();
+  });
   const mark = (el, cur) => el.querySelectorAll('[data-v]').forEach(b => { const on = b.dataset.v===cur; b.classList.toggle('active', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
   const fEl = document.getElementById('prefFont');
   const fontNow = () => { try{ const v = localStorage.getItem('jurnalFontSize'); return v==='kecil' || v==='besar' ? v : 'normal'; }catch(e){ return 'normal'; } };
@@ -6291,7 +6487,7 @@ function renderBackupStatus(){
       sync();
     });
   }
-  function sync(){ mark(curEl, HERO_CURRENCY); mark(dEl, DATE_FMT); tzEl.value = String(CURRENT_TZ_OFFSET); if(hEl) mark(hEl, hideNow()); if(nEl) mark(nEl, numNow()); if(fEl) mark(fEl, fontNow()); }
+  function sync(){ mark(curEl, HERO_CURRENCY); mark(dEl, DATE_FMT); CS.set('csw_prefTz', String(CURRENT_TZ_OFFSET)); if(hEl) mark(hEl, hideNow()); if(nEl) mark(nEl, numNow()); if(fEl) mark(fEl, fontNow()); }
   curEl.addEventListener('click', e => { const b = e.target.closest('[data-v]'); if(b && b.dataset.v!==HERO_CURRENCY) setHeroCurrency(b.dataset.v); });
   dEl.addEventListener('click', e => {
     const b = e.target.closest('[data-v]'); if(!b || b.dataset.v===DATE_FMT) return;
@@ -6300,18 +6496,43 @@ function renderBackupStatus(){
     if(window.renderTrades) window.renderTrades();
     if(window.renderDepositLog) window.renderDepositLog();
   });
-  tzEl.addEventListener('change', () => {
-    const li = document.querySelector('#tzSelectList li[data-value="' + tzEl.value + '"]');
-    if(li) li.click();   // handler header: terapkan offset, simpan, render ulang
-    sync();
-  });
   const gear = document.getElementById('settingsGearBtn'); if(gear) gear.addEventListener('click', sync);
   sync();
 })();
 
-const APP_VERSION = '1.1.222';
-const APP_BUILD_DATE = '2026-11-19';   // ikut diganti tiap rilis (ISO), tampil di Setelan → Tentang
+const APP_VERSION = '1.1.232';
+const APP_BUILD_DATE = '2026-11-29';   // ikut diganti tiap rilis (ISO), tampil di Setelan → Tentang
 const USER_CHANGELOG = [
+  { date:'2026-11-29', items:[
+    'Kurva ekuitas diperbarui: teks sumbu kini digambar 1:1 sehingga terbaca jelas di ponsel, grafik lebih tinggi, legenda jadi satu baris, dan ada mode baru Return % (PNL dibagi modal). Penanda ▲ deposit / ▼ penarikan dan ◆ hari terbaik/terburuk muncul di kurva, strip drawdown di bawah kurva, baris detail hari (PNL hari itu, jumlah transaksi, DD, peristiwa deposit) dengan tombol Lihat transaksi, serta seret mouse untuk memilih rentang (ringkasan PNL, WR, DD, dan tombol Terapkan ke statistik). Tombol Fokus rentang diganti nama menjadi Zoom sumbu.',
+  ]},
+  { date:'2026-11-28', items:[
+    'Kartu Saldo akhir akun dibuat lebih ringkas di ponsel (tinggi turun sekitar 14%, dari 579 ke 497 px): jarak dan padding dikurangi, estimasi Rp PNL kumulatif kini satu baris dengan angkanya (tidak terpotong), label sparkline dipersingkat menjadi PNL harian 7H, dan sel PNL Minggu/Bulan Ini lebih rapat dengan garis pemisah. Isi dan fungsi kartu tidak berubah.',
+  ]},
+  { date:'2026-11-27', items:[
+    'Performa dan Laporan dirapikan supaya tidak saling menumpuk. Performa kini khusus hasil per waktu (ringkasan mingguan, metrik risiko, bulanan, mingguan, heatmap harian, rekor, dan Beli vs Jual rinci). Analisis pola ada di Laporan (jam dan hari buka, sesi, psikologi, durasi). Blok kembar dihapus: Jam & hari buka dari Performa dan Beli vs Jual dari Laporan → Lanjutan. Ditambah kartu Analisis lebih dalam di Performa dengan tombol ke Laporan → Lanjutan atau Psikologi, dan tautan balik ke Performa di Laporan → Lanjutan.',
+  ]},
+  { date:'2026-11-26', items:[
+    'Perbaikan sisa di ponsel: Log Deposit kini berupa baris ringkas (tanggal dan jumlah sejajar, jenis di bawahnya) sehingga kolom Jumlah tidak lagi terpotong; tombol kecil (mata PNL, panah kalender, chip periode, kotak heatmap) diperbesar agar mudah disentuh; filter Kalender dilipat di balik tombol Filter kalender; tombol + menyingkir saat menggulir ke bawah dan muncul lagi saat menggulir ke atas; teks detail Transaksi terakhir dan sub-teks kartu Hari ini boleh turun baris. Di Analisis PNL, label Tingkat Kemenangan diganti Hari Menang (% semua hari) dan Hari Titik Impas menjadi Hari Impas / Tanpa Transaksi agar tidak tertukar dengan win rate per transaksi.',
+  ]},
+  { date:'2026-11-25', items:[
+    'Merapikan pengulangan di seluruh halaman. Ringkasan: kotak batas harian di kartu saldo dihapus (sudah ada di Hari ini), sel Berita di Hari ini dihapus (ada kartu Rilis berita), PNL 7H/30H disembunyikan bila angkanya sama dengan Minggu/Bulan Ini, dan label drawdown dibedakan (PNL vs ekuitas). Performa: bagian Bandingkan dua periode dihapus karena sudah ada di Laporan. Di ponsel, filter Transaksi dilipat di balik tombol Filter & alat (dengan jumlah filter aktif) dan Periode & filter Laporan terlipat secara bawaan. Persen terhadap saldo sangat kecil dibatasi (>+300% / <−300%). Teks Setelan yang usang diperbarui. Baru: Setelan → Data → Seragamkan label catatan untuk menggabungkan penulisan kembar seperti Greedy dan Serakah.',
+  ]},
+  { date:'2026-11-24', items:[
+    'Ringkasan mendapat tujuh tambahan: progres target PNL bulanan (dengan sisa hari trading Senin–Jumat), PNL per sesi hari ini (Asia, London, New York), satu kalimat wawasan otomatis, heatmap PNL 30 hari (ketuk hari untuk melihat transaksinya), dan Catatan harian satu kalimat dengan riwayat dan pencarian. Statistik periode kini menampilkan selisih terhadap periode sebelumnya, dan di ponsel ada chip Mode fokus yang hanya menampilkan saldo, hari ini, dan statistik. Kartu baru bisa disembunyikan dan diurutkan di Setelan → Tampilan.',
+  ]},
+  { date:'2026-11-23', items:[
+    'Form di halaman Kalender tidak lagi memakai kontrol bawaan browser. Zona waktu dan Dampak kini dropdown kustom, dan Tanggal serta Jam digabung menjadi satu pemilih tanggal-jam kustom (di ponsel tampil sebagai lembar di bawah layar). Dropdown Urutkan di tab Transaksi (ponsel) dan Zona waktu di Setelan → Tampilan juga diganti dengan dropdown kustom yang sama seperti filter lainnya. Form Kalender yang belum lengkap kini menampilkan pesan, bukan balon validasi browser.',
+  ]},
+  { date:'2026-11-22', items:[
+    'Di ponsel (lebar layar ≤ 700 px), kalender pemilih tanggal kini muncul sebagai lembar di bawah layar: latar redup yang bisa diketuk untuk menutup, navigasi bulan dan tanggal berukuran lebih besar, serta tombol Hari ini dan OK yang lebar. Berlaku di semua pemilih tanggal (filter, ekspor per periode, form transaksi, arsip). Di desktop tetap popup seperti sebelumnya.',
+  ]},
+  { date:'2026-11-21', items:[
+    'Perbaikan di Ringkasan: baris chip periode (7H, 1B, 3B, 1T, All) di atas strip statistik tidak lagi tertimpa kartu statistik (bagian bawah chip sebelumnya terpotong, terutama di ponsel). Max DD tidak lagi tampil "-$0,00" ketika tidak ada drawdown atau tidak ada transaksi pada periode itu; tanda minus hanya muncul bila drawdown benar-benar ada.',
+  ]},
+  { date:'2026-11-20', items:[
+    'Perbaikan: saat efek kaca aktif, kalender pemilih tanggal (mis. Setelan → Data → Data mentah per periode) dan daftar pilihan tertutup kartu di bawahnya sehingga hanya sebagian yang terlihat. Kartu yang sedang membuka popup kini dinaikkan di atas kartu lain.',
+  ]},
   { date:'2026-11-19', items:[
     'Setelan → Trading: batas rugi harian kini bisa diatur dalam persen saldo awal hari (saldo penutupan hari sebelumnya, GMT+8), selain nominal sen. Batas dihitung ulang tiap hari sehingga ikut naik atau turun mengikuti saldo. Bila persen diisi, nilai persen yang dipakai dan kolom sen diabaikan; hari pertama tanpa saldo sebelumnya memakai kolom sen bila ada. Berlaku di kartu Hari ini, status PNL, notifikasi batas, Laporan (analisis hari melewati batas) dan tinjauan mingguan.',
   ]},
@@ -6899,19 +7120,10 @@ function renderTodayCard(){
     const q = worst / mlC;
     out.push(cell('tcLimit', 'Batas rugi', q >= 1 ? 'Tercapai' : 'Sisa ' + money(mlC - worst), `rugi ${money(worst)} dari ${money(mlC)}` + (lim.maxLossPct ? ` (${String(lim.maxLossPct).replace('.', DEC())}%)` : ''), q >= 1 ? 'over' : ratioCls(q)));
   } else out.push(cell('tcLimit', 'Batas rugi', '—', 'Belum diatur • ketuk untuk mengatur', '', 'limit'));
-  let nv = '—', ns = 'Kalender belum siap', nc = '';
-  if(window.KAL){
-    const now = Date.now(), e = KAL.nextHigh(now), ms = e ? e.ts - now : Infinity;
-    if(ms <= 24*3600000){
-      const h = Math.floor(ms/3600000), m = Math.max(1, Math.floor(ms%3600000/60000));
-      nv = h ? `${h} j ${m} m` : `${m} m`; ns = escapeHtml(String(e.name).slice(0, 40)); nc = ms <= 15*60000 ? 'over' : (ms <= 2*3600000 ? 'warn' : '');
-    } else { nv = 'Aman'; ns = 'Tak ada rilis besar 24 jam'; nc = 'ok'; }
-  }
-  out.push(cell('tcNews', 'Berita', nv, ns, nc, 'news'));
   const miss = list.filter(t => !hasNote(t)).length;
-  out.push(!n ? cell('tcNotes', 'Catatan', '—', 'Belum ada transaksi', '')
-    : miss ? cell('tcNotes', 'Catatan', String(miss), 'belum bercatatan • ketuk untuk mengisi', 'warn', 'notes')
-    : cell('tcNotes', 'Catatan', 'Lengkap', 'semua bercatatan', 'ok'));
+  out.push(!n ? cell('tcNotes', 'Catatan trade', '—', 'Belum ada transaksi', '')
+    : miss ? cell('tcNotes', 'Catatan trade', String(miss), 'belum bercatatan • ketuk untuk mengisi', 'warn', 'notes')
+    : cell('tcNotes', 'Catatan trade', 'Lengkap', 'semua bercatatan', 'ok'));
   grid.innerHTML = out.join('');
   grid.dataset.day = dayStr;
 }
@@ -6958,8 +7170,8 @@ function renderRingkasanExtras(){
       }).join('');
       const eq = DATA.summary.saldo_akhir, pct = (eq + dd) > 0 ? dd / (eq + dd) : 0;
       const ddTxt = dd > 0 ? `<span class="down">\u2212${fmtMoney(dd)}</span> <span class="pnl-spark-pct">(${fmtPct(pct)} dari puncak)</span>` : '<span class="up">Di puncak, tanpa drawdown</span>';
-      sp.innerHTML = `<div class="pnl-spark-col"><span class="pnl-lbl">PNL harian 7 hari</span><svg class="pnl-spark-svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="PNL harian tujuh hari terakhir">${bars}<line x1="0" x2="${W}" y1="${mid}" y2="${mid}" class="sp-axis"/></svg></div>
-        <div class="pnl-spark-col pnl-spark-dd"><span class="pnl-lbl">Drawdown saat ini</span><span class="pnl-spark-ddv">${ddTxt}</span></div>`;
+      sp.innerHTML = `<div class="pnl-spark-col"><span class="pnl-lbl">PNL harian 7H</span><svg class="pnl-spark-svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="PNL harian tujuh hari terakhir">${bars}<line x1="0" x2="${W}" y1="${mid}" y2="${mid}" class="sp-axis"/></svg></div>
+        <div class="pnl-spark-col pnl-spark-dd"><span class="pnl-lbl">Drawdown PNL saat ini</span><span class="pnl-spark-ddv">${ddTxt}</span></div>`;
       sp.hidden = false;
     }
   }
@@ -6994,9 +7206,14 @@ const RC_CARDS = [
   {id:'berita', label:'Rilis berita berikutnya', els:['kalMini']},
   {id:'chart', label:'Chart XAUUSD', els:['chartCard']},
   {id:'terakhir', label:'Transaksi terakhir', els:['recentCard']},
-  {id:'aturan', label:'Aturan trading', els:['rulesCard']}
+  {id:'aturan', label:'Aturan trading', els:['rulesCard']},
+  {id:'target', label:'Target bulan ini', els:['targetCard']},
+  {id:'sesi', label:'PNL per sesi hari ini', els:['sessCard']},
+  {id:'wawasan', label:'Wawasan', els:['insightCard']},
+  {id:'heat', label:'PNL harian 30 hari', els:['heatCard']},
+  {id:'catatan', label:'Catatan harian', els:['noteCard']}
 ];
-const RC_MOBILE = ['saldo','today','berita','statistik','ekuitas','chart','terakhir','aturan'];
+const RC_MOBILE = ['saldo','today','target','sesi','berita','statistik','wawasan','heat','ekuitas','chart','catatan','terakhir','aturan'];
 const rcMQ = window.matchMedia ? window.matchMedia('(max-width: 700px)') : {matches:false};
 function rcLoad(){
   try{ const o = JSON.parse(localStorage.getItem('jurnalRingkasan') || 'null'); if(o && typeof o==='object') return { o: Array.isArray(o.o) ? o.o : null, h: Array.isArray(o.h) ? o.h : [] }; }catch(e){}
@@ -7040,6 +7257,234 @@ function renderRcList(){
   if(rcMQ.addEventListener) rcMQ.addEventListener('change', () => { if(!rcLoad().o) applyRingkasan(); });
   applyRingkasan();
 })();
+
+// ---------- Ringkasan: target bulanan, sesi, wawasan, heatmap, catatan harian, mode fokus (v1.1.227) ----------
+// Semua hari = tanggal tutup GMT+8 (sama dengan kartu Hari ini). Target = getPerfCfg().target (% dari saldo awal bulan).
+const DN_MAX = 60, DN_LEN = 200;
+function dnKey(){ return acctKey('jurnalDayNotes'); }
+function dnLoad(){
+  const r = {};
+  try{ const o = JSON.parse(localStorage.getItem(dnKey()) || '{}');
+    if(o && typeof o === 'object' && !Array.isArray(o)) Object.keys(o).forEach(k => { if(/^\d{4}-\d{2}-\d{2}$/.test(k) && typeof o[k] === 'string' && o[k].trim()) r[k] = o[k].trim().slice(0, DN_LEN); });
+  }catch(e){}
+  return r;
+}
+function dnSave(o){
+  const ks = Object.keys(o).filter(k => o[k] && o[k].trim()).sort().reverse().slice(0, DN_MAX), r = {};
+  ks.forEach(k => { r[k] = o[k].trim().slice(0, DN_LEN); });
+  try{ if(ks.length) localStorage.setItem(dnKey(), JSON.stringify(r)); else localStorage.removeItem(dnKey()); }catch(e){}
+  return r;
+}
+const rgDay = k => (+k.slice(8)) + ' ' + ID_BULAN[+k.slice(5,7)-1];
+const rgSgn = c => (c > 0 ? '+' : '') + fmtMoney(c);
+
+function renderTargetCard(){
+  const c = document.getElementById('targetCard'); if(!c) return;
+  const tg = getPerfCfg().target, m = HERO_PNL && HERO_PNL.month;
+  if(!tg || !m || m.pct === null || m.pct === undefined){ c.hidden = true; return; }
+  const prog = m.pct / (tg / 100), w = Math.max(0, Math.min(1, prog));
+  const y = GMT8_NOW.y, mo = GMT8_NOW.m, last = new Date(Date.UTC(y, mo + 1, 0)).getUTCDate();
+  let days = 0; for(let d = GMT8_NOW.d; d <= last; d++){ const wd = new Date(Date.UTC(y, mo, d)).getUTCDay(); if(wd >= 1 && wd <= 5) days++; }
+  const basis = dayStartBalance(gmt8DateKeyFromParts(y, mo, 1)), need = basis > 0 ? Math.round(basis * tg / 100) - m.pl : null;
+  const done = prog >= 1;
+  document.getElementById('targetPct').textContent = Math.round(prog * 100) + '% tercapai';
+  const fill = document.getElementById('targetFill'); fill.style.width = (w * 100).toFixed(1) + '%'; fill.className = done ? 'tg-done' : (prog < 0 ? 'tg-neg' : '');
+  const bar = document.getElementById('targetBar'); bar.setAttribute('aria-valuenow', String(Math.round(w * 100)));
+  const l1 = `<span class="rg-money ${sgnCls(m.pl)}">${fmtPct(m.pct)}</span> dari target ${String(tg).replace('.', DEC())}%`;
+  let l2;
+  if(done) l2 = 'Target bulan ini tercapai.';
+  else if(need !== null && need > 0) l2 = `Butuh <span class="rg-money">${rgSgn(need)}</span> lagi` + (days ? ` • sisa ${days} hari trading (≈ <span class="rg-money">${fmtMoney(Math.ceil(need / days))}</span>/hari)` : ' • hari trading bulan ini habis');
+  else l2 = days ? `Sisa ${days} hari trading bulan ini` : 'Hari trading bulan ini habis';
+  document.getElementById('targetMeta').innerHTML = `<span>${l1}</span><span>${l2}</span>`;
+  c.hidden = false;
+}
+
+function renderSessCard(){
+  const c = document.getElementById('sessCard'); if(!c) return;
+  const trades = (DATA.trades || []).filter(t => t.tanggal_gmt8 && t.waktu_buka);
+  if(!trades.length){ c.hidden = true; return; }
+  const todayK = gmt8DateKeyFromParts(GMT8_NOW.y, GMT8_NOW.m, GMT8_NOW.d), wk = new Set();
+  for(let i = 0; i < 7; i++) wk.add(gmt8DateKeyFromParts(GMT8_NOW.y, GMT8_NOW.m, GMT8_NOW.d - i));
+  const td = LAP_SESSIONS.map(() => ({pl:0, n:0})), w7 = LAP_SESSIONS.map(() => ({pl:0, n:0}));
+  for(const t of trades){
+    const k = t.tanggal_gmt8.slice(0, 10); if(!wk.has(k)) continue;
+    const si = lapSessionIdx(new Date(parseGmt8(t.waktu_buka) + 8*3600000).getUTCHours()); if(si < 0) continue;
+    w7[si].pl += t.laba; w7[si].n++; if(k === todayK){ td[si].pl += t.laba; td[si].n++; }
+  }
+  document.getElementById('sessGrid').innerHTML = LAP_SESSIONS.map((s, i) => `<div class="sess-cell"><span class="tc-lbl">${s[0]}</span>`
+    + `<span class="tc-val rg-money ${td[i].n ? sgnCls(td[i].pl) : ''}">${td[i].n ? rgSgn(td[i].pl) : '—'}</span>`
+    + `<span class="tc-sub">${td[i].n ? td[i].n + ' transaksi' : 'Belum ada'}</span>`
+    + `<span class="tc-sub sess-7">7H: ${w7[i].n ? `<span class="rg-money ${sgnCls(w7[i].pl)}">${rgSgn(w7[i].pl)}</span> (${w7[i].n})` : '—'}</span></div>`).join('');
+  c.hidden = false;
+}
+
+function insightSentence(){
+  const ts = DATA.trades || [];
+  if(ts.length < 5) return null;
+  const avg = a => a.reduce((s,t) => s + t.laba, 0) / a.length;
+  const lg = ts.filter(isLanggar), ok = ts.filter(t => !isLanggar(t));
+  if(lg.length >= 3 && ok.length >= 3){
+    const al = avg(lg), ao = avg(ok);
+    if(al < ao) return `Transaksi yang melanggar aturan rata-rata ${rgSgn(Math.round(al))}, sedangkan yang patuh ${rgSgn(Math.round(ao))} (${lg.length} vs ${ok.length} transaksi).`;
+  }
+  const grp = f => { const m = {}; for(const t of ts){ const k = f(t); if(!k) continue; (m[k] || (m[k] = [])).push(t); } return m; };
+  const em = grp(t => t.emosi), worst = Object.keys(em).filter(k => em[k].length >= 3).map(k => ({k, n:em[k].length, pl:em[k].reduce((s,t) => s + t.laba, 0)})).filter(x => x.pl < 0).sort((x,y) => x.pl - y.pl)[0];
+  if(worst) return `Emosi “${escapeHtml(worst.k)}” paling merugikan: ${worst.n} transaksi dengan total ${rgSgn(worst.pl)}.`;
+  const su = grp(t => t.setup), best = Object.keys(su).filter(k => su[k].length >= 5).map(k => ({k, n:su[k].length, wr:su[k].filter(t => t.laba > 0).length / su[k].length})).sort((x,y) => y.wr - x.wr || y.n - x.n)[0];
+  if(best) return `Setup “${escapeHtml(best.k)}” paling andal: win rate ${fmtPct(best.wr)} dari ${best.n} transaksi.`;
+  return null;
+}
+function renderInsightCard(){
+  const c = document.getElementById('insightCard'); if(!c) return;
+  const s = insightSentence();
+  if(!s){ c.hidden = true; return; }
+  document.getElementById('insightText').innerHTML = s;
+  document.getElementById('insightNote').textContent = 'semua transaksi';
+  c.hidden = false;
+}
+
+function renderHeatCard(){
+  const c = document.getElementById('heatCard'), g = document.getElementById('heatGrid'); if(!c || !g) return;
+  const trades = (DATA.trades || []).filter(t => t.tanggal_gmt8);
+  if(!trades.length){ c.hidden = true; return; }
+  const by = {};
+  for(const t of trades){ const k = t.tanggal_gmt8.slice(0, 10); const o = by[k] || (by[k] = {pl:0, n:0}); o.pl += t.laba; o.n++; }
+  const keys = []; for(let i = 29; i >= 0; i--) keys.push(gmt8DateKeyFromParts(GMT8_NOW.y, GMT8_NOW.m, GMT8_NOW.d - i));
+  const mx = Math.max(1, ...keys.map(k => by[k] ? Math.abs(by[k].pl) : 0));
+  let g1 = 0, r1 = 0;
+  g.innerHTML = keys.map((k, i) => {
+    const o = by[k]; let cls = 'heat-0', st = '', tip = rgDay(k) + ': tidak ada transaksi';
+    if(o && o.pl !== 0){ cls = o.pl > 0 ? 'heat-up' : 'heat-dn'; st = ` style="--hi:${(0.28 + 0.72 * Math.abs(o.pl) / mx).toFixed(2)}"`; if(o.pl > 0) g1++; else r1++; }
+    if(o) tip = `${rgDay(k)}: ${rgSgn(o.pl)} • ${o.n} transaksi`;
+    return `<button type="button" role="listitem" class="heat-cell ${cls}${i === 29 ? ' heat-today' : ''}"${st} data-key="${k}" title="${tip}" aria-label="${tip}"><span>${+k.slice(8)}</span></button>`;
+  }).join('');
+  document.getElementById('heatNote').textContent = `${g1} hijau • ${r1} merah`;
+  c.hidden = false;
+}
+
+function renderNoteCard(){
+  const inp = document.getElementById('noteInput'); if(!inp) return;
+  const p = gmt8NowParts(), key = gmt8DateKeyFromParts(p.y, p.m, p.d), notes = dnLoad();
+  document.getElementById('noteDate').textContent = rgDay(key);
+  if(document.activeElement !== inp) inp.value = notes[key] || '';
+  const q = (document.getElementById('noteSearch').value || '').trim().toLowerCase();
+  const ks = Object.keys(notes).sort().reverse().filter(k => !q || notes[k].toLowerCase().includes(q) || rgDay(k).toLowerCase().includes(q));
+  document.getElementById('noteHistSum').textContent = 'Riwayat catatan (' + Object.keys(notes).length + ')';
+  document.getElementById('noteList').innerHTML = ks.length ? ks.map(k => `<li><span class="nl-d">${rgDay(k)}</span><span class="nl-t">${escapeHtml(notes[k])}</span></li>`).join('') : `<li class="nl-empty">${q ? 'Tidak ada catatan yang cocok.' : 'Belum ada catatan.'}</li>`;
+}
+(function(){
+  const form = document.getElementById('noteForm'); if(!form) return;
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    const p = gmt8NowParts(), key = gmt8DateKeyFromParts(p.y, p.m, p.d), notes = dnLoad(), v = document.getElementById('noteInput').value.trim().slice(0, DN_LEN);
+    if(v) notes[key] = v; else delete notes[key];
+    dnSave(notes);
+    const h = document.getElementById('noteHint'); h.textContent = v ? 'Tersimpan.' : 'Catatan hari ini dihapus.';
+    setTimeout(() => { h.textContent = 'Maksimal 200 karakter. Tersimpan di perangkat ini saja.'; }, 2500);
+    renderNoteCard();
+  });
+  document.getElementById('noteSearch').addEventListener('input', renderNoteCard);
+  const hg = document.getElementById('heatGrid');
+  if(hg) hg.addEventListener('click', e => { const b = e.target.closest('.heat-cell'); if(!b) return; location.hash = '#transaksi?dari=' + b.dataset.key + '&sampai=' + b.dataset.key; });
+})();
+
+// Mode fokus (ponsel): hanya saldo, hari ini, dan statistik. Tersimpan per perangkat (jurnalFokus).
+function applyFokus(){
+  const panel = document.getElementById('tabpanel-grafik'), btn = document.getElementById('focusBtn'); if(!panel || !btn) return;
+  let on = false; try{ on = localStorage.getItem('jurnalFokus') === '1'; }catch(e){}
+  panel.classList.toggle('rc-focus', on);
+  btn.setAttribute('aria-pressed', on ? 'true' : 'false'); btn.classList.toggle('active', on);
+  btn.textContent = on ? 'Mode fokus: aktif' : 'Mode fokus';
+}
+(function(){
+  const btn = document.getElementById('focusBtn'); if(!btn) return;
+  btn.addEventListener('click', () => {
+    let on = false; try{ on = localStorage.getItem('jurnalFokus') === '1'; localStorage.setItem('jurnalFokus', on ? '0' : '1'); }catch(e){}
+    applyFokus();
+  });
+  applyFokus();
+})();
+
+function renderRingkasanV227(){
+  [renderTargetCard, renderSessCard, renderInsightCard, renderHeatCard, renderNoteCard].forEach(f => { try{ f(); }catch(e){} });
+}
+window.renderRingkasanV227 = renderRingkasanV227;
+renderRingkasanV227();
+setInterval(renderRingkasanV227, 60000);
+
+// ---------- Transaksi: filter & alat bisa dilipat di ponsel (v1.1.228) ----------
+(function(){
+  const btn = document.getElementById('ledgerFoldBtn'), sec = document.getElementById('ledgerSec'); if(!btn || !sec) return;
+  const set = open => { sec.classList.toggle('lfold-open', open); btn.setAttribute('aria-expanded', String(open)); };
+  btn.addEventListener('click', () => set(!sec.classList.contains('lfold-open')));
+  set(false);
+})();
+
+// ---------- Setelan: seragamkan label catatan (v1.1.228) ----------
+// Mengganti nama label di semua transaksi (emosi, trigger, jenis entry, setup). Pasangan kembar disarankan dari penulisan yang sama
+// (huruf besar/kecil, spasi, tanda baca diabaikan) dan beberapa sinonim umum. Bisa dibalik dengan mengganti nama lagi.
+const LBL_FIELDS = [['emosi','Emosi'],['trigger','Trigger entry'],['trigger_exit','Trigger exit'],['jenis_entry','Jenis entry'],['setup','Setup / strategi']];
+const LBL_SYN = [['greedy','Serakah'],['fear','Cemas'],['fvg','Fair Value Gap'],['ob','Order Block'],['sr','Support/Resistance']];
+function lblCounts(f){ const m = {}; for(const t of (DATA.trades || [])){ const v = (t[f] || '').trim(); if(v) m[v] = (m[v] || 0) + 1; } return m; }
+function lblPairs(f){
+  const c = lblCounts(f), ks = Object.keys(c), norm = s => s.toLowerCase().replace(/[^a-z0-9]/g, ''), out = [];
+  for(let i = 0; i < ks.length; i++) for(let j = i + 1; j < ks.length; j++) if(norm(ks[i]) === norm(ks[j])){ const [a, b] = c[ks[i]] >= c[ks[j]] ? [ks[j], ks[i]] : [ks[i], ks[j]]; out.push([a, b]); }
+  for(const [x, y] of LBL_SYN){ const a = ks.find(k => norm(k) === norm(x)), b = ks.find(k => norm(k) === norm(y)); if(a && b && a !== b && !out.some(p => p[0] === a && p[1] === b)) out.push([a, b]); }
+  return out;
+}
+(function(){
+  const fieldEl = document.getElementById('csw_lblField'); if(!fieldEl) return;
+  const newEl = document.getElementById('lblNew'), go = document.getElementById('lblGo'), sug = document.getElementById('lblSuggest');
+  const field = () => CS.get('csw_lblField'), from = () => CS.get('csw_lblFrom');
+  const sync = () => { const a = from(), b = newEl.value.trim(); go.disabled = !(field() && a && b && b !== a); };
+  function fillFrom(){
+    const f = field(), c = f ? lblCounts(f) : {};
+    CS.build('csw_lblFrom', Object.keys(c).sort((x, y) => c[y] - c[x]).map(k => ({value:k, label:`${k} (${c[k]})`})), 'Label lama', () => { newEl.value = ''; sync(); });
+    CS.set('csw_lblFrom', '');
+    const ps = f ? lblPairs(f) : [];
+    sug.hidden = !ps.length;
+    sug.innerHTML = ps.length ? '<span>Kemungkinan kembar:</span>' + ps.map(([a, b], i) => `<button type="button" class="quick-chip" data-i="${i}">${escapeHtml(a)} → ${escapeHtml(b)}</button>`).join('') : '';
+    sug._ps = ps; sync();
+  }
+  CS.build('csw_lblField', LBL_FIELDS.map(([v, l]) => ({value:v, label:l})), 'Pilih jenis catatan', fillFrom);
+  CS.build('csw_lblFrom', [], 'Label lama', sync);
+  newEl.addEventListener('input', sync);
+  sug.addEventListener('click', e => { const b = e.target.closest('button[data-i]'); if(!b) return; const p = sug._ps[+b.dataset.i]; CS.set('csw_lblFrom', p[0]); newEl.value = p[1]; sync(); });
+  go.addEventListener('click', async () => {
+    const f = field(), a = from(), b = newEl.value.trim().slice(0, 40); if(!f || !a || !b || a === b) return;
+    const n = lblCounts(f)[a] || 0;
+    if(!await showConfirmModal(`Ganti label "${a}" menjadi "${b}" pada ${n} transaksi (${LBL_FIELDS.find(x => x[0] === f)[1]})? Bisa dibalik dengan mengganti nama lagi.`)) return;
+    DATA.trades.forEach(t => { if((t[f] || '').trim() === a) t[f] = b; });
+    if(!saveActiveData(DATA)){ await showConfirmModal('Gagal menyimpan ke penyimpanan lokal browser (mungkin penuh atau diblokir).'); return; }
+    queueNotifyAfterReload(`${n} transaksi diperbarui.`, 'success');
+    setTimeout(() => { location.reload(); }, 300);
+  });
+})();
+
+// ---------- Kalender: filter dilipat di ponsel; FAB menyingkir saat menggulir ke bawah (v1.1.229) ----------
+(function(){
+  const btn = document.getElementById('kalFoldBtn'), box = document.getElementById('kalFilters');
+  if(btn && box){
+    btn.addEventListener('click', () => { const o = !box.classList.contains('kfold-open'); box.classList.toggle('kfold-open', o); btn.setAttribute('aria-expanded', String(o)); });
+  }
+  const w = document.getElementById('fabWrap'), menu = document.getElementById('fabMenu');
+  if(w){
+    let last = window.scrollY, busy = false;
+    window.addEventListener('scroll', () => {
+      if(busy) return; busy = true;
+      requestAnimationFrame(() => {
+        busy = false; const y = window.scrollY, d = y - last; if(Math.abs(d) < 6) return; last = y;
+        w.classList.toggle('fab-away', d > 0 && y > 120 && !(menu && menu.classList.contains('show')));
+      });
+    }, {passive:true});
+  }
+})();
+
+// ---------- Tautan antar halaman Performa <-> Laporan (v1.1.230) ----------
+document.addEventListener('click', e => {
+  const l = e.target.closest('[data-go-lap]'); if(l){ window.goToTab('laporan'); if(window.showLaporanGroup) window.showLaporanGroup(l.dataset.goLap); return; }
+  if(e.target.closest('[data-go-perf]')) window.goToTab('statistik');
+});
 
 // ---------- Esc global: tutup modal teratas (v1.1.160) ----------
 (function(){

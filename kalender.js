@@ -102,8 +102,15 @@
   }
 
   function buildControls() {
-    var tz = $("kalTz"); tz.value = state.tz;
-    tz.addEventListener("change", function () { state.tz = tz.value; persist(); render(); tick(); window.dispatchEvent(new Event("kalChanged")); });
+    // Komponen kustom (CS/DTP dari app.js), bukan <select>/<input type=date|time> bawaan browser (v1.1.226)
+    CS.build("csw_kalTz", [
+      { value: "Asia/Makassar", label: "WITA (UTC+8)" }, { value: "Asia/Jakarta", label: "WIB (UTC+7)" }, { value: "Asia/Jayapura", label: "WIT (UTC+9)" },
+      { value: "Etc/GMT-3", label: "Waktu broker (GMT+3)" }, { value: "UTC", label: "UTC" }, { value: "America/New_York", label: "New York (ET)" }
+    ], "", function (v) { state.tz = v; persist(); render(); tick(); window.dispatchEvent(new Event("kalChanged")); });
+    CS.set("csw_kalTz", state.tz);
+    CS.build("csw_kalImp", [{ value: "3", label: "Tinggi" }, { value: "2", label: "Sedang" }, { value: "1", label: "Rendah" }], "Sedang");
+    CS.set("csw_kalImp", "2");
+    DTP.build("kalWaktu", "Pilih tanggal dan jam");
 
     var ic = $("kalImpChips"); ic.textContent = "";
     [3, 2, 1].forEach(function (n) {
@@ -334,12 +341,13 @@
 
   $("kalAddForm").addEventListener("submit", function (ev) {
     ev.preventDefault();
-    var name = $("kalName").value.trim(), date = $("kalDate").value, time = $("kalTime").value;
-    if (!name || !date || !time) return;
+    var name = $("kalName").value.trim(), wv = DTP.get("kalWaktu"), date = wv.slice(0, 10), time = wv.slice(11, 16);
+    if (!name || !date || !time) { ioNote("Isi nama event, tanggal, dan jam.", true); return; }
+    ioNote("");
     var ts = zonedToUtc(date, time, state.tz);
-    manual.push({ id: "m-" + Date.now(), ts: ts, t: new Date(ts).toISOString(), cur: ($("kalCur").value.trim() || "USD").toUpperCase(), name: name, impact: +$("kalImp").value });
+    manual.push({ id: "m-" + Date.now(), ts: ts, t: new Date(ts).toISOString(), cur: ($("kalCur").value.trim() || "USD").toUpperCase(), name: name, impact: +(CS.get("csw_kalImp") || 2) });
     save("kal-manual", manual);
-    $("kalName").value = ""; render(); tick();
+    $("kalName").value = ""; DTP.set("kalWaktu", ""); render(); tick();
   });
 
   // Impor/ekspor jadwal (v1.1.181): JSON {app:'jurnal-xauusd', type:'kalender', events:[{id,t,cur,name,impact,status,f,p,a,gold}]}.
