@@ -2,7 +2,7 @@
 
 Ringkasan perubahan untuk pengguna, terbaru di atas. Isinya sama dengan **Setelan → Tentang aplikasi → Lihat riwayat** di aplikasi (data `USER_CHANGELOG` di `app.js`). Rincian teknis per versi ada di `CHANGELOG.md`; rencana ke depan di `roadmap.md`.
 
-**Versi saat ini: 1.1.222** (19 Nov 2026)
+**Versi saat ini: 1.1.232** (29 Nov 2026)
 
 ## Sorotan
 - Ringkasan: kurva ekuitas yang jelas (modal, puncak berjalan, drawdown, tooltip), pilihan **Ekuitas / PNL kumulatif**, PNL Minggu/Bulan Ini, lencana DD saat ini.
@@ -14,6 +14,16 @@ Ringkasan perubahan untuk pengguna, terbaru di atas. Isinya sama dengan **Setela
 
 ## 1 Okt 2026 (v1.1.145 – v1.1.192)
 **Baru**
+- **Kurva ekuitas**: teks sumbu jelas di ponsel, mode Return %, penanda deposit, detail hari, brush rentang, strip drawdown.
+- **Kartu saldo**: lebih ringkas di ponsel.
+- **Performa vs Laporan**: blok kembar dihapus, ditambah tautan antar halaman.
+- **Ponsel**: Deposit ringkas, area sentuh lebih besar, filter Kalender lipat, FAB menyingkir saat scroll, label Analisis diperjelas.
+- **Rapi-rapi**: pengulangan Ringkasan/Performa dihapus, filter lipat di ponsel, persen aman, dan alat Seragamkan label.
+- **Ringkasan**: target bulanan, PNL per sesi, wawasan, heatmap 30 hari, catatan harian, selisih periode, dan Mode fokus ponsel.
+- **Kalender**: zona waktu, dampak, dan tanggal-jam memakai komponen kustom; Urutkan dan Zona waktu Setelan juga.
+- **Pemilih tanggal**: di ponsel tampil sebagai lembar di bawah layar dengan latar redup.
+- **Perbaikan**: chip periode statistik tidak tertimpa kartu; Max DD nol tidak lagi bertanda minus.
+- **Perbaikan**: kalender tanggal dan daftar pilihan tidak lagi tertutup kartu di bawahnya saat efek kaca aktif.
 - **Setelan Trading**: batas rugi harian bisa dalam persen saldo awal hari (dihitung ulang tiap hari).
 - **Ringkasan**: kartu bisa disembunyikan dan diurutkan lewat Setelan → Tampilan; urutan bawaan ponsel (saldo, hari ini, berita, statistik, grafik).
 - **Ringkasan**: lencana pelanggaran di transaksi terakhir, sparkline 7 hari + drawdown saat ini, kepatuhan aturan 7 hari dan streak.
