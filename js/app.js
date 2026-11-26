@@ -2288,8 +2288,8 @@ function renderEqDdBadge(d){
     el.innerHTML = `<span class="eq-dd-badge up" title="Dihitung dari seluruh riwayat (sama dengan Laporan \u2192 Drawdown), tidak mengikuti pemilih periode."><span>Ekuitas</span><b>di puncak</b></span>`;
   }
 }
-let eqLegendHidden = { modal:false, peak:false };
-try{ const lg = JSON.parse(localStorage.getItem('jurnalEqLegend') || 'null'); if(lg){ eqLegendHidden.modal = !!lg.modal; eqLegendHidden.peak = !!lg.peak; } }catch(e){}   // v1.1.242: pilihan legenda bertahan antar sesi
+let eqLegendHidden = { modal:false, peak:false, viol:false, ma:true };   // v1.1.248: viol = penanda hari melanggar, ma = rata-rata bergerak (tersembunyi bawaan)
+try{ const lg = JSON.parse(localStorage.getItem('jurnalEqLegend') || 'null'); if(lg){ eqLegendHidden.modal = !!lg.modal; eqLegendHidden.peak = !!lg.peak; if(lg.viol !== undefined) eqLegendHidden.viol = !!lg.viol; if(lg.ma !== undefined) eqLegendHidden.ma = !!lg.ma; } }catch(e){}   // v1.1.242: pilihan legenda bertahan antar sesi
 // Jenis kurva Ringkasan: 'equity' (saldo, termasuk deposit/penarikan), 'pnl' (PNL kumulatif trading saja) atau 'ret' (Return % = PNL kumulatif / modal kumulatif). Tersimpan di localStorage `jurnalEqMode`.
 // Zoom sumbu (v1.1.219, diganti nama v1.1.232): sumbu-Y mengikuti rentang data tanpa memaksa titik nol. null = otomatis (aktif bila data hampir datar terhadap saldo).
 let eqZoomPref = null; try{ const z = localStorage.getItem('jurnalEqZoom'); if(z==='1' || z==='0') eqZoomPref = z; }catch(e){}
@@ -2451,6 +2451,38 @@ function renderEquityChart(){
     const cx = x(times[i]), cy = y(vals[i]);
     annos += `<path class="eq-anno" d="M${cx} ${cy-5.5} L${cx+5.5} ${cy} L${cx} ${cy+5.5} L${cx-5.5} ${cy} Z" fill="${col}" stroke="${cssVar('--ink')}" stroke-width="1"><title>${nm}: ${fmtDateKey(parseGmt8(day+'T12:00:00'))} (${sgnMoney(dayAgg[day].pnl)})</title></path>`;
   });
+  // ---------- Hari melanggar (v1.1.248): batas rugi harian, batas transaksi, atau aturan trading yang dicentang ----------
+  // Definisi sama dengan Laporan/Ringkasan mingguan (`weekDayCompliance`): hari = tanggal GMT8, urutan = waktu tutup, rugi = rugi kumulatif terdalam hari itu.
+  const violByDay = {}; let violCount = 0;
+  if(limLossOn() || DAY_LIMITS.maxTrades || DATA.trades.some(isLanggar)){
+    const grp = {};
+    for(const t of DATA.trades){ const k = String(t.tanggal_gmt8).slice(0,10); if(k < k0 || k > k1) continue; (grp[k] || (grp[k] = [])).push(t); }
+    for(const k in grp){
+      const ts = grp[k].sort((a,b) => String(a.tanggal_gmt8) < String(b.tanggal_gmt8) ? -1 : (String(a.tanggal_gmt8) > String(b.tanggal_gmt8) ? 1 : 0));
+      let cum = 0, worst = 0, nRule = 0;
+      for(const t of ts){ cum += t.laba; if(-cum > worst) worst = -cum; if(isLanggar(t)) nRule++; }
+      const v = {}, ml = dayMaxLoss(k);
+      if(ml && worst > ml) v.loss = worst;
+      if(DAY_LIMITS.maxTrades && ts.length > DAY_LIMITS.maxTrades) v.n = ts.length;
+      if(nRule) v.rule = nRule;
+      if(v.loss || v.n || v.rule){ violByDay[k] = v; violCount++; }
+    }
+  }
+  const violWhy = v => [v.loss && 'batas rugi harian terlewati', v.n && `${v.n} transaksi (batas ${DAY_LIMITS.maxTrades})`, v.rule && `${v.rule} transaksi melanggar aturan`].filter(Boolean).join(', ');
+  const dayLastI = {}; for(let i = 0; i < ptDay.length - (tailExtra ? 1 : 0); i++) dayLastI[ptDay[i]] = i;
+  let violMarks = '';
+  for(const k in violByDay){
+    const i = dayLastI[k]; if(i === undefined) continue;
+    violMarks += `<circle cx="${x(times[i]).toFixed(1)}" cy="${padT + 6}" r="3" fill="none" stroke="${lossColor}" stroke-width="1.4"><title>${fmtDateKey(parseGmt8(k+'T12:00:00'))}: ${violWhy(violByDay[k])}</title></circle>`;
+  }
+  // Garis rata-rata bergerak (v1.1.248): rata-rata EQ_MA_N titik transaksi terakhir dari seri yang ditampilkan (Ekuitas/PNL/Return). Tanpa titik ekor.
+  const EQ_MA_N = 20, nReal = vals.length - (tailExtra ? 1 : 0);
+  let maStr = '';
+  if(nReal >= EQ_MA_N + 2){
+    const mp = []; let sm = 0;
+    for(let i = 0; i < nReal; i++){ sm += ddSeries[i]; if(i >= EQ_MA_N) sm -= ddSeries[i - EQ_MA_N]; if(i >= EQ_MA_N - 1) mp.push(`${x(times[i]).toFixed(1)},${y(sm / EQ_MA_N + (modalVals ? modalVals[i] : 0)).toFixed(1)}`); }   // kurva Ekuitas: rata-rata dihitung dari saldo dikurangi modal (deposit/penarikan tidak ikut menghaluskan), lalu modal saat itu ditambahkan kembali
+    maStr = mp.join(' ');
+  }
   // Peristiwa deposit / penarikan / kompensasi MC (hanya kurva Ekuitas; di PNL & Return keduanya tidak memengaruhi kurva)
   const depByDay = {}; let depMarks = '', depCount = 0;
   if(!pnlMode && DATA.deposit && Array.isArray(DATA.deposit.log)){
@@ -2563,6 +2595,7 @@ function renderEquityChart(){
         <animate attributeName="stroke-dashoffset" from="3000" to="0" dur="1.1s" fill="freeze" calcMode="spline" keySplines="0.2 0 0.1 1"/>`}
       </path>
       ${showPeak ? `<polyline id="eqPeakLine" points="${peakPtsStr}" fill="none" stroke="${peakColor}" stroke-width="1.3" stroke-dasharray="5 3" opacity="0.95" clip-path="url(#eqPlotClip)" style="pointer-events:none;${hid.peak ? 'display:none;' : ''}"/>` : ''}
+      ${maStr ? `<polyline id="eqMaLine" points="${maStr}" fill="none" stroke="${cssVar('--paper')}" stroke-width="1.3" stroke-dasharray="1.5 3" stroke-linecap="round" opacity="0.85" clip-path="url(#eqPlotClip)" style="pointer-events:none;${hid.ma ? 'display:none;' : ''}"/>` : ''}
       <g class="eq-axis">${yLabels}${xLabels}</g>
       <line class="eq-strip-base" x1="${padL}" y1="${stripTop}" x2="${W-padR}" y2="${stripTop}" stroke="${cssVar('--line')}" stroke-width="1"/>
       <text class="eq-strip-lbl" x="${padL-6}" y="${stripTop+10}" text-anchor="end">DD</text>
@@ -2571,6 +2604,7 @@ function renderEquityChart(){
       <line class="eq-dd-edge" x1="${x(times[peakIdx])}" y1="${padT}" x2="${x(times[peakIdx])}" y2="${padT+hoverH}" stroke="${lossColor}" stroke-width="1" stroke-dasharray="3 3" opacity="0" style="pointer-events:none;"/>
       <line class="eq-dd-edge" x1="${x(times[troughIdx])}" y1="${padT}" x2="${x(times[troughIdx])}" y2="${padT+hoverH}" stroke="${lossColor}" stroke-width="1" stroke-dasharray="3 3" opacity="0" style="pointer-events:none;"/>
       <g class="eq-deps" style="pointer-events:none;">${depMarks}</g>
+      ${violMarks ? `<g class="eq-viol" id="eqViolG" style="pointer-events:none;${hid.viol ? 'display:none;' : ''}">${violMarks}</g>` : ''}
       <circle id="eqAthDot" cx="${athPx}" cy="${athPy}" r="3" fill="${gainColor}"/>
       ${showBottomLabel ? `<circle id="eqBottomDot" cx="${bottomPx}" cy="${bottomPy}" r="3" fill="${lossColor}"/>` : ''}
       <g class="eq-annos" style="pointer-events:none;">${annos}</g>
@@ -2588,6 +2622,8 @@ function renderEquityChart(){
       <span class="eq-legend-item"><span class="eq-legend-swatch" style="background:${lineColor}"></span>${serName}</span>
       ${modalD ? `<button type="button" class="eq-legend-item${hid.modal ? ' off' : ''}" data-eqleg="modal" aria-pressed="${!hid.modal}" title="Ketuk untuk tampil/sembunyi"><span class="eq-legend-swatch" style="background:${modalColor};opacity:0.7"></span>Modal kumulatif</button>` : ''}
       ${showPeak ? `<button type="button" class="eq-legend-item${hid.peak ? ' off' : ''}" data-eqleg="peak" aria-pressed="${!hid.peak}" title="Ketuk untuk tampil/sembunyi"><span class="eq-legend-swatch eq-legend-dash" style="border-top-color:${peakColor}"></span>Puncak berjalan</button>` : ''}
+      ${maStr ? `<button type="button" class="eq-legend-item${hid.ma ? ' off' : ''}" data-eqleg="ma" aria-pressed="${!hid.ma}" title="Rata-rata ${EQ_MA_N} titik transaksi terakhir (deposit/penarikan tidak ikut dirata-ratakan). Ketuk untuk tampil/sembunyi"><span class="eq-legend-swatch eq-legend-dots" style="border-top-color:${cssVar('--paper')}"></span>Rata-rata ${EQ_MA_N} transaksi</button>` : ''}
+      ${violMarks ? `<button type="button" class="eq-legend-item${hid.viol ? ' off' : ''}" data-eqleg="viol" aria-pressed="${!hid.viol}" title="Hari yang melewati batas rugi/transaksi harian atau ada pelanggaran aturan. Ketuk untuk tampil/sembunyi"><span class="eq-legend-ring"></span>Hari melanggar (${violCount})</button>` : ''}
       ${depCount ? `<span class="eq-legend-item" id="eqLegDep"><span class="eq-legend-tri up">▲</span><span class="eq-legend-tri down">▼</span>Deposit / penarikan</span>` : ''}
       ${(bestDay || worstDay) ? `<span class="eq-legend-item" id="eqLegAnno"><span class="eq-legend-dia" style="background:${gainColor}"></span><span class="eq-legend-dia" style="background:${lossColor}"></span>Hari terbaik / terburuk</span>` : ''}
       <span class="eq-legend-item"><span class="eq-legend-dot" style="background:${gainColor}"></span>Tertinggi</span>
@@ -2617,7 +2653,7 @@ function renderEquityChart(){
       }
       eqLegendHidden[k] = !eqLegendHidden[k];
       try{ localStorage.setItem('jurnalEqLegend', JSON.stringify(eqLegendHidden)); }catch(e){}
-      const el = document.getElementById(k === 'modal' ? 'eqModalLine' : 'eqPeakLine');
+      const el = document.getElementById({modal:'eqModalLine', peak:'eqPeakLine', ma:'eqMaLine', viol:'eqViolG'}[k]);
       if(el) el.style.display = eqLegendHidden[k] ? 'none' : '';
       btn.classList.toggle('off', eqLegendHidden[k]);
       btn.setAttribute('aria-pressed', !eqLegendHidden[k]);
@@ -2656,6 +2692,7 @@ function renderEquityChart(){
       (depByDay[k] || []).forEach(ev => p.push(`<span class="${ev.out ? 'down' : 'up'}">${ev.out ? '▼' : '▲'} ${ev.tipe} ${fmtMoney(ev.cent)}</span>`));
       if(k === bestDay) p.push('<span class="up">◆ hari terbaik periode ini</span>');
       if(k === worstDay) p.push('<span class="down">◆ hari terburuk periode ini</span>');
+      if(violByDay[k]) p.push(`<span class="down">○ Melanggar: ${violWhy(violByDay[k])}</span>`);
     }
     p.push(uw[i] > 1e-9 ? `DD <span class="down">−${fdd(uw[i])}</span>` : 'di puncak');
     let h = p.join('<span class="eq-sep">·</span>');
@@ -4567,7 +4604,7 @@ function downloadTextFile(filename, content, mime){
   URL.revokeObjectURL(url);
 }
 // Salinan HTML mandiri (v1.1.135): ambil index.html asli dari server (bukan DOM yang sedang berjalan, jadi bebas state modal/tema),
-// inline style.css/config.js/app.js/sync.js, buang pwa.js + manifest, dan isi #journal-data dengan data aktif.
+// inline css/style.css + js/*.js (config, app, kalender, broker, sync), buang js/pwa.js + manifest, dan isi #journal-data dengan data aktif.
 // Butuh http(s) (fetch tidak jalan dari file://); library Supabase dan font tetap dari CDN.
 async function buildFullHtmlString(){
   const pageUrl = location.href.split('#')[0].split('?')[0];
@@ -6191,7 +6228,7 @@ renderPsyPrompt();
 
 // ---------- Tentang aplikasi: versi + riwayat perubahan bahasa awam (v1.1.113) ----------
 // SETIAP RILIS: naikkan APP_VERSION, tambah entri di USER_CHANGELOG (tanggal ISO, bahasa pengguna akhir),
-// naikkan CACHE di sw.js, dan tambah entri di CHANGELOG.md. Versi hanya tampil di Setelan (bukan di footer).
+// naikkan CACHE di sw.js, dan tambah entri di docs/CHANGELOG.md. Versi hanya tampil di Setelan (bukan di footer).
 // ---------- Status & pengingat cadangan (v1.1.135) ----------
 // Cadangan terakhir = yang terbaru dari: ekspor JSON/HTML (jurnalBackupInfo), sinkron ke cloud, pemulihan dari cloud (jurnalSyncInfo, ditulis sync.js).
 // Perubahan lokal dicatat saveActiveData() di jurnalLastChange (bukan simpan otomatis saat muat). Semua per browser, tidak ikut ekspor JSON.
@@ -6481,9 +6518,15 @@ function renderBackupStatus(){
   sync();
 })();
 
-const APP_VERSION = '1.1.247';
-const APP_BUILD_DATE = '2026-11-24';   // ikut diganti tiap rilis (ISO), tampil di Setelan → Tentang
+const APP_VERSION = '1.1.250';
+const APP_BUILD_DATE = '2026-11-26';   // ikut diganti tiap rilis (ISO), tampil di Setelan → Tentang
 const USER_CHANGELOG = [
+  { date:'2026-11-26', items:[
+    'Perapihan susunan berkas proyek (folder css, js, icons, docs, sql, tools). Tidak ada perubahan tampilan atau data; aplikasi terpasang akan memuat ulang berkasnya sekali pada pembukaan berikutnya.',
+    'Perbaikan tab Performa di layar lebar: pil filter Arah (Semua arah/Beli/Jual) yang tampil sebagai batang vertikal raksasa di samping Ringkasan mingguan kini kembali menjadi pil kecil, dan filter Sesi serta Emosi/Trigger/Jenis tampil rapi selebar halaman. Ringkasan mingguan juga selebar penuh.',
+    'Kurva ekuitas di Ringkasan kini menandai hari yang melanggar disiplin dengan lingkaran merah di bagian atas grafik: hari yang rugi melewati batas harian, jumlah transaksi melewati batas, atau ada transaksi yang Anda centang melanggar aturan. Arahkan atau ketuk kurva pada hari itu untuk melihat alasannya. Penanda muncul hanya bila batas harian sudah diatur (Setelan → Trading) atau ada pelanggaran aturan yang dicatat, dan bisa disembunyikan dari legenda.',
+    'Ada garis rata-rata 20 transaksi (titik-titik putih) untuk melihat arah kurva tanpa terganggu naik-turun tiap transaksi. Nyalakan lewat legenda "Rata-rata 20 transaksi"; di kurva Ekuitas, deposit dan penarikan tidak ikut dirata-ratakan. Pilihan Anda diingat.',
+  ]},
   { date:'2026-11-24', items:[
     'Di ponsel, kartu PNL per sesi hari ini, Wawasan, dan Catatan harian kini terlipat secara bawaan; ketuk judul kartu untuk membuka atau melipat (pilihan Anda diingat). Chart XAUUSD dipindah ke urutan paling bawah pada urutan bawaan. Urutan yang sudah Anda atur sendiri tidak berubah.',
     'Urutan bawaan Ringkasan: kartu Aturan trading naik ke dekat Hari ini agar bisa dicek sebelum trading (urutan yang sudah Anda atur sendiri tidak berubah). Kartu Target bulan ini kini muncul dengan tombol "Atur target bulanan" saat target belum diisi, bukan menghilang.',
@@ -7035,7 +7078,7 @@ const JNOTIF = (function(){
     if(perm() !== 'granted') return false;
     try{
       const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
-      if(reg && reg.showNotification){ await reg.showNotification(title, {body, tag, icon:'icon-192.png', badge:'icon-192.png'}); return true; }
+      if(reg && reg.showNotification){ await reg.showNotification(title, {body, tag, icon:'icons/icon-192.png', badge:'icons/icon-192.png'}); return true; }
     }catch(e){}
     try{ new Notification(title, {body, tag}); return true; }catch(e){ return false; }
   }

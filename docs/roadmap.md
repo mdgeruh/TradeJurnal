@@ -2,7 +2,10 @@
 
 Satu-satunya daftar rencana dan todo proyek (dulu ada di `SUMMARY.md`). Prioritas: **P1** tinggi, **P2** sedang, **P3** rendah. Tidak ada tanggal tetap. Setiap butir yang mengubah kode mengikuti **Alur rilis** di `README.md`; saat selesai, hapus dari sini (centang bila perlu satu rilis), pindahkan tema barunya ke tabel "Sudah selesai", dan catat di `release_note.md` dan `CHANGELOG.md`. Jebakan bug tiap area ada di `SUMMARY.md`.
 
-## Sudah selesai (v1.1.247)
+## Sudah selesai (v1.1.250)
+- Restrukturisasi folder: css/, js/, icons/, docs/, sql/, tools/, dist/ (v1.1.250). Pemecahan `app.js`/`style.css` per modul tetap di daftar Optimalisasi.
+- Performa layar lebar: filter Arah/Sesi/Emosi tidak lagi menjadi sel grid yang meregang (v1.1.249).
+- Kurva ekuitas: penanda hari melanggar (batas rugi/transaksi harian, aturan) dan garis rata-rata 20 transaksi (v1.1.248).
 - Ringkasan ponsel: kartu Sesi, Wawasan, Catatan terlipat bawaan; Chart XAUUSD ke akhir urutan bawaan (v1.1.247).
 - Ringkasan: Aturan trading naik di urutan bawaan; kartu Target punya ajakan "Atur target bulanan" (v1.1.246).
 - Kurva ekuitas: batang PNL harian dihapus (v1.1.245).
@@ -10,7 +13,7 @@ Satu-satunya daftar rencana dan todo proyek (dulu ada di `SUMMARY.md`). Priorita
 - Ringkasan: kartu PNL harian 30 hari dihapus (duplikat Analisis PNL); filter silang untuk statistik dan Analisis cepat (v1.1.243).
 - Kurva ekuitas: ringkasan periode di bawah grafik, legenda diingat (v1.1.242).
 - Tanggal riwayat perubahan v1.1.227–v1.1.240 diperbaiki ke 23 Nov (v1.1.241).
-- Buka dari file explorer HP: `build-standalone.py` menghasilkan satu berkas HTML mandiri; gerbang login tidak tampil di `file:`/`content:` (v1.1.240).
+- Buka dari file explorer HP: `tools/build-standalone.py` menghasilkan satu berkas HTML mandiri; gerbang login tidak tampil di `file:`/`content:` (v1.1.240).
 - Ringkasan lebih ringan: penyegaran 60 dtk hanya saat tab terlihat, `content-visibility:auto` untuk 6 kartu bawah (v1.1.239).
 - Efek kaca bergaya Liquid Glass: token `--glass-rim`/`--glass-fx`/`--glass-lens`, tombol lensa, navigasi bawah mengambang (v1.1.238).
 - Analisis cepat: 6 tab chart interaktif, filter silang, batang PNL harian di kurva (v1.1.237).
@@ -73,7 +76,7 @@ Hampir semua fitur baru hanya diuji di Chromium dengan data sintetis dan Supabas
 - [ ] **Perangkat asli (Android/iOS):** sentuhan, PWA terpasang (pembaruan, banner versi baru, Periksa pembaruan, tombol Instal aplikasi), sidebar, mode Otomatis dan terang, tooltip kurva ekuitas (termasuk "Kustom…") dan grafik Tren, kartu HP Transaksi (mode terang, mode Pilih), halaman login dengan keyboard layar.
 - [ ] **Cetak PDF** data asli (terakhir v1.1.83; cek margin nomor halaman) dan cetak per skema; heatmap, blok sesi pasar, KPI Max DD % dengan data asli.
 - [ ] Salinan HTML mandiri dibuka dari `file://` di perangkat asli; pengingat cadangan (mode terang, 1280px); aksen custom di grafik/heatmap; font tanpa kedip.
-- [x] **Tindakan manual Supabase (dikonfirmasi pengguna, 23 Okt 2026):** daftarkan alamat aplikasi di **Redirect URLs** dan **Site URL**; jalankan `migrasi-catatan.sql` sekali (tanpa itu catatan tidak ikut ke cloud).
+- [x] **Tindakan manual Supabase (dikonfirmasi pengguna, 23 Okt 2026):** daftarkan alamat aplikasi di **Redirect URLs** dan **Site URL**; jalankan `sql/migrasi-catatan.sql` sekali (tanpa itu catatan tidak ikut ke cloud).
 
 ## 2a. Tahapan perbaikan Performa (P2, usulan 22 Okt 2026)
 - [x] **v1.1.197** Filter emosi/trigger/jenis entry di Performa; blok Metrik risiko (R:R aktual, win rate impas, expectancy, rugi terbesar, lot naik setelah rugi). Kartu bulanan ternyata sudah lengkap (PF, rata² untung/rugi, DD, hari terbaik/terburuk).
@@ -100,12 +103,12 @@ Hampir semua fitur baru hanya diuji di Chromium dengan data sintetis dan Supabas
 3c. **Impor JSON Gabungkan/Timpa** (v1.1.174): dialog impor menawarkan Gabungkan (per ID, tanpa menghapus; catatan lokal dipertahankan) atau Timpa semua. Berguna untuk file ekspor per periode.
 - [x] **Sinkron pengaturan ke Supabase (v1.1.206):** parameter kalkulator dan pengaturan lain ke tabel `pengaturan` (kini hanya `kurs`; perlu kolom baru + migrasi).
 
-**Optimalisasi** (audit v1.1.131; gzip: `app.js` ±79 KB, `style.css` ±14 KB, `index.html` ±13 KB; muat ±175 ms dengan 439 transaksi)
+**Optimalisasi** (audit v1.1.131; gzip: `js/app.js` ±79 KB, `css/style.css` ±14 KB, `index.html` ±13 KB; muat ±175 ms dengan 439 transaksi)
 - [ ] (v1.1.213: sengaja ditunda; semua tab dibangun dari `DATA` saat dibuka, render ulang parsial berisiko tinggi tanpa manfaat terukur) Kurangi `location.reload()` setelah simpan/hapus/impor (±11 tempat): render ulang komponen terdampak. Prasyarat: `allTrades` (kini `const`) jadi sumber tunggal yang bisa dihitung ulang (`recomputeAll()` + `renderAll()`).
 - [x] (diukur v1.1.213: tidak perlu, `renderTrades` ±20 ms dan ekuitas ±60 ms pada 8.000 transaksi; yang lambat adalah pemformat angka, sudah di-cache) Memo hitung ulang berat (`computeLapDD`, `eqDrawdownAllTime`, agregat Laporan) per kunci (versi `DATA` + filter); ukur dulu dengan `performance.measure`.
 - [ ] `Content-Security-Policy` di `vercel.json` (self, jsDelivr, Google Fonts, `*.supabase.co`; perlu `unsafe-inline` selama ada skrip inline di `<head>`/`journal-data`, atau pindahkan ke berkas). Wajib uji browser.
 - [x] (sudah bertahap lewat `ledgerLimit`/`LEDGER_STEP` "Tampilkan lagi"; v1.1.213 memverifikasi) Render bertahap buku transaksi (kini `innerHTML` dibangun ulang tiap `renderTrades()`); tinjau bila data > ±2.000 transaksi.
-- [ ] Pisah `app.js` per tab (ES module/beberapa berkas) bila `app.js` > ±400 KB (kini ±300 KB); minify hanya di build produksi terpisah, sumber tetap terbaca.
+- [ ] Pisah `js/app.js` per tab (ES module/beberapa berkas) bila `js/app.js` > ±400 KB (kini ±300 KB); minify hanya di build produksi terpisah, sumber tetap terbaca.
 
 **Analisis & disiplin** (usulan 3 Okt 2026, urutan prioritas; belum dikerjakan)
 - [x] **Tag setup/strategi per transaksi (v1.1.204)** (mis. CRT H4, RSI divergence, tanpa setup) dengan centang konfirmasi; Laporan menampilkan win rate, expectancy, dan PNL per setup. Perlu bidang baru pada transaksi, filter, impor/ekspor, dan sinkron (kolom Supabase + migrasi).
@@ -138,7 +141,7 @@ Hampir semua fitur baru hanya diuji di Chromium dengan data sintetis dan Supabas
 
 **Setelan**
 - [ ] Tentang: tautan panduan/README (menunggu alamat dokumentasi publik; tanggal build, Periksa pembaruan, dan Instal aplikasi selesai v1.1.147).
-- [x] Format angka (Indonesia/Internasional) selesai v1.1.214. Terjemahan teks UI ke bahasa Inggris tidak dikerjakan (ribuan teks tetap di `index.html`/`app.js`; butuh pemisahan teks ke kamus). (Ukuran tampilan selesai v1.1.159.)
+- [x] Format angka (Indonesia/Internasional) selesai v1.1.214. Terjemahan teks UI ke bahasa Inggris tidak dikerjakan (ribuan teks tetap di `index.html`/`js/app.js`; butuh pemisahan teks ke kamus). (Ukuran tampilan selesai v1.1.159.)
 - [x] Notifikasi pengingat (v1.1.215): berita dampak tinggi, batas harian, catatan psikologi; berjalan saat aplikasi terbuka. Push saat aplikasi tertutup butuh server (belum ada).
 
 **Ringkasan** (saran 24 Okt 2026)
@@ -158,9 +161,9 @@ Hampir semua fitur baru hanya diuji di Chromium dengan data sintetis dan Supabas
   - [ ] **P3** Gambar ulang sebagian (atribut) saat hanya lebar/tema berubah, tidak membuat ulang seluruh SVG.
 - Tampilan dan kegunaan:
   - [x] Baris ringkasan di bawah grafik: perubahan saldo/PNL/return, puncak, drawdown terdalam, jumlah hari (v1.1.242).
-  - [ ] **P1** Penanda hari melanggar aturan / batas rugi harian pada kurva.
+  - [x] Penanda hari melanggar aturan / batas rugi harian pada kurva (v1.1.248).
   - [x] Ingat pilihan: mode dan Zoom sumbu sudah tersimpan sebelumnya; legenda Modal/Puncak kini ikut tersimpan (v1.1.242).
-  - [ ] **P2** Garis tren / rata-rata bergerak (mis. 20 transaksi), tombol hidup/mati.
+  - [x] Garis rata-rata bergerak 20 transaksi, tombol hidup/mati di legenda (v1.1.248). Sisa: panjang jendela bisa diatur.
   - [ ] **P2** Bandingkan dengan periode lain (garis putus-putus; data dari fitur banding di Laporan).
   - [ ] **P2** Zoom cubit dan geser di ponsel.
   - [ ] **P2** Skala log untuk saldo yang tumbuh banyak kali lipat.
@@ -176,7 +179,7 @@ Hampir semua fitur baru hanya diuji di Chromium dengan data sintetis dan Supabas
 
 ## 4. Ide lanjutan (belum dijadwalkan)
 - **Impor CSV:** pratinjau baris, pilihan zona waktu, impor deposit, opsi memperbarui transaksi ber-ID sama.
-- **Build produksi ter-minify** terpisah (hemat ±30–40%); tinjau ulang bila `app.js` > ±400 KB.
+- **Build produksi ter-minify** terpisah (hemat ±30–40%); tinjau ulang bila `js/app.js` > ±400 KB.
 
 ## Keputusan yang sudah diambil
 - Pilihan periode berdiri sendiri per tab (mulai dari All, tidak disimpan). Performa dan Deposit **tidak** diberi filter periode: Performa sudah per bulan/minggu, Deposit punya pencarian dan filter tipe.

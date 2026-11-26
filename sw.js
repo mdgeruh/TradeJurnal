@@ -3,11 +3,12 @@
 // Anti campur-versi (v1.1.170): berkas CSS/JS dipanggil index.html dengan ?v=<versi> dan di-precache dengan nama bertanda itu;
 // halaman (navigasi) diambil jaringan-dulu agar index.html selalu yang terbaru, baru jatuh ke cache bila offline.
 // Panggilan ke Supabase (domain lain) tidak pernah di-cache.
-const V = '1.1.247';
+const V = '1.1.250';
 const CACHE = 'jurnal-v' + V;
 const SHELL = ['./', 'index.html',
-  ...['style.css', 'app.js', 'kalender.js', 'broker.js', 'sync.js', 'config.js', 'pwa.js'].map(f => f + '?v=' + V),
-  'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
+  'css/style.css?v=' + V,
+  ...['config', 'app', 'kalender', 'broker', 'sync', 'pwa'].map(f => 'js/' + f + '.js?v=' + V),
+  'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 const CDN = ['cdn.jsdelivr.net', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 
 self.addEventListener('install', e => {

@@ -2,7 +2,7 @@
 
 Ringkasan perubahan untuk pengguna, terbaru di atas. Isinya sama dengan **Setelan → Tentang aplikasi → Lihat riwayat** di aplikasi (data `USER_CHANGELOG` di `app.js`). Rincian teknis per versi ada di `CHANGELOG.md`; rencana ke depan di `roadmap.md`.
 
-**Versi saat ini: 1.1.247** (24 Nov 2026)
+**Versi saat ini: 1.1.250** (26 Nov 2026)
 
 ## Sorotan
 - Ringkasan: kurva ekuitas yang jelas (modal, puncak berjalan, drawdown, tooltip), pilihan **Ekuitas / PNL kumulatif**, PNL Minggu/Bulan Ini, lencana DD saat ini.
@@ -11,6 +11,17 @@ Ringkasan perubahan untuk pengguna, terbaru di atas. Isinya sama dengan **Setela
 - **Tampilan:** mode Gelap/Terang/Otomatis, 8 skema warna, aksen sendiri, mode ramah buta warna.
 - **Data aman:** sinkron cloud (Supabase), status dan pengingat cadangan, ekspor HTML mandiri/JSON, ekspor-impor pengaturan.
 - **Aplikasi terpasang (PWA)** di Android dan iOS, terbuka cepat dan bisa offline.
+
+## 26 Nov 2026 (v1.1.248 – v1.1.250)
+**Diubah**
+- **Susunan berkas proyek dirapikan** ke folder `css/`, `js/`, `icons/`, `docs/`, `sql/`, `tools/`, `dist/`. Tampilan dan data tidak berubah. Saat memperbarui, ganti seluruh isi folder dengan zip penuh.
+
+**Diperbaiki**
+- **Performa di layar lebar**: pil filter Arah tidak lagi tampil sebagai batang vertikal besar; filter Arah, Sesi, dan Emosi/Trigger/Jenis kini rapi selebar halaman.
+
+**Baru**
+- **Kurva ekuitas menandai hari yang melanggar**: lingkaran merah di atas grafik untuk hari yang rugi melewati batas harian, transaksinya melewati batas, atau ada pelanggaran aturan yang dicentang. Arahkan atau ketuk kurva untuk melihat alasannya. Bisa disembunyikan dari legenda.
+- **Garis rata-rata 20 transaksi** (titik-titik putih) untuk melihat arah kurva; nyalakan dari legenda. Deposit dan penarikan tidak ikut dirata-ratakan.
 
 ## 24 Nov 2026 (v1.1.243 – v1.1.247)
 **Diubah**
