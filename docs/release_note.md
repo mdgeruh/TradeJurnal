@@ -2,7 +2,7 @@
 
 Ringkasan perubahan untuk pengguna, terbaru di atas. Isinya sama dengan **Setelan → Tentang aplikasi → Lihat riwayat** di aplikasi (data `USER_CHANGELOG` di `app.js`). Rincian teknis per versi ada di `CHANGELOG.md`; rencana ke depan di `roadmap.md`.
 
-**Versi saat ini: 1.1.251** (26 Nov 2026)
+**Versi saat ini: 1.1.252** (26 Nov 2026)
 
 ## Sorotan
 - Ringkasan: kurva ekuitas yang jelas (modal, puncak berjalan, drawdown, tooltip), pilihan **Ekuitas / PNL kumulatif**, PNL Minggu/Bulan Ini, lencana DD saat ini.
@@ -12,7 +12,10 @@ Ringkasan perubahan untuk pengguna, terbaru di atas. Isinya sama dengan **Setela
 - **Data aman:** sinkron cloud (Supabase), status dan pengingat cadangan, ekspor HTML mandiri/JSON, ekspor-impor pengaturan.
 - **Aplikasi terpasang (PWA)** di Android dan iOS, terbuka cepat dan bisa offline.
 
-## 26 Nov 2026 (v1.1.248 – v1.1.251)
+## 26 Nov 2026 (v1.1.248 – v1.1.252)
+**Diperbaiki**
+- **Kurva ekuitas Ringkasan:** hover kini memilih titik terdekat (dulu selalu titik di kanan); waktu kurva selalu GMT+8 walau zona waktu perangkat berbeda; garis tidak terpotong di ujung kanan pada kurva yang sangat panjang; rata-rata 20 transaksi tidak menghitung deposit/penarikan dan langsung ada dari tepi kiri periode; tooltip ujung kanan menulis "Akhir rentang"; label sumbu-X tidak berulang untuk rentang panjang.
+
 **Diubah**
 - **Layar desktop lebar dipakai lebih penuh.** Halaman kini melebar sampai 1560 px (monitor ≥1500 px) atau 1840 px (≥1900 px), jadi ruang kosong di kiri-kanan berkurang dan kurva ekuitas lebih lebar. Layar yang lebih kecil tidak berubah.
 - **Susunan berkas proyek dirapikan** ke folder `css/`, `js/`, `icons/`, `docs/`, `sql/`, `tools/`, `dist/`. Tampilan dan data tidak berubah. Saat memperbarui, ganti seluruh isi folder dengan zip penuh.

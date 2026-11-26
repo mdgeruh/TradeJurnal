@@ -3,6 +3,16 @@
 Perubahan Jurnal XAUUSD, terbaru di atas. Semua rilis 22 Sep – 1 Okt 2026. Versi berbahasa pengguna akhir ada di aplikasi (Setelan → Tentang aplikasi). v1.1.144 ke atas dicatat per versi; sebelumnya diringkas per tema. Status dan jebakan bug: `SUMMARY.md`; rencana dan todo: `roadmap.md`.
 
 ## Rilis terbaru
+### 1.1.252 — 26 Nov
+Perbaikan kurva ekuitas Ringkasan (`renderEquityChart` di `js/app.js`), hasil audit kode:
+- **Hover memilih titik terdekat:** `nearestIndex` mengembalikan titik pertama dengan waktu ≥ kursor (tetangga kanan). Kini membandingkan jarak ke titik sebelumnya dan memilih yang lebih dekat. Teruji: di celah 33 px, kursor 20% dari titik A dulu menampilkan titik B, kini titik A.
+- **Zona waktu:** waktu titik kurva (`fullTimes`), titik deposit, dan `eqTimes` pada blok PNL snapshot dibaca dengan `parseGmt8()` (ms UTC sebenarnya), bukan `new Date(stringGMT8)` yang memakai zona perangkat. `eqDayKeyLocal()` kini membaca kalender GMT+8 (`t + 8 jam`, ISO). Label sumbu-X memakai `timeZone:'Etc/GMT-8'`. Teruji dengan jam dibekukan: path kurva identik di Asia/Makassar, Asia/Jakarta, dan America/New_York (sebelumnya berbeda).
+- **Animasi garis:** `stroke-dasharray="3000"` yang menetap diganti `pathLength="1"` dengan dasharray/dashoffset 1 → 0. Pada kurva volatil dengan panjang path 3085, versi lama menyembunyikan ±85 unit di ujung kanan.
+- **Rata-rata 20 transaksi:** dihitung dari transaksi saja (titik yang mengubah saldo/modal tanpa mengubah `pnl_kumulatif` dilewati) dan dari seluruh riwayat, bukan hanya titik dalam periode. Di periode 1B garis kini mulai dari tepi kiri (x=56) dan tidak lagi dari tengah grafik (x=307 pada data uji).
+- **Tooltip titik ekor** menulis "Akhir rentang". **Sumbu-X:** bulan+tahun sampai ±1100 hari, di atas itu tahun saja dengan label duplikat dikosongkan.
+- **Keterangan DD:** `title` pada pil "Terbesar periode ini", legenda Puncak berjalan, dan legenda rata-rata menjelaskan dasar hitung masing-masing. Definisi DD tidak diubah.
+- **Pengujian:** Playwright/Chromium dengan data sintetis (420 transaksi + deposit/penarikan), tiga zona waktu, jam dibekukan. Belum diuji di perangkat asli dan data nyata.
+- **Tidak diubah:** bentuk kurva halus (monotone) antar transaksi.
 ### 1.1.251 — 26 Nov
 - **Lebar layar desktop sangat lebar** (`css/style.css`, blok baru di akhir berkas): `.wrap` tetap `max-width:1240px` di 1100–1499px, naik ke `1560px` di ≥1500px dan `1840px` di ≥1900px. Di ≥1500px kolom kiri tab Ringkasan (`data-panel="grafik"`) menjadi `minmax(360px,440px)` (sebelumnya `minmax(340px,400px)`), kolom kurva tetap `1fr`. Penyebab keluhan: di monitor ±1830px (sidebar ciut 68px) konten hanya 1176px sehingga ±260px kosong di tiap sisi. Cetak/PDF tidak terpengaruh (`@media screen`).
 - **Versi:** `?v=` di `index.html`, `V` di `sw.js`, `APP_VERSION` dan entri `USER_CHANGELOG` di `js/app.js`; `dist/jurnal-trading-mandiri.html` dibangun ulang.

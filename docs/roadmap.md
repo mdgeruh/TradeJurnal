@@ -2,7 +2,8 @@
 
 Satu-satunya daftar rencana dan todo proyek (dulu ada di `SUMMARY.md`). Prioritas: **P1** tinggi, **P2** sedang, **P3** rendah. Tidak ada tanggal tetap. Setiap butir yang mengubah kode mengikuti **Alur rilis** di `README.md`; saat selesai, hapus dari sini (centang bila perlu satu rilis), pindahkan tema barunya ke tabel "Sudah selesai", dan catat di `release_note.md` dan `CHANGELOG.md`. Jebakan bug tiap area ada di `SUMMARY.md`.
 
-## Sudah selesai (v1.1.251)
+## Sudah selesai (v1.1.252)
+- Perbaikan kurva ekuitas Ringkasan: hover titik terdekat, waktu GMT+8 konsisten, animasi garis tanpa dasharray tetap, rata-rata 20 transaksi hanya transaksi, label ekor dan sumbu-X (v1.1.252).
 - Lebar desktop sangat lebar: `.wrap` 1560px (≥1500px) dan 1840px (≥1900px) (v1.1.251).
 - Restrukturisasi folder: css/, js/, icons/, docs/, sql/, tools/, dist/ (v1.1.250). Pemecahan `app.js`/`style.css` per modul tetap di daftar Optimalisasi.
 - Performa layar lebar: filter Arah/Sesi/Emosi tidak lagi menjadi sel grid yang meregang (v1.1.249).
@@ -198,9 +199,6 @@ Hampir semua fitur baru hanya diuji di Chromium dengan data sintetis dan Supabas
 
 - [x] Kalender: PCE, PDB, penjualan ritel, ISM Nov-Des ditambahkan v1.1.202 (PDB/PCE dari jadwal BEA); kalender bawaan berakhir 30 Des 2026, perpanjang menjelang Desember.
 
-## Temuan audit kurva ekuitas Ringkasan (belum dikerjakan)
-- `nearestIndex` memilih titik di kanan kursor, bukan terdekat.
-- Waktu titik kurva memakai `new Date()` lokal, sedangkan rentang periode memakai `parseGmt8` (UTC); bergeser di perangkat non-GMT+8.
-- `stroke-dasharray="3000"` permanen setelah animasi bisa memotong garis bila panjang path >3000.
-- Dua definisi drawdown pada satu grafik (garis puncak/lencana vs strip DD/tooltip).
-- Rata-rata 20 transaksi menghitung titik deposit/penarikan; tooltip titik ekor menampilkan tanggal transaksi terakhir; label sumbu-X tahun berulang untuk rentang >400 hari.
+## Opsional kurva ekuitas
+- Garis tangga (saldo berubah mendadak saat transaksi tutup) sebagai alternatif kurva halus antar transaksi yang berjauhan.
+- Menyamakan dasar hitung DD (garis puncak/lencana vs strip/tooltip) bila keterangan di `title` dirasa kurang.
