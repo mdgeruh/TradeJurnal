@@ -3,7 +3,70 @@
 Perubahan Jurnal XAUUSD, terbaru di atas. Semua rilis 22 Sep – 1 Okt 2026. Versi berbahasa pengguna akhir ada di aplikasi (Setelan → Tentang aplikasi). v1.1.144 ke atas dicatat per versi; sebelumnya diringkas per tema. Status dan jebakan bug: `SUMMARY.md`; rencana dan todo: `roadmap.md`.
 
 ## Rilis terbaru
-### 1.1.232 — 29 Nov
+### 1.1.247 — 24 Nov
+- **Kartu sekunder terlipat di ponsel:** `#sessCard`, `#insightCard`, `#noteCard` mendapat kelas `.rc-fold`; di layar <= 700px terlipat bawaan, ketuk/Enter pada `.recent-head` membuka-lipat (role=button, aria-expanded). Pilihan disimpan di `localStorage['jurnalRcFold']` (`'o'` dibuka, `'c'` dilipat). Layar lebar tidak terpengaruh.
+- **Urutan bawaan:** kartu `chart` (TradingView) dipindah ke paling akhir di `RC_CARDS` dan `RC_MOBILE`. Urutan tersimpan pengguna tidak diubah.
+### 1.1.246 — 24 Nov
+- **Urutan bawaan Ringkasan:** kartu `aturan` (checklist pra-trading) dipindah ke setelah `today` (ponsel, `RC_MOBILE`) dan setelah `saldo` (`RC_CARDS`). Urutan tersimpan pengguna (`jurnalRingkasan`) tidak diubah.
+- **Kartu Target:** bila target bulanan belum diisi dan sudah ada transaksi, kartu tampil dengan label "Belum diatur" dan tombol `.tg-set` "Atur target bulanan" (membuka Setelan → Trading). Sebelumnya kartu disembunyikan total.
+- Peringatan batas rugi harian tidak diubah: sel `tcLimit` di kartu Hari ini sudah berwarna `warn` mulai 80% dan `over` saat tercapai.
+### 1.1.245 — 24 Nov
+- **Batang PNL harian di bawah kurva ekuitas dihapus** (blok `barsSvg`, grup `.eq-bars`, label "Harian", CSS `.eq-bar`; konstanta `barH`/`barTop` hilang). Tinggi plot kurva bertambah (`plotH` tidak lagi dikurangi `barH` dan satu `stripGap`); strip DD, penanda hari terbaik/terburuk, dan tooltip PNL harian tidak berubah.
+### 1.1.244 — 24 Nov
+- **Strip statistik periode dihapus dari Ringkasan** (`#statPeriodRow`, `#statStrip`, `#statPeriodChips`, `#qfStatPill`; fungsi `renderStatStrip`; CSS `.stat-period*`, `.stat-vs`, `.qf-wrap`). Ringkasan metrik ada di Laporan. `computePeriodStats` dipertahankan (dipakai Laporan dan Performa).
+- **Label periode:** `selectPeriodKey`/`applyCustomRange` kini mengisi variabel `periodLabelTxt` (dulu dibaca dari teks `#statPeriod`), dipakai catatan skop Analisis cepat. Perhitungan periode sebelumnya (selisih vs sebelumnya) ikut dihapus.
+- **Kartu Ringkasan:** id `statistik` diganti `psikologi` (hanya memuat `#psyPromptCard`, label "Ajakan catatan psikologi"). Validator pref `jurnalRingkasan` tetap menerima `statistik` dan `heat` agar ekspor lama tidak ditolak; `rcOrder` mengabaikan id yang tak dikenal.
+- Mode fokus (`.rc-focus`) kini hanya saldo dan Hari ini. Filter silang (QF) hanya untuk Analisis cepat; `qfRefresh` tidak lagi memanggil `selectPeriodKey`. Tombol brush kurva "Terapkan ke statistik" menjadi "Terapkan ke periode".
+### 1.1.243 — 24 Nov
+- **Kartu PNL harian 30 hari dihapus dari Ringkasan** (duplikat kalender PNL harian di Analisis PNL). Dihapus: `#heatCard` (`index.html`), `renderHeatCard` dan handler klik `#heatGrid` (`app.js`), entri `heat` di `RC_CARDS`/`RC_MOBILE`, serta CSS `.heat-grid`/`.heat-cell`/`.heat-legend` (`.lap-heat*` milik Laporan tidak disentuh).
+- **Kompatibilitas pengaturan:** validator pref `jurnalRingkasan` tetap menerima id `heat` agar ekspor pengaturan lama dan data cloud tidak ditolak; `rcOrder` membuang id yang tak dikenal, jadi urutan/sembunyi kartu lain tetap utuh.
+- Filter silang (QF) kini berlaku untuk statistik periode dan Analisis cepat; teks `.qf-scope` diperbarui. `qfRefresh` dan `renderRingkasanV227` tidak lagi memanggil kartu heat.
+### 1.1.242 — 23 Nov
+- **Ringkasan di bawah kurva ekuitas** (`#eqSum`, `.eq-sum`, dihitung di `renderEquityChart` dari `vals`/`maxDD`/`athIdx`/`scopeStart..scopeEnd`): perubahan saldo (Ekuitas; termasuk deposit/penarikan), perubahan PNL (PNL kumulatif), atau perubahan return dalam poin (Return %); puncak; drawdown terdalam rentang (hanya hasil trading); lama rentang (hari). Mengikuti pemilih periode dan mode.
+- **Legenda diingat:** `eqLegendHidden` disimpan di `localStorage` kunci `jurnalEqLegend`. Mode kurva (`jurnalEqMode`) dan Zoom sumbu (`jurnalEqZoom`) sudah tersimpan sejak sebelumnya.
+- Pencarian titik hover (`nearestIndex`) ternyata sudah pencarian biner; tidak diubah. Cache hitungan sengaja tidak dikerjakan (lihat roadmap).
+### 1.1.241 — 23 Nov
+- **Perbaikan tanggal.** `USER_CHANGELOG`, `APP_BUILD_DATE`, dan judul versi 1.1.227–1.1.240 di sini yang bertanggal ke depan (24 Nov – 2 Des) disamakan ke 23 Nov 2026. Urutan riwayat mengikuti urutan array untuk tanggal yang sama. Tidak ada perubahan fitur.
+### 1.1.240 — 23 Nov
+- **Buka dari file explorer HP.** `build-standalone.py` (Python 3, tanpa dependensi) menggabungkan `index.html` + `style.css` + 6 skrip + ikon (data URI) menjadi `jurnal-trading-mandiri.html`; perlu karena pengelola berkas Android membuka HTML lewat `content://` sehingga berkas pendamping (css/js) tidak ikut termuat. Tautan manifest dihapus di hasil build; service worker memang hanya di http(s).
+- Gerbang login (`gate-on`) kini hanya di `http:`/`https:`; di `file:`/`content:` langsung ke aplikasi. Sinkron cloud tetap bisa dari halaman Setelan bila ada internet.
+- Catatan: data `localStorage` terikat ke alamat berkas; memindahkan/mengganti nama berkas = data tidak terlihat. Ekspor JSON sebelum memindahkan.
+### 1.1.239 — 23 Nov
+- **Ringkasan lebih ringan.** `setInterval(renderRingkasanV227, 60000)` kini lewat `tick()`: dilewati bila `document.hidden` atau panel `#tabpanel-grafik` tidak aktif, ditandai `stale`, lalu digambar ulang sekali lewat `visibilitychange` / `MutationObserver` kelas panel saat Ringkasan tampil lagi (lebar chart benar). Render awal tidak berubah.
+- `content-visibility:auto` (+ `contain-intrinsic-size`) untuk `#targetCard`, `#sessCard`, `#insightCard`, `#noteCard`, `#recentCard`, `#rulesCard`; `#heatCard`, `#quickCard`, `#chartCard`, dan kartu ber-popup sengaja dikecualikan (paint containment memotong tooltip/popup). Cetak: `visible`.
+- Belum diukur dengan Lighthouse (butir di roadmap tetap terbuka); efeknya terutama menghemat kerja saat tab lain dibuka.
+### 1.1.238 — 23 Nov
+- **Liquid Glass** (CSS saja, hanya aktif saat `html[data-glass="1"]`). Token baru di blok `html[data-glass="1"]`: `--glass-rim` (sorot atas-kiri, pantulan bawah-kanan, cahaya dalam lewat `inset box-shadow`, tanpa pseudo-element agar bar filter `sticky` tidak terganggu), `--glass-rim-sm`, `--glass-fx` / `--glass-fx-lite` (blur + saturate + brightness; versi ringan di ≤720 px), `--glass-chip`, `--glass-lens`, `--glass-modal`.
+- Kartu, `.rg-card`, bar filter Laporan, sidebar desktop, modal, dan lembar tanggal memakai token baru. Tombol (`.quick-chip`, `.custom-select-btn`, `.theme-toggle`, `.ledger-reset-btn`, `.dt-picker-btn`) berbentuk lensa dengan efek tekan; `.active` memakai `--glass-lens`.
+- Ponsel: `.bottom-nav` menjadi kapsul mengambang (`left/right:10px`), `.wrap` dan `.fab-wrap` digeser agar tidak tertutup.
+- Dropdown (`.custom-select-list`) tetap padat. Fallback: tanpa dukungan blur / `prefers-reduced-transparency` kartu padat; `prefers-contrast:more` mematikan blur; efek tekan mati pada `prefers-reduced-motion`; cetak tanpa bayangan.
+### 1.1.237 — 23 Nov
+- **Kartu Analisis cepat** (`#quickCard`, id `cepat` di pengaturan kartu Ringkasan, kini 14 kartu): tab Bergulir (WR/PF jendela 20, garis target WR dari Setelan), Distribusi (histogram, rata-rata, median), Emosi & setup (batang dua arah, ketuk untuk filter), Jam × hari (7×8 blok 3 jam GMT+8), Disiplin (isLanggar), Drawdown (episode, kebutuhan pemulihan).
+- **Filter silang `QF`.** Deskriptor `field|cell|bin|rule`; diterapkan ke statistik periode (`selectPeriodKey`/`applyCustomRange`, label periode memuat `Filter:`), PNL harian 30 hari, dan semua tab; pil di kartu dan di baris periode statistik. Kurva dan saldo tetap seluruh akun.
+- **Batang PNL harian** di bawah kurva ekuitas (`.eq-bar`), sumbu-X sama dengan kurva; tinggi SVG +40 px.
+- **Layar lebar (≥900 px):** keenam chart tampil terpisah dalam grid 2 kolom (tanpa tab), masing-masing dengan baris rincian sendiri; ponsel tetap tab.
+- **Kalender mini** (saran 7) tidak diduplikasi: kartu PNL harian 30 hari sudah serupa (sejak v1.1.236 memuat nominal).
+- **Tes.** `t237.js` (38 cek); `t221.js` 13→14 baris.
+
+### 1.1.236 — 23 Nov
+- **Sel PNL harian 30 hari** memuat tanggal, nominal PNL (ringkas, `fmtMoneyNum`) dan jumlah transaksi (`n×`); nominal memakai `.rg-money` sehingga buram saat angka disembunyikan.
+- **Tooltip kurva** menambah `Hari: ±nominal · n×` bila lebar kurva ≥460 px.
+- **Tes.** `t236.js`: isi sel tidak meluber, buram saat disembunyikan, tooltip lebar/sempit.
+
+### 1.1.235 — 23 Nov
+- **Bar filter menempel ikut tema kaca.** `html[data-glass="1"] .lap-filter-sec.lf-closed` memakai latar `color-mix(--ink 38%, transparent)` + `backdrop-filter: blur(18px)` + tepi kaca; tema non-kaca tetap solid.
+- **Tes.** `t235.js`: latar bar tembus pandang saat mode kaca aktif dan solid saat tidak.
+
+### 1.1.234 — 23 Nov
+- **Bar filter menempel.** `.lap-filter-sec.lf-closed` memakai `position:sticky` (top = safe-area), dinonaktifkan saat cetak.
+- **Blok sekunder bisa dilipat.** `.psy-group[data-fold]` dibungkus `<details class="lap-fold-grp">` oleh JS; default terlipat ≤700 px, terbuka di layar lebar; dibuka paksa saat cetak lalu dipulihkan.
+- **Tes.** `t234.js`: 6 blok, default per lebar layar, tap target ≥44 px, filter menempel, grafik di blok terbuka punya lebar, tanpa scroll horizontal.
+
+### 1.1.233 — 23 Nov
+- **Laporan satu halaman.** `#laporanSubnav` dihapus; semua `[data-lgroup]` tampil berurutan. `showLaporanGroup(g)` kini menggulir ke bagian (`scroll-margin-top`); rute `#laporan-<kunci>` dan `[data-go-lap]` tetap valid; hash tidak lagi menyimpan sub-tab.
+- **Tes.** `t233.js` baru; `tlap.js`, `tnews.js`, `troute.js` disesuaikan.
+
+### 1.1.232 — 23 Nov
 - **Kurva ekuitas.** SVG memakai lebar kontainer asli (viewBox = lebar nyata, render ulang via ResizeObserver) sehingga font sumbu 10,5 px tidak lagi tertarik; tinggi 330/320 px; label sumbu-X 4/6.
 - **Penanda & anotasi.** ▲/▼ deposit, penarikan, kompensasi MC (hanya mode Ekuitas); ◆ hari terbaik/terburuk periode (≥3 hari bertransaksi).
 - **Mode Return %.** `jurnalEqMode='ret'` = PNL kumulatif ÷ modal kumulatif ×100 (bukan TWR); validator Setelan diperluas.
@@ -12,16 +75,16 @@ Perubahan Jurnal XAUUSD, terbaru di atas. Semua rilis 22 Sep – 1 Okt 2026. Ver
 - **Strip drawdown & legenda.** Strip underwater 30 px menggantikan pita merah; DD terbesar periode digabung ke baris badge DD; legenda satu baris (bisa digeser di ponsel); `Fokus rentang` → `Zoom sumbu` (+ "otomatis").
 - **Tes.** `t232.js`: skala 1:1, font efektif, legenda satu baris, penanda, anotasi, strip DD, info hover/klik/tombol, panah, mode Return %, brush + terapkan; t219 dan tes lain disesuaikan.
 
-### 1.1.231 — 28 Nov
+### 1.1.231 — 23 Nov
 - **Kartu saldo ringkas.** Padding `.hero` 24/22 (20/18 di ≤480 px), `.pnl-snapshot`, `.pnl-grid`, `.pnl-cell` dirapatkan; `.hrs-inline` menaruh estimasi Rp sebaris (nowrap) pada PNL kumulatif; label spark `PNL harian 7H`; garis pemisah baris kedua grid PNL.
 - **Tes.** `t231.js`: tinggi kartu ≤520 px di ponsel, estimasi Rp satu baris, elemen lengkap, blur PNL tetap, mode Rp tanpa baris ganda.
 
-### 1.1.230 — 27 Nov
+### 1.1.230 — 23 Nov
 - **Pembagian peran.** Performa = hasil per waktu; Laporan = analisis pola. Dihapus: `perfHeat2`/`renderPerfHeat2` (Jam & hari buka di Performa; versi Laporan → Lanjutan tetap) dan `lapArahSplit`/`renderLapArahSplit`/`lapArahStat` (Beli vs Jual di Laporan; Split arah di Performa tetap, `lap2NoArah` tetap dipakai Temuan otomatis).
 - **Tautan antar halaman.** Kartu `#perfMore` di Performa (`data-go-lap`) dan petunjuk di Laporan → Lanjutan (`data-go-perf`), memakai `goToTab` dan `showLaporanGroup`.
 - **Tes.** `tperf5.js` (khusus heatmap Performa) dipindahkan ke `old/`; ditambah `t230.js`.
 
-### 1.1.229 — 26 Nov
+### 1.1.229 — 23 Nov
 - **Deposit di ponsel.** `#tabpanel-modal table.ledger` ≤700 px menjadi grid per baris (tanggal + jumlah, jenis + tipe), header pengurut menjadi chip, `min-width` tabel dibuang.
 - **Area sentuh.** Min-height 38 px untuk `.quick-chip`, `.lap-gran-btn`, `.kal-chip`, `.lap-filter-chip`, `.hm-btn`; `.eye-toggle` dan panah kalender ≥38 px; heatmap 30 hari 6 kolom di ponsel.
 - **Kalender.** `#kalFoldBtn` melipat `#kalFilters` (kelas `kfold-open`) di ≤700 px.
@@ -29,7 +92,7 @@ Perubahan Jurnal XAUUSD, terbaru di atas. Semua rilis 22 Sep – 1 Okt 2026. Ver
 - **Teks.** `.recent-meta` dan `.tc-sub` boleh dua baris di ponsel; kartu spark saldo membungkus di ≤480 px.
 - **Label Analisis PNL.** `Hari Menang (% semua hari)` dengan tooltip dasar hitung (hari kalender, termasuk akhir pekan) dan `Hari Impas / Tanpa Transaksi`.
 
-### 1.1.228 — 25 Nov
+### 1.1.228 — 23 Nov
 - **Ringkasan dirapikan.** Hapus `#dayLimitBox` (batas harian cukup di kartu Hari ini), sel `tcNews` (kartu `kalMini` tetap), 7H/30H di `#pnlGrid` disembunyikan bila `pl` dan `pct` sama dengan Minggu/Bulan Ini; label "Drawdown PNL saat ini" vs "DD ekuitas saat ini"; sel "Catatan" menjadi "Catatan trade"; grid Hari ini 3 kolom.
 - **Performa.** Bagian Bandingkan dua periode (`perfCmp`, `csw_perfCmpA/B`, `renderPerfCmp`) dihapus; pembanding tetap ada di Laporan → Bandingkan.
 - **Filter lipat di ponsel.** Transaksi: `#ledgerFoldBtn` + kelas `lfold-open` pada `#ledgerSec` (pencarian tetap tampil, badge jumlah filter). Laporan: `lapFilterSec` terlipat bawaan di ≤700 px bila belum ada preferensi tersimpan.
@@ -37,7 +100,7 @@ Perubahan Jurnal XAUUSD, terbaru di atas. Semua rilis 22 Sep – 1 Okt 2026. Ver
 - **Seragamkan label.** Setelan → Data: `lblCounts`, `lblPairs` (nama sama diabaikan huruf/tanda baca + sinonim greedy/serakah, fvg/fair value gap, dll.), mengganti label pada emosi, trigger entry/exit, jenis entry, dan setup lalu menyimpan lewat `saveActiveData`.
 - **Teks Setelan** (urutan bawaan ponsel, Target performa) diperbarui.
 
-### 1.1.227 — 24 Nov
+### 1.1.227 — 23 Nov
 - **Kartu Ringkasan baru.** `targetCard` (progres = PNL bulan ini ÷ target `getPerfCfg().target`, sisa hari trading Senin–Jumat GMT+8, kebutuhan PNL per hari; tersembunyi tanpa target), `sessCard` (PNL hari ini per sesi menurut jam buka via `lapSessionIdx`, plus 7H), `insightCard` (`insightSentence()`: langgar vs patuh, emosi paling merugikan n≥3, setup terbaik n≥5), `heatCard` (30 sel, intensitas warna, klik → `#transaksi?dari=&sampai=`), `noteCard` (`jurnalDayNotes` per akun, maks 200 karakter dan 60 catatan, lokal saja, tidak ikut ekspor atau sinkron). Semuanya terdaftar di `RC_CARDS`, `RC_MOBILE`, dan validator `jurnalRingkasan` (13 id); angka ikut tersamar bila angka PNL disembunyikan (`.rg-card.hidden-values`).
 - **Selisih vs periode sebelumnya.** `renderStatStrip(st, label, prev)` menampilkan `.stat-vs` untuk Transaksi, Win rate, dan Laba/Rugi; pembanding = periode sama panjang tepat sebelumnya (preset 7H/1B/3B/1T dan Kustom), tidak ada untuk All atau bila periode sebelumnya kosong.
 - **Mode fokus ponsel.** `#focusBar`/`#focusBtn`, kelas `rc-focus` pada `#tabpanel-grafik`, pref per perangkat `jurnalFokus` (validator, masuk `SETELAN_SKIP`).

@@ -2,7 +2,22 @@
 
 Satu-satunya daftar rencana dan todo proyek (dulu ada di `SUMMARY.md`). Prioritas: **P1** tinggi, **P2** sedang, **P3** rendah. Tidak ada tanggal tetap. Setiap butir yang mengubah kode mengikuti **Alur rilis** di `README.md`; saat selesai, hapus dari sini (centang bila perlu satu rilis), pindahkan tema barunya ke tabel "Sudah selesai", dan catat di `release_note.md` dan `CHANGELOG.md`. Jebakan bug tiap area ada di `SUMMARY.md`.
 
-## Sudah selesai (v1.1.232)
+## Sudah selesai (v1.1.247)
+- Ringkasan ponsel: kartu Sesi, Wawasan, Catatan terlipat bawaan; Chart XAUUSD ke akhir urutan bawaan (v1.1.247).
+- Ringkasan: Aturan trading naik di urutan bawaan; kartu Target punya ajakan "Atur target bulanan" (v1.1.246).
+- Kurva ekuitas: batang PNL harian dihapus (v1.1.245).
+- Ringkasan: strip statistik periode dihapus (ada di Laporan); mode fokus saldo + Hari ini (v1.1.244).
+- Ringkasan: kartu PNL harian 30 hari dihapus (duplikat Analisis PNL); filter silang untuk statistik dan Analisis cepat (v1.1.243).
+- Kurva ekuitas: ringkasan periode di bawah grafik, legenda diingat (v1.1.242).
+- Tanggal riwayat perubahan v1.1.227–v1.1.240 diperbaiki ke 23 Nov (v1.1.241).
+- Buka dari file explorer HP: `build-standalone.py` menghasilkan satu berkas HTML mandiri; gerbang login tidak tampil di `file:`/`content:` (v1.1.240).
+- Ringkasan lebih ringan: penyegaran 60 dtk hanya saat tab terlihat, `content-visibility:auto` untuk 6 kartu bawah (v1.1.239).
+- Efek kaca bergaya Liquid Glass: token `--glass-rim`/`--glass-fx`/`--glass-lens`, tombol lensa, navigasi bawah mengambang (v1.1.238).
+- Analisis cepat: 6 tab chart interaktif, filter silang, batang PNL harian di kurva (v1.1.237).
+- PNL harian 30 hari dan tooltip kurva menampilkan nominal & jumlah transaksi (v1.1.236).
+- Bar filter Laporan menempel ikut tema kaca (tembus pandang) (v1.1.235).
+- Laporan: filter menempel dan blok sekunder bisa dilipat (v1.1.234).
+- Laporan satu halaman (sub-tab dihapus) (v1.1.233).
 - Perbaikan & peningkatan kurva ekuitas (10 saran) (v1.1.232).
 - Optimalisasi kartu saldo akhir akun (lebih ringkas) (v1.1.231).
 - Pembagian peran Performa (hasil per waktu) dan Laporan (analisis pola) (v1.1.230).
@@ -134,6 +149,24 @@ Hampir semua fitur baru hanya diuji di Chromium dengan data sintetis dan Supabas
 - [x] Grafik ekuitas: legenda ringkas, Fokus rentang sumbu-Y (v1.1.219)
 - [x] Transaksi terakhir lebih kaya, sparkline dan drawdown saat ini, kepatuhan aturan (v1.1.220)
 - [x] Atur kartu sendiri dan urutan di ponsel (v1.1.221)
+
+**Kurva ekuitas** (saran 23 Nov 2026; belum dikerjakan)
+- Kinerja (belum diukur; ukur dulu dengan data uji ±5.000 transaksi, catat waktu sebelum/sesudah):
+  - [ ] **P1** (ditunda v1.1.242: butuh sinyal "data berubah" yang andal; cache salah = kurva basi) Cache hitungan berat di `renderEquityChart`: `eqDrawdownAllTime()` (seluruh riwayat) dan agregasi PNL per hari (`dayAgg`) dihitung ulang tiap ganti periode/putar layar/ganti tema; simpan sampai data berubah.
+  - [ ] **P1** Kurangi titik untuk rentang panjang (±2× lebar layar, mis. LTTB) pada garis, garis puncak, dan strip drawdown; titik asli tetap untuk hover/tooltip.
+  - [x] Pencarian titik hover (`nearestIndex`) sudah pencarian biner; tidak perlu diubah (dicek v1.1.242).
+  - [ ] **P3** Gambar ulang sebagian (atribut) saat hanya lebar/tema berubah, tidak membuat ulang seluruh SVG.
+- Tampilan dan kegunaan:
+  - [x] Baris ringkasan di bawah grafik: perubahan saldo/PNL/return, puncak, drawdown terdalam, jumlah hari (v1.1.242).
+  - [ ] **P1** Penanda hari melanggar aturan / batas rugi harian pada kurva.
+  - [x] Ingat pilihan: mode dan Zoom sumbu sudah tersimpan sebelumnya; legenda Modal/Puncak kini ikut tersimpan (v1.1.242).
+  - [ ] **P2** Garis tren / rata-rata bergerak (mis. 20 transaksi), tombol hidup/mati.
+  - [ ] **P2** Bandingkan dengan periode lain (garis putus-putus; data dari fitur banding di Laporan).
+  - [ ] **P2** Zoom cubit dan geser di ponsel.
+  - [ ] **P2** Skala log untuk saldo yang tumbuh banyak kali lipat.
+  - [ ] **P3** Simpan kurva sebagai PNG (opsi menyembunyikan nominal, ikut tombol mata).
+  - [ ] **P3** Tooltip ponsel: ketuk menahan titik + tombol Lihat transaksi.
+  - [ ] **P3** Periksa Return % saat ada penarikan (tidak boleh turun palsu) dan beri catatan kecil bila modal berubah.
 
 **Optimalisasi**
 - [ ] (Terblokir: jaringan sesi tidak bisa mengunduh font; kerjakan dari mesin dengan akses npm/CDN) Host sendiri font (Fraunces, IBM Plex Mono) sebagai `woff2` subset Latin + tambah ke `SHELL` di `sw.js` (offline penuh tanpa dependensi luar).

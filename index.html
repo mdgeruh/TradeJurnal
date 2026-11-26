@@ -20,7 +20,7 @@ var ac=JSON.parse(localStorage.getItem('jurnalAccent')||'null'),a=ac&&ac[light?'
 // Halaman login (v1.1.146): tampil sejak render pertama bila belum ada sesi Supabase tersimpan, bukan sedang membuka tautan reset password,
 // dan pengguna belum memilih "Lanjut tanpa masuk". sync.js mencabut kelas ini bila Supabase tidak terpasang/tidak terjangkau.
 (function(){try{var h=location.hash+location.search,ls=localStorage,has=/access_token|type=recovery|[?&]code=/.test(h)||Object.keys(ls).some(function(k){return /^sb-.*-auth-token$/.test(k);});
-if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.add('gate-on');}catch(e){}})();
+if(!has&&ls.getItem('jurnalGateSkip')!=='1'&&/^https?:$/.test(location.protocol))document.documentElement.classList.add('gate-on');}catch(e){}})();
 </script>
 <script>
 // Status sidebar desktop (v1.1.109): diterapkan sebelum render pertama supaya tidak melompat. Tanpa pilihan tersimpan: layar < 1280px mulai ciut.
@@ -37,7 +37,7 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="style.css?v=1.1.232">
+<link rel="stylesheet" href="style.css?v=1.1.247">
 </head>
 <body>
 <div class="login-gate" id="loginGate" role="dialog" aria-modal="true" aria-labelledby="lgTitle">
@@ -120,7 +120,7 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
     </div>
   </section>
 
-  <div class="focus-bar" id="focusBar"><button type="button" class="quick-chip" id="focusBtn" aria-pressed="false" title="Tampilkan hanya saldo, hari ini, dan statistik">Mode fokus</button></div>
+  <div class="focus-bar" id="focusBar"><button type="button" class="quick-chip" id="focusBtn" aria-pressed="false" title="Tampilkan hanya saldo dan hari ini">Mode fokus</button></div>
 
   <section class="today-card" id="todayCard" aria-label="Ringkasan hari ini">
     <div class="today-head"><h2>Hari ini</h2><span id="todayDate"></span></div>
@@ -181,9 +181,6 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
     <div class="chart-box" id="chartBox"></div>
   </section>
 
-  <div class="stat-period-row" id="statPeriodRow"><div class="stat-period" id="statPeriod"></div><div class="lap-gran-tabs" id="statPeriodChips" role="tablist" aria-label="Periode statistik"></div></div>
-  <section class="stats" id="statStrip" aria-live="polite"></section>
-
   <section class="psy-prompt" id="psyPromptCard" hidden>
     <div class="psy-prompt-text">
       <strong id="psyPromptTitle"></strong>
@@ -229,10 +226,11 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
     <p class="insight-text" id="insightText"></p>
   </section>
 
-  <section class="rg-card" id="heatCard" hidden aria-labelledby="heatTitle">
-    <div class="recent-head"><h2 id="heatTitle">PNL harian 30 hari</h2><span class="rules-prog" id="heatNote"></span></div>
-    <div class="heat-grid" id="heatGrid" role="list"></div>
-    <div class="rules-hint heat-legend">Hijau untung, merah rugi, makin pekat makin besar. Ketuk hari untuk melihat transaksinya.</div>
+  <section class="rg-card" id="quickCard" hidden aria-labelledby="quickTitle">
+    <div class="recent-head"><h2 id="quickTitle">Analisis cepat</h2><span class="rules-prog" id="quickNote"></span></div>
+    <div class="qc-filter" id="qcFilter" hidden></div>
+    <div class="qc-tabs" id="qcTabs" role="tablist" aria-label="Jenis analisis"></div>
+    <div class="qc-body" id="qcBody"></div>
   </section>
 
   <section class="rg-card" id="noteCard" aria-labelledby="noteTitle">
@@ -501,8 +499,6 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
     <div class="laporan-btn-group"><button type="button" class="laporan-print-btn has-ic ic-only" id="laporanCsvBtn" title="Unduh ringkasan Laporan periode &amp; filter terpilih (CSV)" aria-label="Ekspor CSV"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M5 21h14"/></svg><span class="btn-sr">Ekspor CSV</span></button><button type="button" class="laporan-print-btn has-ic ic-only" id="laporanPrintBtn" aria-label="Cetak / PDF" title="Cetak / PDF"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V3h12v6"/><rect x="6" y="14" width="12" height="7"/><path d="M6 17H4a1 1 0 0 1-1-1v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a1 1 0 0 1-1 1h-2"/></svg><span class="btn-sr">Cetak / PDF</span></button></div>
   </div>
 
-  <div class="sg-tabs" id="laporanSubnav" role="tablist" aria-label="Bagian laporan"></div>
-
   <section class="lap-filter-sec" id="lapFilterSec">
     <h2 class="lap-fold-h"><button type="button" class="lap-fold-btn" id="lapFilterToggle" aria-expanded="true" aria-controls="lapFilterBody" title="Buka/tutup periode &amp; filter">
       <span class="lap-fold-title">Periode &amp; filter</span>
@@ -609,21 +605,21 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
     <div class="psy-group"><h3>Emosi setelah transaksi rugi</h3><div id="lapAfterLoss"></div></div>
     <div class="psy-group"><h3>Silang psikologi</h3><div class="lap-heat-mode" id="lapMxMode"></div><div class="lap-mx" id="lapMx"></div><div class="psy-cover" id="lapMxNote" style="margin-top:8px;"></div></div>
     <div class="psy-group"><h3>Jam &amp; hari buka (GMT+8)</h3><div id="lapHeat"></div><div class="psy-cover" id="lapHeatInfo" style="margin-top:8px;"></div></div>
-    <div class="psy-group"><h3>Sesi pasar (waktu buka, GMT+8)</h3><div id="lapSession"></div><div class="psy-cover" id="lapSessionNote" style="margin-top:8px;"></div></div>
+    <div class="psy-group" data-fold="1"><h3>Sesi pasar (waktu buka, GMT+8)</h3><div id="lapSession"></div><div class="psy-cover" id="lapSessionNote" style="margin-top:8px;"></div></div>
     <div class="psy-group"><h3 id="lapNewsTitle">Saat rilis berita (±30 menit dari event dampak tinggi)</h3><div id="lapNews"></div><div class="psy-cover" id="lapNewsNote" style="margin-top:8px;"></div></div>
-    <div class="psy-group"><h3>Durasi posisi vs hasil</h3><div id="lapDur"></div></div>
-    <div class="psy-group"><h3>Distribusi hasil per transaksi</h3>
+    <div class="psy-group" data-fold="1"><h3>Durasi posisi vs hasil</h3><div id="lapDur"></div></div>
+    <div class="psy-group" data-fold="1"><h3>Distribusi hasil per transaksi</h3>
       <div class="theme-modes" id="lapDistUnit" role="group" aria-label="Satuan distribusi" style="margin:6px 0 10px;"><button type="button" class="quick-chip active" data-u="pnl" aria-pressed="true">PNL</button><button type="button" class="quick-chip" data-u="pips" aria-pressed="false">Pips</button></div><div class="stats" id="lapDist"></div>
       <div class="chart-box" id="lapDistBox" style="margin-top:10px;"></div><div class="psy-cover" id="lapDistNote" style="margin-top:8px;"></div></div>
-    <div class="psy-group"><h3>Lot &amp; ukuran posisi</h3><div class="stats" id="lapLot"></div>
+    <div class="psy-group" data-fold="1"><h3>Lot &amp; ukuran posisi</h3><div class="stats" id="lapLot"></div>
       <div class="psy-cover" style="margin-top:10px;">Setelah rugi: apakah lot dinaikkan? (dibanding transaksi sebelumnya)</div><div id="lapLotAfterLoss"></div>
       <div class="psy-cover" style="margin-top:10px;">Hasil menurut ukuran lot (dibanding lot rata-rata periode)</div><div id="lapLotSize"></div>
       <div class="psy-cover" id="lapLotNote" style="margin-top:8px;"></div></div>
-    <div class="psy-group"><h3>Transaksi per hari &amp; batas harian</h3><div class="stats" id="lapDaily"></div>
+    <div class="psy-group" data-fold="1"><h3>Transaksi per hari &amp; batas harian</h3><div class="stats" id="lapDaily"></div>
       <div class="psy-cover" style="margin-top:10px;">Hasil menurut jumlah transaksi per hari</div><div id="lapDayBins"></div>
       <div class="psy-cover" style="margin-top:10px;">Batas harian pribadi (atur di Setelan ⚙)</div><div id="lapDayLimits"></div>
       <div class="psy-cover" id="lapDailyNote" style="margin-top:8px;"></div></div>
-    <div class="psy-group"><h3>Tren performa (rolling)</h3><div class="lap-heat-mode" id="lapRollMode"></div><div class="stats" id="lapRollStats"></div>
+    <div class="psy-group" data-fold="1"><h3>Tren performa (rolling)</h3><div class="lap-heat-mode" id="lapRollMode"></div><div class="stats" id="lapRollStats"></div>
       <div class="chart-box" id="lapRollBox"></div><div class="psy-cover" id="lapRollNote" style="margin-top:8px;"></div></div>
     <div class="psy-group"><h3>Drawdown (underwater)</h3><div class="stats" id="lapDD"></div>
       <div class="chart-box lap-dd-box" id="lapDDBox"></div>
@@ -843,7 +839,7 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
   <section id="rcSection" data-sgroup="tampilan" aria-labelledby="rcTitle">
     <div class="section-head">
       <h2 id="rcTitle">Kartu Ringkasan</h2>
-      <div class="section-note">Sembunyikan kartu yang tidak dipakai dan atur urutannya dengan tombol panah. Di ponsel, urutan bawaan: Saldo, Hari ini, Target, Sesi, Rilis berita, Statistik, lalu kartu lainnya; sekali Anda mengatur urutan sendiri, urutan itu dipakai di semua ukuran layar. Tersimpan di perangkat ini dan tidak ikut sinkron cloud.</div>
+      <div class="section-note">Sembunyikan kartu yang tidak dipakai dan atur urutannya dengan tombol panah. Di ponsel, urutan bawaan: Saldo, Hari ini, Target, Sesi, Rilis berita, Wawasan, lalu kartu lainnya; sekali Anda mengatur urutan sendiri, urutan itu dipakai di semua ukuran layar. Tersimpan di perangkat ini dan tidak ikut sinkron cloud.</div>
     </div>
     <div class="rc-list" id="rcList"></div>
     <div class="settings-row"><div class="settings-desc"><strong>Atur ulang</strong><span>Kembali ke urutan bawaan dan tampilkan semua kartu.</span></div><button type="button" class="ledger-reset-btn" id="rcReset">Atur ulang</button></div>
@@ -1563,11 +1559,11 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1')document.documentElement.classList.a
 </div>
 
 <script id="journal-data" type="application/json">{"summary": {"total": 0, "win": 0, "loss": 0, "winrate": 0, "pl_cent": 0, "pl_rp": 0, "saldo_akhir": 0, "pct_pl": null}, "periods": [], "kurs": 0, "dashboard": {"update": "Update terakhir: -", "saldo": 0, "stats": {"total": 0, "winrate": 0, "pf": 0, "maxdd": 0, "expectancy": 0}, "top_win": [], "top_loss": [], "mm": {"equity": 0, "risk": 0.01, "sl": 150, "pipval": 10, "lot": 0, "tp_pips": 0, "tp_cent": 0}}, "maxdd_note": "", "equity": [], "months": [], "weeks": [], "trades": [], "deposit": {"total_deposit": 0, "total_penarikan": 0, "total_mc": 0, "modal_bersih": 0, "log": []}, "period_ranges": [], "modal_kumulatif": []}</script>
-<script src="config.js?v=1.1.232"></script>
-<script src="app.js?v=1.1.232"></script>
-<script src="kalender.js?v=1.1.232"></script>
-<script src="broker.js?v=1.1.232"></script>
-<script src="sync.js?v=1.1.232"></script>
-<script src="pwa.js?v=1.1.232"></script>
+<script src="config.js?v=1.1.247"></script>
+<script src="app.js?v=1.1.247"></script>
+<script src="kalender.js?v=1.1.247"></script>
+<script src="broker.js?v=1.1.247"></script>
+<script src="sync.js?v=1.1.247"></script>
+<script src="pwa.js?v=1.1.247"></script>
 </body>
 </html>

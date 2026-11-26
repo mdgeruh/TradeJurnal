@@ -2,7 +2,7 @@
 
 Ringkasan perubahan untuk pengguna, terbaru di atas. Isinya sama dengan **Setelan → Tentang aplikasi → Lihat riwayat** di aplikasi (data `USER_CHANGELOG` di `app.js`). Rincian teknis per versi ada di `CHANGELOG.md`; rencana ke depan di `roadmap.md`.
 
-**Versi saat ini: 1.1.232** (29 Nov 2026)
+**Versi saat ini: 1.1.247** (24 Nov 2026)
 
 ## Sorotan
 - Ringkasan: kurva ekuitas yang jelas (modal, puncak berjalan, drawdown, tooltip), pilihan **Ekuitas / PNL kumulatif**, PNL Minggu/Bulan Ini, lencana DD saat ini.
@@ -12,8 +12,21 @@ Ringkasan perubahan untuk pengguna, terbaru di atas. Isinya sama dengan **Setela
 - **Data aman:** sinkron cloud (Supabase), status dan pengingat cadangan, ekspor HTML mandiri/JSON, ekspor-impor pengaturan.
 - **Aplikasi terpasang (PWA)** di Android dan iOS, terbuka cepat dan bisa offline.
 
+## 24 Nov 2026 (v1.1.243 – v1.1.247)
+**Diubah**
+- **Ringkasan di ponsel**: kartu PNL per sesi, Wawasan, dan Catatan harian terlipat secara bawaan (ketuk judul untuk membuka); Chart XAUUSD pindah ke bawah pada urutan bawaan.
+- **Ringkasan**: kartu Aturan trading kini di dekat Hari ini (urutan bawaan), dan kartu Target menampilkan tombol "Atur target bulanan" saat target belum diisi.
+- **Kurva ekuitas**: batang PNL harian di bawah kurva dihapus (ada di kalender Analisis PNL); kurva jadi lebih tinggi.
+- **Ringkasan**: strip statistik periode (Transaksi, Win rate, Laba/Rugi, PF, Max DD, dan lainnya) dihapus karena sudah ada di Laporan. Mode fokus kini hanya saldo dan Hari ini; filter silang hanya untuk Analisis cepat.
+- **Ringkasan**: kartu PNL harian 30 hari dihapus karena sudah ada di Analisis PNL. Filter silang kini berlaku untuk statistik periode dan Analisis cepat.
+
 ## 1 Okt 2026 (v1.1.145 – v1.1.192)
 **Baru**
+- **Ringkasan**: kartu Analisis cepat (6 tab) + filter silang + batang PNL harian di kurva.
+- **Ringkasan**: PNL harian 30 hari menampilkan nominal & jumlah transaksi; tooltip kurva memuat PNL hari itu.
+- **Laporan**: bar filter menempel kini tembus pandang (tema kaca).
+- **Laporan**: bar filter menempel dan blok sekunder bisa dilipat.
+- **Laporan**: satu halaman tanpa sub-tab.
 - **Kurva ekuitas**: teks sumbu jelas di ponsel, mode Return %, penanda deposit, detail hari, brush rentang, strip drawdown.
 - **Kartu saldo**: lebih ringkas di ponsel.
 - **Performa vs Laporan**: blok kembar dihapus, ditambah tautan antar halaman.

@@ -545,11 +545,22 @@ renderHeroMoney();
 
 // ---------- Periode Ringkasan: chip bulat (v1.1.134), default All ----------
 let currentPeriodRange = null;
+var periodLabelTxt = 'All time';   // label periode terpilih (dipakai Analisis cepat); dulu dibaca dari strip statistik
+// Filter silang Ringkasan (v1.1.237): QF = null atau {k:'field'|'cell'|'bin'|'rule', ...}; var agar aman dipanggil sebelum blok Analisis cepat dimuat.
+var QF = null; var lastSelKey = null;
+function qcCell(t){ if(!t.waktu_buka) return null; const d = new Date(parseGmt8(t.waktu_buka) + 8*3600000); if(isNaN(d)) return null; return {d:(d.getUTCDay()+6)%7, b:Math.floor(d.getUTCHours()/3)}; }
+function qfTest(t){
+  const q = QF; if(!q) return true;
+  if(q.k === 'field') return ((String(t[q.f] == null ? '' : t[q.f]).trim()) || '(kosong)') === q.v;
+  if(q.k === 'cell'){ const c = qcCell(t); return !!c && c.d === q.d && c.b === q.b; }
+  if(q.k === 'bin') return t.laba >= q.lo && t.laba < q.hi;
+  if(q.k === 'rule') return (q.v === 'langgar') === !!(t.langgar && t.langgar.length);
+  return true;
+}
+function qfFilter(arr){ return QF ? arr.filter(qfTest) : arr; }
 buildPeriodChips(document.getElementById('periodChips'), { items: PERIOD_PRESETS, active: 'all', onSelect: k=> selectPeriodKey(k) });
-// Chip periode kedua tepat di atas strip statistik (v1.1.218), terhubung dengan chip di atas kurva. 'Sesuaikan' hanya ada di chip kurva (kolom tanggalnya di sana).
-buildPeriodChips(document.getElementById('statPeriodChips'), { items: PERIOD_PRESETS.filter(p=>p.key!=='custom'), active: 'all', onSelect: k=> selectPeriodKey(k) });
 function markPeriodChips(key){
-  ['periodChips','statPeriodChips'].forEach(id => { const el = document.getElementById(id); if(!el) return; el.querySelectorAll('.lap-gran-btn').forEach(b => { const on = b.dataset.key === key; b.classList.toggle('active', on); b.setAttribute('aria-selected', String(on)); }); });
+  ['periodChips'].forEach(id => { const el = document.getElementById(id); if(!el) return; el.querySelectorAll('.lap-gran-btn').forEach(b => { const on = b.dataset.key === key; b.classList.toggle('active', on); b.setAttribute('aria-selected', String(on)); }); });
 }
 const customRangeEl = document.getElementById('customRange');
 const customNote = document.getElementById('customNote');
@@ -595,33 +606,6 @@ function computePeriodStats(matched){
 // Satu kartu stat strip: Transaksi & Win rate digabung dengan Laba/Rugi (+ sub-baris ≈ Rp),
 // PF, Max DD, Expectancy — sebelumnya Transaksi & Win rate juga tampil terpisah di kartu
 // period-detail di atas kurva ekuitas, jadi dobel dengan kartu ini.
-function renderStatStrip(st, periodLabel, prev){
-  const pe = document.getElementById('statPeriod');
-  if(pe && periodLabel) pe.textContent = 'Periode: ' + periodLabel;
-  const pfTxt = st.total===0 ? '—' : (st.pf===Infinity ? '∞' : st.pf.toFixed(2).replace('.', DEC())+'x');
-  // v1.1.227: selisih terhadap periode sebelumnya yang sama panjang (kosong bila tak ada pembanding atau periode itu tanpa transaksi).
-  const hasPrev = !!(prev && prev.total > 0);
-  const dl = (cur, old, fmt, goodUp) => {
-    if(!hasPrev || !isFinite(cur) || !isFinite(old)) return '';
-    const d = cur - old; if(Math.abs(d) < 1e-9) return '<span class="stat-vs">sama seperti sebelumnya</span>';
-    return `<span class="stat-vs ${(d > 0) === (goodUp !== false) ? 'up' : 'down'}">${d > 0 ? '\u25b2 +' : '\u25bc \u2212'}${fmt(Math.abs(d))} vs sebelumnya</span>`;
-  };
-  const dN = dl(st.total, prev && prev.total, x => String(Math.round(x)), true);
-  const dW = st.total && prev && prev.total ? dl(st.winrate, prev.winrate, x => nf(1,1).format(x*100) + ' poin', true) : '';
-  const dP = dl(st.pl, prev && prev.pl, x => fmtMoney(x), true);
-  document.getElementById('statStrip').innerHTML = `
-    <div class="stat"><div class="stat-lbl">Transaksi</div><div class="stat-val">${st.total}</div>${dN}</div>
-    <div class="stat"><div class="stat-lbl">Win rate</div><div class="stat-val">${st.total? fmtPct(st.winrate) : '—'}</div>${dW}</div>
-    <div class="stat"><div class="stat-lbl">Laba/Rugi</div><div class="stat-val ${sgnCls(st.pl)}">${st.pl>0?'+':''}${fmtMoney(st.pl)}</div>${approxRp(st.pl)}${dP}</div>
-    <div class="stat"><div class="stat-lbl">PF</div><div class="stat-val">${pfTxt}</div></div>
-    <div class="stat"><div class="stat-lbl" title="Berbasis PNL (tanpa deposit/penarikan); beda dasar hitung dengan Drawdown ekuitas di kurva">Max DD (PNL)</div><div class="stat-val ${st.maxdd>0?'down':''}">${st.maxdd>0?'-':''}${fmtMoney(st.maxdd)}</div></div>
-    <div class="stat"><div class="stat-lbl">Expectancy</div><div class="stat-val ${sgnCls(st.expectancy)}">${st.expectancy>0?'+':''}${fmtMoney(st.expectancy)}</div></div>
-    <div class="stat"><div class="stat-lbl">Streak</div><div class="stat-val ${st.streak>0?'up':(st.streak<0?'down':'')}">${st.streak===0 ? '—' : Math.abs(st.streak) + (st.streak>0 ? ' menang' : ' rugi')}</div></div>
-    <div class="stat"><div class="stat-lbl">Rata² menang</div><div class="stat-val up">${st.winCount ? '+' + fmtMoney(st.avgWin) : '—'}</div><span class="approx-rp">${st.rr>0 ? 'RR ' + st.rr.toFixed(2).replace('.', DEC()) + 'x' : ''}</span></div>
-    <div class="stat"><div class="stat-lbl">Rata² rugi</div><div class="stat-val down">${st.lossCount ? '−' + fmtMoney(st.avgLoss) : '—'}</div></div>
-  `;
-}
-
 // ---------- Laporan: ringkasan performa + analisis psikologi trading, mengikuti periode terpilih ----------
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1929,6 +1913,20 @@ function renderLapCmp(){
   let open = !(window.matchMedia && window.matchMedia('(max-width: 700px)').matches); try{ const sv = localStorage.getItem(KEY); if(sv === '0') open = false; else if(sv === '1') open = true; }catch(e){}   // v1.1.228: default terlipat di ponsel
   setOpen(open, false);
 })();
+// ---------- Laporan: blok sekunder bisa dilipat (v1.1.234) ----------
+// Enam blok Lanjutan (sesi, durasi, distribusi, lot, per hari, rolling) dibungkus <details>; default terlipat di ponsel (<=700px), terbuka di layar lebar & saat cetak.
+(function(){
+  const narrow = !!(window.matchMedia && window.matchMedia('(max-width: 700px)').matches);
+  document.querySelectorAll('#tabpanel-laporan .psy-group[data-fold]').forEach(g => {
+    const h = g.querySelector(':scope > h3'); if(!h) return;
+    const d = document.createElement('details'), s = document.createElement('summary');
+    d.className = 'lap-fold-grp'; d.open = !narrow;
+    s.appendChild(h); d.appendChild(s);
+    while(g.firstChild) d.appendChild(g.firstChild);
+    g.appendChild(d);
+    d.addEventListener('toggle', () => { if(d.open && typeof renderLap2 === 'function') renderLap2(); });   // grafik di blok terlipat tidak punya lebar saat dihitung; gambar ulang saat dibuka
+  });
+})();
 function renderLap2(){
   const range = lap2GetRange(lap2Gran, lap2Offset);
   const rangeLbl = document.getElementById('lapRangeLabel');
@@ -2146,6 +2144,7 @@ document.getElementById('laporanPrintBtn').addEventListener('click', ()=>{
   const metaEl = document.getElementById('printMeta');
   const ver = ((document.querySelector('footer')||{}).textContent||'').match(/v[\d.]+/);
   if(metaEl) metaEl.textContent = (metaEl.dataset.base||'') + ' · Dicetak ' + new Date().toLocaleString('id-ID') + (ver ? ' · Jurnal XAUUSD ' + ver[0] : '');
+  document.querySelectorAll('.lap-fold-grp').forEach(d => { d.dataset.was = d.open ? '1' : '0'; d.open = true; });
   const tbl = document.querySelector('.lap-tbl-wrap');
   if(tbl){ tbl.dataset.was = tbl.open ? '1' : '0'; const short = (lap2Gran==='harian' || lap2Gran==='mingguan'); tbl.dataset.pr = short ? '1' : '0'; tbl.open = short; }
   document.body.classList.add('printing-laporan');
@@ -2153,6 +2152,7 @@ document.getElementById('laporanPrintBtn').addEventListener('click', ()=>{
 });
 window.addEventListener('afterprint', ()=>{
   document.body.classList.remove('printing-laporan');
+  document.querySelectorAll('.lap-fold-grp').forEach(d => { if(d.dataset.was === '0') d.open = false; });
   const tbl = document.querySelector('.lap-tbl-wrap');
   if(tbl){ tbl.open = tbl.dataset.was === '1'; delete tbl.dataset.pr; }
   const metaEl = document.getElementById('printMeta');
@@ -2176,14 +2176,14 @@ function applyCustomRange(){
   const pl = matched.reduce((s,t)=>s+t.laba,0);
   customNote.textContent = matched.length ? '' : 'Tidak ada transaksi di rentang ini';
   currentPeriodRange = {start: rs, end: re};
-  const span = re - rs + 1, prevM = DATA.trades.filter(t=>{ const tt = parseGmt8(t.tanggal_gmt8); return tt>=rs-span && tt<rs; });
-  renderStatStrip(computePeriodStats(matched), 'Kustom ' + fromV + ' – ' + toV, computePeriodStats(prevM));
+  periodLabelTxt = 'Kustom ' + fromV + ' \u2013 ' + toV;
   if(window.updateChartHighlight) window.updateChartHighlight(currentPeriodRange, 'Kustom ' + fromV + ' – ' + toV, pl);
   if(window.renderTrades) window.renderTrades();
 }
 
 
 function selectPeriodKey(key){
+  lastSelKey = key;
   markPeriodChips(key);
   if(key === 'custom'){ selectCustom(); return; }
   customRangeEl.classList.remove('open');
@@ -2201,12 +2201,7 @@ function selectPeriodKey(key){
     return tt>=range.start && tt<=range.end;
   });
   const pl = matched.reduce((s,t)=>s+t.laba, 0);
-  let prevSt = null;
-  if(preset.days){
-    const ps = range.start - preset.days*86400000;
-    prevSt = computePeriodStats(DATA.trades.filter(t=>{ const tt = parseGmt8(t.tanggal_gmt8); return tt>ps && tt<=range.start; }));
-  }
-  renderStatStrip(computePeriodStats(matched), preset.long, prevSt);
+  periodLabelTxt = preset.long;
   if(window.updateChartHighlight) window.updateChartHighlight(range, preset.long, pl);
 }
 
@@ -2294,6 +2289,7 @@ function renderEqDdBadge(d){
   }
 }
 let eqLegendHidden = { modal:false, peak:false };
+try{ const lg = JSON.parse(localStorage.getItem('jurnalEqLegend') || 'null'); if(lg){ eqLegendHidden.modal = !!lg.modal; eqLegendHidden.peak = !!lg.peak; } }catch(e){}   // v1.1.242: pilihan legenda bertahan antar sesi
 // Jenis kurva Ringkasan: 'equity' (saldo, termasuk deposit/penarikan), 'pnl' (PNL kumulatif trading saja) atau 'ret' (Return % = PNL kumulatif / modal kumulatif). Tersimpan di localStorage `jurnalEqMode`.
 // Zoom sumbu (v1.1.219, diganti nama v1.1.232): sumbu-Y mengikuti rentang data tanpa memaksa titik nol. null = otomatis (aktif bila data hampir datar terhadap saldo).
 let eqZoomPref = null; try{ const z = localStorage.getItem('jurnalEqZoom'); if(z==='1' || z==='0') eqZoomPref = z; }catch(e){}
@@ -2333,10 +2329,10 @@ function renderEquityChart(){
   const W = cw >= 200 ? Math.round(cw) : 880;
   eqLastW = W;
   const narrow = W < 560;
-  const H = narrow ? 330 : 320;
+  const H = narrow ? 372 : 362;
   const padL = narrow ? 46 : 56, padR = narrow ? 12 : 22, padT = 16, padB = 26, stripH = 30, stripGap = 8;
-  const plotW = W - padL - padR, plotH = H - padT - padB - stripH - stripGap;
-  const stripTop = padT + plotH + stripGap, hoverH = plotH + stripGap + stripH;
+  const plotW = W - padL - padR, plotH = H - padT - padB - stripGap - stripH;
+  const stripTop = padT + plotH + stripGap, hoverH = stripTop + stripH - padT;
   const goldColor = cssVar('--gold');
   const gainColor = cssVar('--gain');
   const lossColor = cssVar('--loss');
@@ -2543,6 +2539,10 @@ function renderEquityChart(){
   const hid = eqLegendHidden;
   const noteLabel = periodLabel && periodLabel.indexOf(' — ') >= 0 ? periodLabel : ''; // label periode hanya bila ada catatan (periode sudah terlihat di pemilih)
   const bandH = stripH, bandY = stripTop;
+  // Ringkasan periode di bawah kurva (v1.1.242): perubahan, puncak, drawdown terdalam, lama rentang
+  const sumChg = vals[vals.length-1] - vals[0], sumDays = Math.max(1, Math.round((scopeEnd - scopeStart) / 86400000));
+  const sumChgTxt = retMode ? (sumChg > 0 ? '+' : (sumChg < 0 ? '\u2212' : '')) + nf(2,2).format(Math.abs(sumChg)) + ' poin' : sgnMoney(sumChg);
+  const sumHtml = `<div class="eq-sum" id="eqSum"><span title="${pnlMode ? 'Selisih awal ke akhir rentang' : 'Selisih saldo awal ke akhir rentang, termasuk deposit dan penarikan'}"><i>${retMode ? 'Perubahan return' : (pnlMode ? 'Perubahan PNL' : 'Perubahan saldo')}</i><b class="${sumChg > 0 ? 'up' : (sumChg < 0 ? 'down' : '')}">${sumChgTxt}</b></span><span><i>Puncak</i><b>${fv(vals[athIdx])}</b></span><span title="Drawdown terdalam dalam rentang ini, hanya dari hasil trading"><i>Drawdown terdalam</i><b class="${maxDD > 0 ? 'down' : ''}">${maxDD > 0 ? '\u2212' + fdd(maxDD) : '\u2014'}</b></span><span><i>Rentang</i><b>${sumDays} hari</b></span></div>`;
   const serName = retMode ? 'Return % (PNL ÷ modal)' : (pnlMode ? 'PNL kumulatif (tanpa deposit)' : (modalD ? 'Saldo / Ekuitas' : 'Saldo'));
   box.innerHTML = `
     <div class="eq-plot">
@@ -2593,6 +2593,7 @@ function renderEquityChart(){
       <span class="eq-legend-item"><span class="eq-legend-dot" style="background:${gainColor}"></span>Tertinggi</span>
       ${showBottomLabel ? `<span class="eq-legend-item"><span class="eq-legend-dot" style="background:${lossColor}"></span>Terendah</span>` : ''}
     </div>
+    ${sumHtml}
     <div class="eq-info" id="eqInfo" aria-live="polite"></div>
     <div class="eq-brush" id="eqBrush" hidden></div>
   `;
@@ -2615,6 +2616,7 @@ function renderEquityChart(){
         return;
       }
       eqLegendHidden[k] = !eqLegendHidden[k];
+      try{ localStorage.setItem('jurnalEqLegend', JSON.stringify(eqLegendHidden)); }catch(e){}
       const el = document.getElementById(k === 'modal' ? 'eqModalLine' : 'eqPeakLine');
       if(el) el.style.display = eqLegendHidden[k] ? 'none' : '';
       btn.classList.toggle('off', eqLegendHidden[k]);
@@ -2683,7 +2685,9 @@ function renderEquityChart(){
       top: i => 0,
       html: i => {
         const modalPart = modalVals ? `<span style="color:${modalColor}">Modal: ${fmtMoney(modalVals[i])}</span>` : '';
-        return `<span class="t-date">${fmtDate(eqFull[idxs[i]][0])}</span>` + ttJoin([fv(vals[i]), modalPart]);
+        const da = (W < 460 || (tailExtra && i === times.length - 1)) ? null : dayAgg[ptDay[i]];   // di ponsel tooltip tetap satu baris; rincian hari ada di baris detail di bawah kurva
+        const dayPart = da ? `<span class="${sgnCls(da.pnl)}">Hari: ${sgnMoney(da.pnl)} \u00b7 ${da.n}\u00d7</span>` : '';
+        return `<span class="t-date">${fmtDate(eqFull[idxs[i]][0])}</span>` + ttJoin([fv(vals[i]), modalPart, dayPart]);
       }
     },
     enableClick: true,
@@ -2754,7 +2758,7 @@ function renderEquityChart(){
     brushEl.innerHTML = `<span class="eq-brush-t"><b>${lbl}</b></span>` + (rows.length
       ? `<span>PNL <b class="${sgnCls(pnl)}">${sgnMoney(pnl)}</b></span><span>${rows.length} trade</span><span>WR <b>${Math.round(wins / rows.length * 100)}%</b></span><span>DD maks <b class="${mdd > 0 ? 'down' : ''}">${mdd > 0 ? '−' : ''}${fmtMoney(mdd)}</b></span>`
       : '<span>Tidak ada transaksi di rentang ini</span>')
-      + `<span class="eq-brush-acts"><button type="button" class="eq-link" data-eqb="go">Lihat transaksi</button><button type="button" class="eq-link" data-eqb="apply">Terapkan ke statistik</button><button type="button" class="eq-link" data-eqb="clear" aria-label="Hapus pilihan rentang">✕</button></span>`;
+      + `<span class="eq-brush-acts"><button type="button" class="eq-link" data-eqb="go">Lihat transaksi</button><button type="button" class="eq-link" data-eqb="apply">Terapkan ke periode</button><button type="button" class="eq-link" data-eqb="clear" aria-label="Hapus pilihan rentang">✕</button></span>`;
     brushEl.dataset.ka = ka; brushEl.dataset.kb = kb;
   };
   hoverArea.addEventListener('pointerup', e => endBrush(e, false));
@@ -2785,6 +2789,7 @@ window.updateChartHighlight = function(range, label, pl){
   lastPeriodLabel = label;
   lastPeriodPL = pl || 0;
   renderEquityChart();
+  try{ if(window.renderQuickCard) window.renderQuickCard(); }catch(e){}   // sebelum blok Analisis cepat dimuat (TDZ) dilewati; render awal lewat renderRingkasanV227
 };
 renderEquityChart();
 window.renderEquityChart = renderEquityChart;
@@ -4632,7 +4637,7 @@ const SETTINGS_VALIDATORS = {
   jurnalNumFmt: v => v==='id' || v==='en',
   jurnalGlass: v => v==='0' || v==='1',
   jurnalFokus: v => v==='0' || v==='1',
-  jurnalRingkasan: v => { try{ const o = JSON.parse(v); const ids = ['today','saldo','ekuitas','statistik','berita','chart','terakhir','aturan','target','sesi','wawasan','heat','catatan']; const okA = x => Array.isArray(x) && x.length<=13 && x.every((k,i) => ids.includes(k) && x.indexOf(k)===i); return !!o && typeof o==='object' && !Array.isArray(o) && (o.o===undefined || okA(o.o)) && (o.h===undefined || okA(o.h)); }catch(e){ return false; } },
+  jurnalRingkasan: v => { try{ const o = JSON.parse(v); const ids = ['today','saldo','ekuitas','statistik','psikologi','berita','chart','terakhir','aturan','target','sesi','wawasan','heat','cepat','catatan']; /* 'heat' tetap diterima: berkas ekspor lama; rcOrder mengabaikannya */ const okA = x => Array.isArray(x) && x.length<=14 && x.every((k,i) => ids.includes(k) && x.indexOf(k)===i); return !!o && typeof o==='object' && !Array.isArray(o) && (o.o===undefined || okA(o.o)) && (o.h===undefined || okA(o.h)); }catch(e){ return false; } },
   jurnalNotif: v => { try{ const o = JSON.parse(v); return !!o && typeof o === 'object' && !Array.isArray(o) && Object.keys(o).every(k => ['event','limit','note'].includes(k) && (o[k] === 0 || o[k] === 1)); }catch(e){ return false; } },
   jurnalCustomOpts: v => { try{ const o = JSON.parse(v); return !!o && typeof o==='object' && !Array.isArray(o) && ['trigger','exit'].every(k => o[k]===undefined || (Array.isArray(o[k]) && o[k].length<=20 && o[k].every(x => typeof x==='string' && x.length>0 && x.length<=40))); }catch(e){ return false; } },
   'kal-prefs': v => { try{ const o = JSON.parse(v); return !!o && typeof o==='object' && !Array.isArray(o); }catch(e){ return false; } },
@@ -4719,37 +4724,13 @@ window.showSetelanGroup = showSetelanGroup;
 // ---------- Sub-navigasi Laporan (v1.1.152): Tren · Ringkasan · Psikologi · Bandingkan · Lanjutan ----------
 // Periode & filter (bagian atas) selalu tampil; tiap <section data-lgroup> hanya tampil bila kelompoknya aktif. Cetak/PDF menampilkan semuanya.
 const LAPORAN_GROUPS = [{key:'tren',label:'Tren'},{key:'ringkasan',label:'Ringkasan'},{key:'psikologi',label:'Psikologi'},{key:'bandingkan',label:'Bandingkan'},{key:'lanjutan',label:'Lanjutan'}];
-const LAPORAN_ICONS = {
-  tren:'<path d="M3 17l5-6 4 3 8-9"/><path d="M3 21h18"/>',
-  ringkasan:'<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8"/><path d="M8 13h8"/><path d="M8 17h5"/>',
-  psikologi:'<path d="M12 21c-4-3-8-6-8-11a5 5 0 0 1 8-3 5 5 0 0 1 8 3c0 5-4 8-8 11z"/>',
-  bandingkan:'<path d="M7 4v16"/><path d="M17 4v16"/><path d="M3 8l4-4 4 4"/><path d="M13 16l4 4 4-4"/>',
-  lanjutan:'<path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/>'
-};
+// Laporan satu halaman (v1.1.233): sub-tab dihapus, semua bagian tampil berurutan. Tautan lama #laporan-<kunci> dan [data-go-lap] kini menggulir ke bagiannya.
 function showLaporanGroup(g){
-  if(!LAPORAN_GROUPS.some(x=>x.key===g)) g = 'tren';
-  document.querySelectorAll('#tabpanel-laporan [data-lgroup]').forEach(sec => sec.classList.toggle('sg-off', sec.dataset.lgroup !== g));
-  const nav = document.getElementById('laporanSubnav');
-  if(nav) nav.querySelectorAll('.sg-tab').forEach(b => { const on = b.dataset.key===g; b.classList.toggle('active', on); b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1; });
-  try{ sessionStorage.setItem('jurnalLaporanGroup', g); }catch(e){}
-  if(window.routeSync) window.routeSync();
+  if(!LAPORAN_GROUPS.some(x=>x.key===g)) return;
+  const sec = document.querySelector('#tabpanel-laporan [data-lgroup="' + g + '"]');
+  if(sec) setTimeout(() => { try{ sec.scrollIntoView({behavior:'smooth', block:'start'}); }catch(e){ sec.scrollIntoView(); } }, 80);
 }
 window.showLaporanGroup = showLaporanGroup;
-(function(){
-  const nav = document.getElementById('laporanSubnav'); if(!nav) return;
-  let g = 'tren'; try{ g = sessionStorage.getItem('jurnalLaporanGroup') || g; }catch(e){}
-  nav.innerHTML = LAPORAN_GROUPS.map(x => `<button type="button" class="sg-tab" role="tab" aria-selected="false" data-key="${x.key}"><svg class="bi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${LAPORAN_ICONS[x.key]}</svg><span>${x.label}</span></button>`).join('');
-  nav.addEventListener('click', e => { const b = e.target.closest('.sg-tab'); if(b) showLaporanGroup(b.dataset.key); });
-  nav.addEventListener('keydown', e => {
-    const keys = LAPORAN_GROUPS.map(x => x.key), cur = keys.indexOf(sessionStorage.getItem('jurnalLaporanGroup') || g);
-    let n = -1;
-    if(e.key === 'ArrowRight') n = (cur + 1) % keys.length; else if(e.key === 'ArrowLeft') n = (cur - 1 + keys.length) % keys.length;
-    else if(e.key === 'Home') n = 0; else if(e.key === 'End') n = keys.length - 1;
-    if(n < 0) return;
-    e.preventDefault(); showLaporanGroup(keys[n]); const t = nav.querySelector(`[data-key="${keys[n]}"]`); if(t) t.focus();
-  });
-  showLaporanGroup(g);
-})();
 
 // Gabungkan data dari file JSON ke DATA aktif tanpa menghapus apa pun (v1.1.174).
 // Transaksi dikunci per ID: baru -> ditambah, ID sama dan isi beda -> field dari file menimpa field lama
@@ -6500,25 +6481,64 @@ function renderBackupStatus(){
   sync();
 })();
 
-const APP_VERSION = '1.1.232';
-const APP_BUILD_DATE = '2026-11-29';   // ikut diganti tiap rilis (ISO), tampil di Setelan → Tentang
+const APP_VERSION = '1.1.247';
+const APP_BUILD_DATE = '2026-11-24';   // ikut diganti tiap rilis (ISO), tampil di Setelan → Tentang
 const USER_CHANGELOG = [
-  { date:'2026-11-29', items:[
-    'Kurva ekuitas diperbarui: teks sumbu kini digambar 1:1 sehingga terbaca jelas di ponsel, grafik lebih tinggi, legenda jadi satu baris, dan ada mode baru Return % (PNL dibagi modal). Penanda ▲ deposit / ▼ penarikan dan ◆ hari terbaik/terburuk muncul di kurva, strip drawdown di bawah kurva, baris detail hari (PNL hari itu, jumlah transaksi, DD, peristiwa deposit) dengan tombol Lihat transaksi, serta seret mouse untuk memilih rentang (ringkasan PNL, WR, DD, dan tombol Terapkan ke statistik). Tombol Fokus rentang diganti nama menjadi Zoom sumbu.',
-  ]},
-  { date:'2026-11-28', items:[
-    'Kartu Saldo akhir akun dibuat lebih ringkas di ponsel (tinggi turun sekitar 14%, dari 579 ke 497 px): jarak dan padding dikurangi, estimasi Rp PNL kumulatif kini satu baris dengan angkanya (tidak terpotong), label sparkline dipersingkat menjadi PNL harian 7H, dan sel PNL Minggu/Bulan Ini lebih rapat dengan garis pemisah. Isi dan fungsi kartu tidak berubah.',
-  ]},
-  { date:'2026-11-27', items:[
-    'Performa dan Laporan dirapikan supaya tidak saling menumpuk. Performa kini khusus hasil per waktu (ringkasan mingguan, metrik risiko, bulanan, mingguan, heatmap harian, rekor, dan Beli vs Jual rinci). Analisis pola ada di Laporan (jam dan hari buka, sesi, psikologi, durasi). Blok kembar dihapus: Jam & hari buka dari Performa dan Beli vs Jual dari Laporan → Lanjutan. Ditambah kartu Analisis lebih dalam di Performa dengan tombol ke Laporan → Lanjutan atau Psikologi, dan tautan balik ke Performa di Laporan → Lanjutan.',
-  ]},
-  { date:'2026-11-26', items:[
-    'Perbaikan sisa di ponsel: Log Deposit kini berupa baris ringkas (tanggal dan jumlah sejajar, jenis di bawahnya) sehingga kolom Jumlah tidak lagi terpotong; tombol kecil (mata PNL, panah kalender, chip periode, kotak heatmap) diperbesar agar mudah disentuh; filter Kalender dilipat di balik tombol Filter kalender; tombol + menyingkir saat menggulir ke bawah dan muncul lagi saat menggulir ke atas; teks detail Transaksi terakhir dan sub-teks kartu Hari ini boleh turun baris. Di Analisis PNL, label Tingkat Kemenangan diganti Hari Menang (% semua hari) dan Hari Titik Impas menjadi Hari Impas / Tanpa Transaksi agar tidak tertukar dengan win rate per transaksi.',
-  ]},
-  { date:'2026-11-25', items:[
-    'Merapikan pengulangan di seluruh halaman. Ringkasan: kotak batas harian di kartu saldo dihapus (sudah ada di Hari ini), sel Berita di Hari ini dihapus (ada kartu Rilis berita), PNL 7H/30H disembunyikan bila angkanya sama dengan Minggu/Bulan Ini, dan label drawdown dibedakan (PNL vs ekuitas). Performa: bagian Bandingkan dua periode dihapus karena sudah ada di Laporan. Di ponsel, filter Transaksi dilipat di balik tombol Filter & alat (dengan jumlah filter aktif) dan Periode & filter Laporan terlipat secara bawaan. Persen terhadap saldo sangat kecil dibatasi (>+300% / <−300%). Teks Setelan yang usang diperbarui. Baru: Setelan → Data → Seragamkan label catatan untuk menggabungkan penulisan kembar seperti Greedy dan Serakah.',
+  { date:'2026-11-24', items:[
+    'Di ponsel, kartu PNL per sesi hari ini, Wawasan, dan Catatan harian kini terlipat secara bawaan; ketuk judul kartu untuk membuka atau melipat (pilihan Anda diingat). Chart XAUUSD dipindah ke urutan paling bawah pada urutan bawaan. Urutan yang sudah Anda atur sendiri tidak berubah.',
+    'Urutan bawaan Ringkasan: kartu Aturan trading naik ke dekat Hari ini agar bisa dicek sebelum trading (urutan yang sudah Anda atur sendiri tidak berubah). Kartu Target bulan ini kini muncul dengan tombol "Atur target bulanan" saat target belum diisi, bukan menghilang.',
+    'Batang PNL harian di bawah kurva ekuitas dihapus (PNL per hari ada di kalender Analisis PNL). Kurva kini lebih tinggi dan strip DD tetap ada; tooltip kurva tetap menampilkan PNL hari itu.',
+    'Strip statistik periode (Transaksi, Win rate, Laba/Rugi, PF, Max DD, Expectancy, Streak, rata-rata menang dan rugi) dihapus dari Ringkasan karena sudah ada di Laporan. Periode tetap dipilih lewat chip di atas kurva ekuitas dan dipakai untuk Analisis cepat. Mode fokus kini hanya menampilkan saldo dan Hari ini. Filter silang kini berlaku untuk Analisis cepat saja.'
   ]},
   { date:'2026-11-24', items:[
+    'Kartu PNL harian 30 hari di Ringkasan dihapus karena sudah ada di Analisis PNL (kalender PNL harian). Pengaturan urutan dan sembunyi kartu Anda tetap aman, dan filter silang kini berlaku untuk statistik periode dan Analisis cepat.'
+  ]},
+  { date:'2026-11-23', items:[
+    'Kurva ekuitas kini punya ringkasan di bawah grafik untuk periode yang dipilih: perubahan saldo (atau PNL / return), puncak, drawdown terdalam, dan lama rentang. Pilihan garis Modal dan Puncak di legenda juga diingat saat aplikasi dibuka lagi.'
+  ]},
+  { date:'2026-11-23', items:[
+    'Tanggal di riwayat perubahan ini diperbaiki: rilis terbaru sebelumnya tertulis bertanggal ke depan (24 Nov – 2 Des), kini disamakan dengan tanggal pengerjaan 23 November 2026.'
+  ]},
+  { date:'2026-11-23', items:[
+    'Aplikasi kini bisa dibuka langsung dari pengelola berkas (file explorer) di HP lewat satu berkas jurnal-trading-mandiri.html, tanpa server dan tanpa halaman login. Data tersimpan di browser untuk berkas itu; ekspor JSON secara berkala sebagai cadangan.'
+  ]},
+  { date:'2026-11-23', items:[
+    'Ringkasan lebih ringan: kartu tidak lagi digambar ulang di latar belakang saat Anda berada di tab lain, dan kartu di bagian bawah halaman baru dirender saat mendekati layar.'
+  ]},
+  { date:'2026-11-23', items:[
+    'Efek kaca (Setelan → Tampilan → Efek kaca) kini bergaya Liquid Glass: kartu dan navigasi punya tepi berkilau, blur lebih jernih, tombol berbentuk lensa yang kenyal saat ditekan, dan navigasi bawah di ponsel menjadi kapsul kaca mengambang.'
+  ]},
+  { date:'2026-11-23', items:[
+    'Ringkasan mendapat kartu baru Analisis cepat dengan 6 tab interaktif: Bergulir (win rate dan profit factor 20 transaksi terakhir), Distribusi (histogram hasil per transaksi dengan rata-rata dan median), Emosi & setup (PNL per emosi, trigger, setup, jenis entry), Jam × hari (heatmap blok 3 jam), Disiplin (patuh vs melanggar aturan), dan Drawdown (sekarang vs terdalam plus berapa persen yang dibutuhkan untuk kembali ke puncak). Ketuk elemen chart untuk rincian, lalu Filter ke ini: statistik periode, PNL harian 30 hari, dan seluruh tab ikut terfilter, dengan pil filter yang bisa dihapus. Di layar lebar keenam chart tampil terpisah berdampingan (tanpa tab); di ponsel tetap satu chart per tab. Kurva ekuitas juga mendapat batang PNL harian di bawahnya.',
+  ]},
+  { date:'2026-11-23', items:[
+    'PNL harian 30 hari di Ringkasan kini menampilkan nominal PNL dan jumlah transaksi pada tiap hari, seperti kalender di Analisis (ikut buram saat angka disembunyikan). Tooltip kurva ekuitas di layar lebar juga menampilkan PNL dan jumlah transaksi hari itu; di ponsel rincian itu ada di baris detail di bawah kurva.',
+  ]},
+  { date:'2026-11-23', items:[
+    'Perbaikan tampilan: bar Periode & filter Laporan yang menempel kini tembus pandang dengan efek blur mengikuti tema kaca, tidak lagi berupa blok gelap solid.',
+  ]},
+  { date:'2026-11-23', items:[
+    'Laporan lebih efisien di ponsel: bar Periode & filter yang dilipat kini menempel di atas layar saat menggulir, sehingga periode terlihat dan bisa diubah kapan saja. Enam blok sekunder di bagian Lanjutan (sesi pasar, durasi posisi, distribusi hasil, lot, transaksi per hari, tren rolling) bisa dilipat dan terlipat secara default di ponsel; di layar lebar dan saat cetak tetap terbuka.',
+  ]},
+  { date:'2026-11-23', items:[
+    'Halaman Laporan kini satu halaman: sub-tab (Tren, Ringkasan, Psikologi, Bandingkan, Lanjutan) dihapus dan semua bagian tampil berurutan di bawah filter. Tautan lama seperti Laporan → Lanjutan tetap berfungsi dan menggulir langsung ke bagiannya.',
+  ]},
+  { date:'2026-11-23', items:[
+    'Kurva ekuitas diperbarui: teks sumbu kini digambar 1:1 sehingga terbaca jelas di ponsel, grafik lebih tinggi, legenda jadi satu baris, dan ada mode baru Return % (PNL dibagi modal). Penanda ▲ deposit / ▼ penarikan dan ◆ hari terbaik/terburuk muncul di kurva, strip drawdown di bawah kurva, baris detail hari (PNL hari itu, jumlah transaksi, DD, peristiwa deposit) dengan tombol Lihat transaksi, serta seret mouse untuk memilih rentang (ringkasan PNL, WR, DD, dan tombol Terapkan ke statistik). Tombol Fokus rentang diganti nama menjadi Zoom sumbu.',
+  ]},
+  { date:'2026-11-23', items:[
+    'Kartu Saldo akhir akun dibuat lebih ringkas di ponsel (tinggi turun sekitar 14%, dari 579 ke 497 px): jarak dan padding dikurangi, estimasi Rp PNL kumulatif kini satu baris dengan angkanya (tidak terpotong), label sparkline dipersingkat menjadi PNL harian 7H, dan sel PNL Minggu/Bulan Ini lebih rapat dengan garis pemisah. Isi dan fungsi kartu tidak berubah.',
+  ]},
+  { date:'2026-11-23', items:[
+    'Performa dan Laporan dirapikan supaya tidak saling menumpuk. Performa kini khusus hasil per waktu (ringkasan mingguan, metrik risiko, bulanan, mingguan, heatmap harian, rekor, dan Beli vs Jual rinci). Analisis pola ada di Laporan (jam dan hari buka, sesi, psikologi, durasi). Blok kembar dihapus: Jam & hari buka dari Performa dan Beli vs Jual dari Laporan → Lanjutan. Ditambah kartu Analisis lebih dalam di Performa dengan tombol ke Laporan → Lanjutan atau Psikologi, dan tautan balik ke Performa di Laporan → Lanjutan.',
+  ]},
+  { date:'2026-11-23', items:[
+    'Perbaikan sisa di ponsel: Log Deposit kini berupa baris ringkas (tanggal dan jumlah sejajar, jenis di bawahnya) sehingga kolom Jumlah tidak lagi terpotong; tombol kecil (mata PNL, panah kalender, chip periode, kotak heatmap) diperbesar agar mudah disentuh; filter Kalender dilipat di balik tombol Filter kalender; tombol + menyingkir saat menggulir ke bawah dan muncul lagi saat menggulir ke atas; teks detail Transaksi terakhir dan sub-teks kartu Hari ini boleh turun baris. Di Analisis PNL, label Tingkat Kemenangan diganti Hari Menang (% semua hari) dan Hari Titik Impas menjadi Hari Impas / Tanpa Transaksi agar tidak tertukar dengan win rate per transaksi.',
+  ]},
+  { date:'2026-11-23', items:[
+    'Merapikan pengulangan di seluruh halaman. Ringkasan: kotak batas harian di kartu saldo dihapus (sudah ada di Hari ini), sel Berita di Hari ini dihapus (ada kartu Rilis berita), PNL 7H/30H disembunyikan bila angkanya sama dengan Minggu/Bulan Ini, dan label drawdown dibedakan (PNL vs ekuitas). Performa: bagian Bandingkan dua periode dihapus karena sudah ada di Laporan. Di ponsel, filter Transaksi dilipat di balik tombol Filter & alat (dengan jumlah filter aktif) dan Periode & filter Laporan terlipat secara bawaan. Persen terhadap saldo sangat kecil dibatasi (>+300% / <−300%). Teks Setelan yang usang diperbarui. Baru: Setelan → Data → Seragamkan label catatan untuk menggabungkan penulisan kembar seperti Greedy dan Serakah.',
+  ]},
+  { date:'2026-11-23', items:[
     'Ringkasan mendapat tujuh tambahan: progres target PNL bulanan (dengan sisa hari trading Senin–Jumat), PNL per sesi hari ini (Asia, London, New York), satu kalimat wawasan otomatis, heatmap PNL 30 hari (ketuk hari untuk melihat transaksinya), dan Catatan harian satu kalimat dengan riwayat dan pencarian. Statistik periode kini menampilkan selisih terhadap periode sebelumnya, dan di ponsel ada chip Mode fokus yang hanya menampilkan saldo, hari ini, dan statistik. Kartu baru bisa disembunyikan dan diurutkan di Setelan → Tampilan.',
   ]},
   { date:'2026-11-23', items:[
@@ -7201,19 +7221,19 @@ try{ renderRingkasanExtras(); }catch(e){}
 const RC_CARDS = [
   {id:'today', label:'Hari ini', els:['todayCard']},
   {id:'saldo', label:'Saldo & PNL', els:['heroSection']},
-  {id:'ekuitas', label:'Kurva ekuitas', els:['eqSection']},
-  {id:'statistik', label:'Statistik periode', els:['statPeriodRow','statStrip','psyPromptCard']},
-  {id:'berita', label:'Rilis berita berikutnya', els:['kalMini']},
-  {id:'chart', label:'Chart XAUUSD', els:['chartCard']},
-  {id:'terakhir', label:'Transaksi terakhir', els:['recentCard']},
   {id:'aturan', label:'Aturan trading', els:['rulesCard']},
+  {id:'ekuitas', label:'Kurva ekuitas', els:['eqSection']},
+  {id:'psikologi', label:'Ajakan catatan psikologi', els:['psyPromptCard']},
+  {id:'berita', label:'Rilis berita berikutnya', els:['kalMini']},
+  {id:'terakhir', label:'Transaksi terakhir', els:['recentCard']},
   {id:'target', label:'Target bulan ini', els:['targetCard']},
   {id:'sesi', label:'PNL per sesi hari ini', els:['sessCard']},
   {id:'wawasan', label:'Wawasan', els:['insightCard']},
-  {id:'heat', label:'PNL harian 30 hari', els:['heatCard']},
-  {id:'catatan', label:'Catatan harian', els:['noteCard']}
+  {id:'cepat', label:'Analisis cepat', els:['quickCard']},
+  {id:'catatan', label:'Catatan harian', els:['noteCard']},
+  {id:'chart', label:'Chart XAUUSD', els:['chartCard']}
 ];
-const RC_MOBILE = ['saldo','today','target','sesi','berita','statistik','wawasan','heat','ekuitas','chart','catatan','terakhir','aturan'];
+const RC_MOBILE = ['saldo','today','aturan','target','sesi','berita','wawasan','ekuitas','psikologi','cepat','catatan','terakhir','chart'];
 const rcMQ = window.matchMedia ? window.matchMedia('(max-width: 700px)') : {matches:false};
 function rcLoad(){
   try{ const o = JSON.parse(localStorage.getItem('jurnalRingkasan') || 'null'); if(o && typeof o==='object') return { o: Array.isArray(o.o) ? o.o : null, h: Array.isArray(o.h) ? o.h : [] }; }catch(e){}
@@ -7281,6 +7301,13 @@ const rgSgn = c => (c > 0 ? '+' : '') + fmtMoney(c);
 function renderTargetCard(){
   const c = document.getElementById('targetCard'); if(!c) return;
   const tg = getPerfCfg().target, m = HERO_PNL && HERO_PNL.month;
+  const tgBar = document.getElementById('targetBar');
+  if(!tg && (DATA.trades || []).length){
+    document.getElementById('targetPct').textContent = 'Belum diatur'; if(tgBar) tgBar.style.display = 'none';
+    document.getElementById('targetMeta').innerHTML = '<button type="button" class="tg-set" data-act="tgset">Atur target bulanan</button>';
+    c.hidden = false; return;
+  }
+  if(tgBar) tgBar.style.display = '';
   if(!tg || !m || m.pct === null || m.pct === undefined){ c.hidden = true; return; }
   const prog = m.pct / (tg / 100), w = Math.max(0, Math.min(1, prog));
   const y = GMT8_NOW.y, mo = GMT8_NOW.m, last = new Date(Date.UTC(y, mo + 1, 0)).getUTCDate();
@@ -7298,6 +7325,42 @@ function renderTargetCard(){
   document.getElementById('targetMeta').innerHTML = `<span>${l1}</span><span>${l2}</span>`;
   c.hidden = false;
 }
+
+(function(){
+  const c = document.getElementById('targetCard'); if(!c) return;
+  c.addEventListener('click', e => { if(!e.target.closest('[data-act="tgset"]')) return; window.goToTab('setelan'); if(window.showSetelanGroup) window.showSetelanGroup('trading'); });
+})();
+
+// Kartu sekunder terlipat di ponsel (v1.1.247): PNL per sesi, Wawasan, Catatan harian. Bawaan terlipat; pilihan disimpan di 'jurnalRcFold'.
+// Nilai per kartu: 'o' (dibuka pengguna) atau 'c' (dilipat pengguna); kosong = bawaan (terlipat di layar <= 700px, terbuka di layar lebar).
+(function(){
+  const KEY = 'jurnalRcFold', IDS = ['sessCard','insightCard','noteCard'];
+  const mq = window.matchMedia ? window.matchMedia('(max-width: 700px)') : null;
+  const load = () => { try{ const o = JSON.parse(localStorage.getItem(KEY) || '{}'); return o && typeof o === 'object' ? o : {}; }catch(e){ return {}; } };
+  const save = o => { try{ localStorage.setItem(KEY, JSON.stringify(o)); }catch(e){} };
+  const isCollapsed = (st, id) => !!(mq && mq.matches) && st[id] !== 'o';
+  function apply(){
+    const st = load(), narrow = !!(mq && mq.matches);
+    IDS.forEach(id => {
+      const c = document.getElementById(id), hd = c && c.querySelector('.recent-head'); if(!hd) return;
+      const col = isCollapsed(st, id);
+      c.classList.add('rc-fold'); c.classList.toggle('rc-collapsed', col);
+      if(narrow){ hd.setAttribute('role', 'button'); hd.tabIndex = 0; hd.setAttribute('aria-expanded', String(!col)); }
+      else { hd.removeAttribute('role'); hd.removeAttribute('tabindex'); hd.removeAttribute('aria-expanded'); }
+    });
+  }
+  function toggle(id){
+    if(!(mq && mq.matches)) return;
+    const st = load(); st[id] = isCollapsed(st, id) ? 'o' : 'c'; save(st); apply();
+  }
+  IDS.forEach(id => {
+    const c = document.getElementById(id); if(!c) return;
+    c.addEventListener('click', e => { if(e.target.closest('.recent-head')) toggle(id); });
+    c.addEventListener('keydown', e => { if((e.key === 'Enter' || e.key === ' ') && e.target.classList && e.target.classList.contains('recent-head')){ e.preventDefault(); toggle(id); } });
+  });
+  if(mq){ if(mq.addEventListener) mq.addEventListener('change', apply); else if(mq.addListener) mq.addListener(apply); }
+  apply();
+})();
 
 function renderSessCard(){
   const c = document.getElementById('sessCard'); if(!c) return;
@@ -7343,25 +7406,6 @@ function renderInsightCard(){
   c.hidden = false;
 }
 
-function renderHeatCard(){
-  const c = document.getElementById('heatCard'), g = document.getElementById('heatGrid'); if(!c || !g) return;
-  const trades = (DATA.trades || []).filter(t => t.tanggal_gmt8);
-  if(!trades.length){ c.hidden = true; return; }
-  const by = {};
-  for(const t of trades){ const k = t.tanggal_gmt8.slice(0, 10); const o = by[k] || (by[k] = {pl:0, n:0}); o.pl += t.laba; o.n++; }
-  const keys = []; for(let i = 29; i >= 0; i--) keys.push(gmt8DateKeyFromParts(GMT8_NOW.y, GMT8_NOW.m, GMT8_NOW.d - i));
-  const mx = Math.max(1, ...keys.map(k => by[k] ? Math.abs(by[k].pl) : 0));
-  let g1 = 0, r1 = 0;
-  g.innerHTML = keys.map((k, i) => {
-    const o = by[k]; let cls = 'heat-0', st = '', tip = rgDay(k) + ': tidak ada transaksi';
-    if(o && o.pl !== 0){ cls = o.pl > 0 ? 'heat-up' : 'heat-dn'; st = ` style="--hi:${(0.28 + 0.72 * Math.abs(o.pl) / mx).toFixed(2)}"`; if(o.pl > 0) g1++; else r1++; }
-    if(o) tip = `${rgDay(k)}: ${rgSgn(o.pl)} • ${o.n} transaksi`;
-    return `<button type="button" role="listitem" class="heat-cell ${cls}${i === 29 ? ' heat-today' : ''}"${st} data-key="${k}" title="${tip}" aria-label="${tip}"><span>${+k.slice(8)}</span></button>`;
-  }).join('');
-  document.getElementById('heatNote').textContent = `${g1} hijau • ${r1} merah`;
-  c.hidden = false;
-}
-
 function renderNoteCard(){
   const inp = document.getElementById('noteInput'); if(!inp) return;
   const p = gmt8NowParts(), key = gmt8DateKeyFromParts(p.y, p.m, p.d), notes = dnLoad();
@@ -7384,11 +7428,9 @@ function renderNoteCard(){
     renderNoteCard();
   });
   document.getElementById('noteSearch').addEventListener('input', renderNoteCard);
-  const hg = document.getElementById('heatGrid');
-  if(hg) hg.addEventListener('click', e => { const b = e.target.closest('.heat-cell'); if(!b) return; location.hash = '#transaksi?dari=' + b.dataset.key + '&sampai=' + b.dataset.key; });
 })();
 
-// Mode fokus (ponsel): hanya saldo, hari ini, dan statistik. Tersimpan per perangkat (jurnalFokus).
+// Mode fokus (ponsel): hanya saldo dan hari ini. Tersimpan per perangkat (jurnalFokus).
 function applyFokus(){
   const panel = document.getElementById('tabpanel-grafik'), btn = document.getElementById('focusBtn'); if(!panel || !btn) return;
   let on = false; try{ on = localStorage.getItem('jurnalFokus') === '1'; }catch(e){}
@@ -7405,12 +7447,246 @@ function applyFokus(){
   applyFokus();
 })();
 
+// ---------- Analisis cepat (v1.1.237): kartu Ringkasan dengan 6 tab + filter silang ----------
+// Filter silang (QF): ketuk elemen di chart (baris emosi, kolom histogram, sel jam x hari, blok disiplin) lalu "Filter ke ini";
+// semua tab Analisis cepat memakai subset yang sama. Kurva & saldo tetap seluruh akun.
+const QC = { tab:'roll', rollMode:'wr', grp:'emosi', items:[], sel:-1 };
+const QC_DOW = ['Sen','Sel','Rab','Kam','Jum','Sab','Min'];
+const QC_GRP = [['emosi','Emosi'],['trigger','Trigger'],['setup','Setup'],['jenis_entry','Jenis entry']];
+const qcPf = pf => pf === Infinity ? '∞' : pf.toFixed(2).replace('.', DEC());
+function qcTrades(usePeriod){
+  let a = (DATA.trades || []).filter(t => t.tanggal_gmt8);
+  if(usePeriod && currentPeriodRange){ const r = currentPeriodRange; a = a.filter(t => { const x = parseGmt8(t.tanggal_gmt8); return x >= r.start && x <= r.end; }); }
+  a = qfFilter(a);
+  return a.sort((p, q) => parseGmt8(p.tanggal_gmt8) - parseGmt8(q.tanggal_gmt8));
+}
+function qcStats(list){
+  let n = list.length, w = 0, pl = 0, gw = 0, gl = 0;
+  for(const t of list){ pl += t.laba; if(t.laba > 0){ w++; gw += t.laba; } else if(t.laba < 0) gl -= t.laba; }
+  return {n, w, pl, gw, gl, wr: n ? w / n : 0, pf: gl > 0 ? gw / gl : (gw > 0 ? Infinity : 0)};
+}
+const qcDayLbl = d => fmtDateKey(parseGmt8(String(d).slice(0,10) + 'T12:00:00'));
+function qcPush(info, filter){ QC.items.push({info, filter, tab: QC.cur}); return QC.items.length - 1; }
+function qcEmpty(msg){ return `<div class="psy-empty">${msg}</div>`; }
+
+function qcRollHtml(W){
+  const all = qcTrades(false), n = all.length, N = Math.max(5, Math.min(20, Math.floor(n / 2)));
+  if(n < N + 1) return qcEmpty('Belum cukup transaksi untuk grafik bergulir (minimal 6).');
+  const pts = [];
+  for(let i = N - 1; i < n; i++){
+    let w = 0, gw = 0, gl = 0;
+    for(let j = i - N + 1; j <= i; j++){ const l = all[j].laba; if(l > 0){ w++; gw += l; } else if(l < 0) gl -= l; }
+    pts.push({i, wr: w / N * 100, w, pf: gl > 0 ? gw / gl : (gw > 0 ? Infinity : 0), date: all[i].tanggal_gmt8});
+  }
+  const wrMode = QC.rollMode === 'wr', vals = pts.map(p => wrMode ? p.wr : Math.min(p.pf, 5));
+  let mxv = 0; for(const v of vals) if(v > mxv) mxv = v;
+  const hi = wrMode ? 100 : Math.max(2, Math.min(5, mxv * 1.1));
+  const H = 170, padL = 34, padR = 10, padT = 10, padB = 24, pw = W - padL - padR, ph = H - padT - padB;
+  const x = k => padL + (pts.length === 1 ? pw / 2 : k / (pts.length - 1) * pw), y = v => padT + ph - v / hi * ph;
+  const ref = wrMode ? getPerfCfg().minWr : 1;
+  const line = vals.map((v, k) => `${x(k).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  const last = pts[pts.length - 1], col = cssVar('--gold');
+  const ticks = wrMode ? [0, 50, 100] : [0, hi / 2, hi];
+  const grid = ticks.map(v => `<line x1="${padL}" x2="${W - padR}" y1="${y(v)}" y2="${y(v)}" class="qc-grid"/><text x="${padL - 5}" y="${y(v) + 3.5}" text-anchor="end">${wrMode ? v + '%' : nf(0, 1).format(v)}</text>`).join('');
+  const xl = [0, Math.floor((pts.length - 1) / 2), pts.length - 1].map((k, j) => `<text x="${x(k)}" y="${H - 7}" text-anchor="${j === 0 ? 'start' : (j === 2 ? 'end' : 'middle')}">${qcDayLbl(pts[k].date)}</text>`).join('');
+  QC.roll = {pts, N, x, y, hi, padL, pw, padT, ph, W, vals};
+  return `<div class="qc-sub"><button type="button" class="quick-chip${wrMode ? ' active' : ''}" data-qroll="wr">Win rate</button><button type="button" class="quick-chip${wrMode ? '' : ' active'}" data-qroll="pf">Profit factor</button></div>
+    <div class="qc-now">Terakhir (${N} transaksi): WR <b>${Math.round(last.wr)}%</b> · PF <b>${qcPf(last.pf)}</b></div>
+    <div class="qc-chart"><svg id="qcRollSvg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Grafik ${wrMode ? 'win rate' : 'profit factor'} bergulir">
+      <g class="qc-axis">${grid}${xl}</g>
+      <line x1="${padL}" x2="${W - padR}" y1="${y(ref)}" y2="${y(ref)}" stroke="${cssVar('--gain')}" stroke-width="1" stroke-dasharray="5 3" opacity=".8"/>
+      <polyline points="${line}" fill="none" stroke="${col}" stroke-width="1.8" stroke-linejoin="round"/>
+      <line id="qcRollCur" x1="0" x2="0" y1="${padT}" y2="${padT + ph}" class="qc-cur" style="opacity:0"/><circle id="qcRollDot" r="3.5" fill="${col}" style="opacity:0"/>
+      <rect id="qcRollHit" x="${padL}" y="${padT}" width="${pw}" height="${ph}" fill="transparent"/></svg></div>
+    <div class="qc-hint">Jendela ${N} transaksi terakhir (seluruh riwayat). Garis putus-putus = ${wrMode ? 'target WR ' + ref + '% (Setelan)' : 'PF 1,0 (impas)'}.</div>`;
+}
+function qcBindRoll(body){
+  const hit = body.querySelector('#qcRollHit'), info = document.getElementById('qcInfo_roll'), R = QC.roll; if(!hit || !R) return;
+  const cur = body.querySelector('#qcRollCur'), dot = body.querySelector('#qcRollDot');
+  const at = cx => {
+    const r = hit.getBoundingClientRect(), px = (cx - r.left) / r.width * R.pw;
+    const k = Math.max(0, Math.min(R.pts.length - 1, Math.round(px / R.pw * (R.pts.length - 1))));
+    const p = R.pts[k], xx = R.x(k);
+    cur.setAttribute('x1', xx); cur.setAttribute('x2', xx); cur.style.opacity = 1;
+    dot.setAttribute('cx', xx); dot.setAttribute('cy', R.y(R.vals[k])); dot.style.opacity = 1;
+    info.innerHTML = `<b>${qcDayLbl(p.date)}</b> · transaksi ke-${p.i + 1} · WR <b>${Math.round(p.wr)}%</b> (${p.w}/${R.N}) · PF <b>${qcPf(p.pf)}</b>`;
+  };
+  hit.addEventListener('pointermove', e => at(e.clientX));
+  hit.addEventListener('click', e => at(e.clientX));
+  hit.addEventListener('touchstart', e => { if(e.touches[0]) at(e.touches[0].clientX); }, {passive:true});
+  hit.addEventListener('touchmove', e => { if(e.touches[0]) at(e.touches[0].clientX); }, {passive:true});
+}
+
+function qcDistHtml(W){
+  const list = qcTrades(true);
+  if(list.length < 3) return qcEmpty('Belum cukup transaksi pada periode ini untuk distribusi (minimal 3).');
+  let mn = Infinity, mx = -Infinity; for(const t of list){ if(t.laba < mn) mn = t.laba; if(t.laba > mx) mx = t.laba; }
+  const raw = (mx - mn) / 12 || 1, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(v => v >= raw) || 10 * mag;
+  const lo = Math.floor(mn / step) * step, hi = (Math.floor(mx / step) + 1) * step, nb = Math.max(1, Math.min(40, Math.round((hi - lo) / step)));
+  const bins = Array.from({length: nb}, (_, i) => ({a: lo + i * step, b: lo + (i + 1) * step, n: 0, pl: 0}));
+  for(const t of list){ const b = bins[Math.min(nb - 1, Math.floor((t.laba - lo) / step))]; b.n++; b.pl += t.laba; }
+  let mxN = 0; for(const b of bins) if(b.n > mxN) mxN = b.n;
+  const sorted = list.map(t => t.laba).sort((p, q) => p - q), med = sorted.length % 2 ? sorted[(sorted.length - 1) / 2] : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2;
+  const mean = list.reduce((s, t) => s + t.laba, 0) / list.length;
+  const H = 150, padL = 8, padR = 8, padT = 8, padB = 22, pw = W - padL - padR, ph = H - padT - padB;
+  const x = v => padL + (v - lo) / (hi - lo) * pw, bw = pw / nb;
+  let bars = '';
+  bins.forEach((b, i) => {
+    if(!b.n) return;
+    const h = Math.max(2, b.n / mxN * ph), c = (b.a + b.b) / 2 >= 0 ? 'var(--gain)' : 'var(--loss)';
+    const id = qcPush(`<b>${fmtMoney(b.a)} s/d ${fmtMoney(b.b)}</b> · ${b.n} transaksi · total <span class="${sgnCls(b.pl)}">${(b.pl > 0 ? '+' : '') + fmtMoney(b.pl)}</span>`, {k:'bin', lo:b.a, hi: i === nb - 1 ? b.b + 1e-6 : b.b, label:`PNL ${fmtMoney(b.a)} s/d ${fmtMoney(b.b)}`});
+    bars += `<rect class="qc-bar" data-qi="${id}" x="${(padL + i * bw + 1).toFixed(1)}" y="${(padT + ph - h).toFixed(1)}" width="${Math.max(1, bw - 2).toFixed(1)}" height="${h.toFixed(1)}" fill="${c}" opacity=".85" tabindex="0"/>`;
+  });
+  const ticks = []; const tn = W < 420 ? 4 : 6; for(let i = 0; i <= tn; i++) ticks.push(lo + (hi - lo) * i / tn);
+  const xt = ticks.map((v, i) => `<text x="${x(v)}" y="${H - 7}" text-anchor="${i === 0 ? 'start' : (i === tn ? 'end' : 'middle')}">${fmtMoneyNum(v, true)}</text>`).join('');
+  const zero = (lo < 0 && hi > 0) ? `<line x1="${x(0)}" x2="${x(0)}" y1="${padT}" y2="${padT + ph}" stroke="${cssVar('--paper-faint')}" stroke-dasharray="3 3"/>` : '';
+  return `<div class="qc-now">Rata-rata <b class="${sgnCls(mean)}">${(mean > 0 ? '+' : '') + fmtMoney(mean)}</b> · Median <b class="${sgnCls(med)}">${(med > 0 ? '+' : '') + fmtMoney(med)}</b> · ${list.length} transaksi</div>
+    <div class="qc-chart"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Histogram hasil per transaksi"><g class="qc-axis">${xt}</g>${zero}
+      <line x1="${x(mean)}" x2="${x(mean)}" y1="${padT}" y2="${padT + ph}" stroke="${cssVar('--gold')}" stroke-width="1.5"/>
+      <line x1="${x(med)}" x2="${x(med)}" y1="${padT}" y2="${padT + ph}" stroke="${cssVar('--paper-dim')}" stroke-width="1.5" stroke-dasharray="4 2"/>${bars}</svg></div>
+    <div class="qc-hint">Garis emas = rata-rata, putus-putus = median. Ketuk kolom untuk rincian dan filter.</div>`;
+}
+
+function qcGrpHtml(){
+  const f = QC.grp, list = qcTrades(true), m = {};
+  for(const t of list){ const v = (String(t[f] == null ? '' : t[f]).trim()) || '(kosong)'; (m[v] || (m[v] = [])).push(t); }
+  const rows = Object.keys(m).map(k => Object.assign({k}, qcStats(m[k]))).sort((a, b) => b.n - a.n).slice(0, 10).sort((a, b) => b.pl - a.pl);
+  const seg = `<div class="qc-sub">${QC_GRP.map(g => `<button type="button" class="quick-chip${QC.grp === g[0] ? ' active' : ''}" data-qgrp="${g[0]}">${g[1]}</button>`).join('')}</div>`;
+  if(!rows.length) return seg + qcEmpty('Belum ada transaksi pada periode ini.');
+  let mx = 1; for(const r of rows) if(Math.abs(r.pl) > mx) mx = Math.abs(r.pl);
+  const lbl = QC_GRP.find(g => g[0] === f)[1];
+  const html = rows.map(r => {
+    const id = qcPush(`<b>${escapeHtml(r.k)}</b> · ${r.n} transaksi · WR ${Math.round(r.wr * 100)}% · PF ${qcPf(r.pf)} · total <span class="${sgnCls(r.pl)}">${(r.pl > 0 ? '+' : '') + fmtMoney(r.pl)}</span>`, {k:'field', f, v:r.k, label:`${lbl} = ${r.k}`});
+    const w = Math.abs(r.pl) / mx * 50;
+    return `<button type="button" class="qc-row" data-qi="${id}"><span class="qc-rl"><span class="qc-rn">${escapeHtml(r.k)}</span><span class="qc-rm">${r.n}× · WR ${Math.round(r.wr * 100)}%</span></span><span class="qc-track"><span class="qc-fill ${r.pl >= 0 ? 'up' : 'down'}" style="${r.pl >= 0 ? 'left:50%' : 'right:50%'};width:${w.toFixed(1)}%"></span></span><span class="qc-rv ${sgnCls(r.pl)}">${(r.pl > 0 ? '+' : '') + fmtMoneyNum(r.pl, true)}</span></button>`;
+  }).join('');
+  return seg + `<div class="qc-rows">${html}</div><div class="qc-hint">PNL per ${lbl.toLowerCase()} pada periode statistik. Ketuk baris untuk rincian dan filter.</div>`;
+}
+
+function qcHeatHtml(){
+  const list = qcTrades(true), cells = {};
+  let any = 0;
+  for(const t of list){ const c = qcCell(t); if(!c) continue; any++; const k = c.d + '-' + c.b; (cells[k] || (cells[k] = [])).push(t); }
+  if(!any) return qcEmpty('Belum ada transaksi dengan waktu buka pada periode ini.');
+  let mx = 1; for(const k in cells){ const s = Math.abs(qcStats(cells[k]).pl); if(s > mx) mx = s; }
+  let h = '<div class="qc-hm"><span></span>' + [0,1,2,3,4,5,6,7].map(b => `<span class="qc-hh">${b * 3}</span>`).join('');
+  for(let d = 0; d < 7; d++){
+    h += `<span class="qc-hd">${QC_DOW[d]}</span>`;
+    for(let b = 0; b < 8; b++){
+      const arr = cells[d + '-' + b];
+      if(!arr){ h += '<span class="qc-hc qc-hc0"></span>'; continue; }
+      const s = qcStats(arr), id = qcPush(`<b>${QC_DOW[d]} ${String(b * 3).padStart(2,'0')}.00–${String(b * 3 + 3).padStart(2,'0')}.00</b> (GMT+8, waktu buka) · ${s.n} transaksi · WR ${Math.round(s.wr * 100)}% · total <span class="${sgnCls(s.pl)}">${(s.pl > 0 ? '+' : '') + fmtMoney(s.pl)}</span>`, {k:'cell', d, b, label:`${QC_DOW[d]} ${b * 3}–${b * 3 + 3}h`});
+      h += `<button type="button" class="qc-hc ${s.pl >= 0 ? 'up' : 'down'}" style="--hi:${(0.25 + 0.75 * Math.abs(s.pl) / mx).toFixed(2)}" data-qi="${id}">${s.n}</button>`;
+    }
+  }
+  return `<div class="qc-now">Jam buka dalam GMT+8, blok 3 jam. Angka = jumlah transaksi.</div>${h}</div><div class="qc-hint">Hijau untung, merah rugi, makin pekat makin besar. Ketuk sel untuk rincian dan filter.</div>`;
+}
+
+function qcRuleHtml(){
+  const anyL = (DATA.trades || []).some(t => isLanggar(t));
+  if(!anyL) return qcEmpty('Belum ada transaksi yang ditandai melanggar aturan. Tandai lewat kartu Aturan trading di Ringkasan atau form transaksi, lalu perbandingan patuh vs melanggar muncul di sini.');
+  const list = qcTrades(true), a = list.filter(t => !isLanggar(t)), b = list.filter(t => isLanggar(t));
+  const blk = (nm, arr, v, cls) => {
+    const s = qcStats(arr);
+    const id = qcPush(`<b>${nm}</b> · ${s.n} transaksi · WR ${Math.round(s.wr * 100)}% · total <span class="${sgnCls(s.pl)}">${(s.pl > 0 ? '+' : '') + fmtMoney(s.pl)}</span>`, s.n ? {k:'rule', v, label: nm} : null);
+    return `<button type="button" class="qc-blk ${cls}" data-qi="${id}"><span class="qc-bt">${nm}</span><b class="${sgnCls(s.pl)}">${s.n ? (s.pl > 0 ? '+' : '') + fmtMoney(s.pl) : '—'}</b><span class="qc-bm">${s.n} transaksi · WR ${s.n ? Math.round(s.wr * 100) + '%' : '—'}</span><span class="qc-bm">rata-rata ${s.n ? fmtMoney(s.pl / s.n) : '—'}</span></button>`;
+  };
+  return `<div class="qc-two">${blk('Patuh aturan', a, 'patuh', 'ok')}${blk('Melanggar aturan', b, 'langgar', 'bad')}</div><div class="qc-hint">Periode statistik. Ketuk blok untuk rincian dan filter.</div>`;
+}
+
+function qcDdHtml(){
+  const d = eqDrawdownAllTime().d, eps = d.episodes || [];
+  if(!d.last) return qcEmpty('Belum ada data ekuitas.');
+  let worst = null; for(const e of eps) if(!worst || e.depthPct > worst.depthPct) worst = e;
+  const now = d.now ? d.now.pct : 0, deep = worst ? worst.depthPct : 0, rec = now > 0 && now < 1 ? now / (1 - now) : null;
+  const bar = (lbl, v, cls) => `<div class="qc-ddr"><span class="qc-ddl">${lbl}</span><span class="qc-track"><span class="qc-fill ${cls}" style="left:0;width:${Math.min(100, v * 100).toFixed(1)}%"></span></span><b class="down">−${fmtPct(v)}</b></div>`;
+  return `${bar('Sekarang', now, 'down')}${bar('Terdalam', deep, 'down')}
+    <div class="qc-now">${d.now ? `Masih dalam drawdown sejak ${lapFmtDate(d.now.since)}${rec !== null ? ` · butuh <b class="up">+${fmtPct(rec)}</b> untuk kembali ke puncak` : ''}` : 'Ekuitas sedang di puncaknya.'} · ${eps.length} episode drawdown</div>
+    <div class="qc-hint">Dari seluruh riwayat (sama dengan Laporan → Drawdown); tidak terpengaruh periode maupun filter silang.</div>`;
+}
+
+const QC_TABS = [['roll','Bergulir'],['dist','Distribusi'],['grp','Emosi & setup'],['heat','Jam \u00d7 hari'],['rule','Disiplin'],['dd','Drawdown']];
+const QC_TITLES = {roll:'Win rate & profit factor bergulir', dist:'Distribusi hasil per transaksi', grp:'PNL per emosi, trigger & setup', heat:'Jam \u00d7 hari buka', rule:'Patuh vs melanggar aturan', dd:'Drawdown'};
+const QC_WIDEMQ = window.matchMedia ? window.matchMedia('(min-width: 900px)') : {matches:false};
+// Layar lebar (>=900px): keenam chart tampil terpisah berdampingan (2 kolom); ponsel/tablet: satu chart per tab.
+function renderQuickCard(){
+  const c = document.getElementById('quickCard'), body = document.getElementById('qcBody'); if(!c || !body) return;
+  if(!(DATA.trades || []).some(t => t.tanggal_gmt8)){ c.hidden = true; return; }
+  c.hidden = false;
+  QC.items = []; QC.sel = -1;
+  const wide = !!QC_WIDEMQ.matches;
+  c.classList.toggle('qc-wide', wide);
+  document.getElementById('qcTabs').innerHTML = wide ? '' : QC_TABS.map(t => `<button type="button" role="tab" class="quick-chip${QC.tab === t[0] ? ' active' : ''}" aria-selected="${QC.tab === t[0]}" data-qtab="${t[0]}">${t[1]}</button>`).join('');
+  const per = periodLabelTxt || 'periode terpilih';
+  const scopeOf = t => (t === 'roll' || t === 'dd') ? 'seluruh riwayat' : per;
+  const tabs = wide ? QC_TABS.map(t => t[0]) : [QC.tab];
+  document.getElementById('quickNote').textContent = wide ? '' : scopeOf(QC.tab);
+  body.innerHTML = tabs.map(t => `<div class="qc-panel" data-qp="${t}">${wide ? `<div class="qc-ph"><h3>${QC_TITLES[t]}</h3><span class="qc-scope">${escapeHtml(scopeOf(t))}</span></div>` : ''}<div class="qc-pb" data-qpb="${t}"></div><div class="qc-info" id="qcInfo_${t}" aria-live="polite"></div></div>`).join('');
+  const fn = { roll: qcRollHtml, dist: qcDistHtml, grp: qcGrpHtml, heat: qcHeatHtml, rule: qcRuleHtml, dd: qcDdHtml };
+  for(const t of tabs){
+    const pb = body.querySelector(`[data-qpb="${t}"]`), W = Math.max(240, Math.round(pb.clientWidth) || 320);
+    QC.cur = t; pb.innerHTML = fn[t](W); qcReset(t);
+    if(t === 'roll') qcBindRoll(pb);
+  }
+  qfPills();
+}
+window.renderQuickCard = renderQuickCard;
+function qcReset(t){ const el = document.getElementById('qcInfo_' + t); if(el) el.innerHTML = '<span class="eq-hint">Ketuk elemen chart untuk rincian</span>'; }
+function qcShow(i){
+  const it = QC.items[i]; if(!it) return;
+  const el = document.getElementById('qcInfo_' + it.tab); if(!el) return;
+  el.innerHTML = it.info + (it.filter && i === QC.sel ? ` <button type="button" class="eq-link" data-qfapply="${i}">Filter ke ini</button>` : '');
+}
+function qfPills(){
+  const lab = QF ? escapeHtml(QF.label) : '';
+  const a = document.getElementById('qcFilter');
+  const pill = `<button type="button" class="qf-pill" data-qfclear="1" title="Hapus filter silang">Filter: ${lab} <span aria-hidden="true">✕</span></button>`;
+  if(a){ a.hidden = !QF; a.innerHTML = QF ? pill + '<span class="qf-scope">berlaku untuk Analisis cepat; kurva & saldo tetap seluruh akun</span>' : ''; }
+}
+function qfRefresh(){
+  qfPills();
+  renderQuickCard();
+}
+function qfSet(q){ QF = q; qfRefresh(); }
+function qfClear(){ QF = null; qfRefresh(); }
+window.qfClear = qfClear;
+(function(){
+  const card = document.getElementById('quickCard'); if(!card) return;
+  card.addEventListener('click', e => {
+    const t = e.target.closest('[data-qtab]'); if(t){ QC.tab = t.dataset.qtab; renderQuickCard(); return; }
+    const r = e.target.closest('[data-qroll]'); if(r){ QC.rollMode = r.dataset.qroll; renderQuickCard(); return; }
+    const g = e.target.closest('[data-qgrp]'); if(g){ QC.grp = g.dataset.qgrp; renderQuickCard(); return; }
+    const ap = e.target.closest('[data-qfapply]'); if(ap){ const it = QC.items[+ap.dataset.qfapply]; if(it && it.filter) qfSet(it.filter); return; }
+    const it = e.target.closest('[data-qi]'); if(it){ const prev = QC.items[QC.sel], n = +it.dataset.qi; if(prev && prev.tab !== QC.items[n].tab) qcReset(prev.tab); QC.sel = n; qcShow(n); card.querySelectorAll('.qc-sel').forEach(x => x.classList.remove('qc-sel')); it.classList.add('qc-sel'); }
+  });
+  card.addEventListener('mouseover', e => { const it = e.target.closest('[data-qi]'); if(!it) return; const n = +it.dataset.qi, s = QC.items[QC.sel]; if(s && s.tab === QC.items[n].tab) return; qcShow(n); });
+  card.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ const it = e.target.closest('rect[data-qi]'); if(it){ e.preventDefault(); it.dispatchEvent(new MouseEvent('click', {bubbles:true})); } } });
+  document.addEventListener('click', e => { if(e.target.closest('[data-qfclear]')) qfClear(); });
+  if(QC_WIDEMQ.addEventListener) QC_WIDEMQ.addEventListener('change', () => { if(!card.hidden) renderQuickCard(); });
+  if(window.ResizeObserver){
+    let tm = null, lw = 0; const body = document.getElementById('qcBody');
+    new ResizeObserver(() => { clearTimeout(tm); tm = setTimeout(() => { const w = body.clientWidth; if(w >= 200 && Math.abs(w - lw) > 6){ lw = w; if(!card.hidden) renderQuickCard(); } }, 150); }).observe(body);
+  }
+})();
+
 function renderRingkasanV227(){
-  [renderTargetCard, renderSessCard, renderInsightCard, renderHeatCard, renderNoteCard].forEach(f => { try{ f(); }catch(e){} });
+  [renderTargetCard, renderSessCard, renderInsightCard, renderQuickCard, renderNoteCard].forEach(f => { try{ f(); }catch(e){} });
 }
 window.renderRingkasanV227 = renderRingkasanV227;
 renderRingkasanV227();
-setInterval(renderRingkasanV227, 60000);
+// Penyegaran tiap menit hanya saat Ringkasan terlihat (v1.1.239): tab lain / halaman di latar tidak ikut menggambar ulang 6 kartu.
+// Bila ada putaran yang terlewat, kartu digambar ulang sekali begitu Ringkasan tampil lagi (lebar chart juga benar, tidak 0 saat tersembunyi).
+(function(){
+  const panel = document.getElementById('tabpanel-grafik');
+  const live = () => !document.hidden && (!panel || panel.classList.contains('active'));
+  let stale = false;
+  const tick = () => { if(live()){ stale = false; renderRingkasanV227(); } else stale = true; };
+  setInterval(tick, 60000);
+  const resume = () => { if(stale && live()) tick(); };
+  document.addEventListener('visibilitychange', resume);
+  if(panel && window.MutationObserver) new MutationObserver(resume).observe(panel, {attributes:true, attributeFilter:['class']});
+})();
 
 // ---------- Transaksi: filter & alat bisa dilipat di ponsel (v1.1.228) ----------
 (function(){

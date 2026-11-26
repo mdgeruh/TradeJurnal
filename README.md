@@ -125,6 +125,26 @@ Tab Kalender → **Impor dan ekspor jadwal**. Ekspor menyimpan semua event (bawa
 ## Performa mingguan: rentang dan rata-rata (v1.1.180)
 Di bagian Performa mingguan pilih **12 minggu / 26 minggu / Semua**. Batang menampilkan garis putus-putus rata-rata per minggu, dengan ringkasan rata-rata dan jumlah minggu untung. Daftar mingguan mengikuti rentang, dan semuanya mengikuti filter arah/sesi. Pilihan diingat dan ikut ekspor pengaturan.
 
+## Analisis cepat (v1.1.237)
+Kartu Ringkasan dengan tab Bergulir, Distribusi, Emosi & setup, Jam × hari, Disiplin, Drawdown; filter silang ke Analisis cepat; batang PNL harian di kurva (dihapus di v1.1.245). Di layar lebar chart tampil terpisah (grid 2 kolom), di ponsel berupa tab. Tes: `t237.js`.
+
+
+## Nominal harian di Ringkasan (v1.1.236)
+Tooltip kurva memuat PNL dan jumlah transaksi hari itu. Kartu PNL harian 30 hari di Ringkasan dihapus di v1.1.243 (ada di kalender Analisis PNL). Tes: `t236.js`.
+
+
+## Bar filter kaca (v1.1.235)
+Bar Periode & filter Laporan yang menempel kini tembus pandang + blur di tema kaca. Tes: `t235.js`.
+
+
+## Laporan lebih ringkas (v1.1.234)
+Bar Periode & filter menempel saat dilipat; enam blok sekunder Lanjutan bisa dilipat (default terlipat di ponsel, terbuka saat cetak). Tes: `t234.js`.
+
+
+## Laporan satu halaman (v1.1.233)
+Sub-tab Laporan dihapus; semua bagian tampil berurutan. Tautan `#laporan-<kunci>` menggulir ke bagiannya. Tes: `t233.js`.
+
+
 ## Kurva ekuitas (v1.1.232)
 Sumbu 1:1 (terbaca di ponsel), mode Return %, penanda ▲▼ deposit/penarikan, ◆ hari terbaik/terburuk, strip drawdown, baris detail hari + Lihat transaksi, brush mouse untuk memilih rentang, Zoom sumbu. Tes: `t232.js`.
 
@@ -146,7 +166,7 @@ Pengulangan antarhalaman dikurangi (batas harian, Berita, PNL 7H/30H, Bandingkan
 
 
 ## Upgrade Ringkasan (v1.1.227)
-Kartu baru: Target bulan ini, PNL per sesi hari ini, Wawasan, PNL harian 30 hari (heatmap), Catatan harian. Statistik periode menampilkan selisih vs periode sebelumnya; di ponsel ada Mode fokus. Catatan harian hanya tersimpan di perangkat. Tes: `t227.js`.
+Kartu baru: Target bulan ini, PNL per sesi hari ini, Wawasan, PNL harian 30 hari (heatmap; dihapus di v1.1.243), Catatan harian. Statistik periode (selisih vs periode sebelumnya) dihapus di v1.1.244 karena ada di Laporan; di ponsel ada Mode fokus (saldo dan Hari ini). Catatan harian hanya tersimpan di perangkat. Tes: `t227.js`.
 
 
 ## Komponen kustom di Kalender dan Setelan (v1.1.226)
