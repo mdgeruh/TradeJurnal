@@ -2288,8 +2288,8 @@ function renderEqDdBadge(d){
     el.innerHTML = `<span class="eq-dd-badge up" title="Dihitung dari seluruh riwayat (sama dengan Laporan \u2192 Drawdown), tidak mengikuti pemilih periode."><span>Ekuitas</span><b>di puncak</b></span>`;
   }
 }
-let eqLegendHidden = { modal:false, peak:false, viol:false, ma:true };   // v1.1.248: viol = penanda hari melanggar, ma = rata-rata bergerak (tersembunyi bawaan)
-try{ const lg = JSON.parse(localStorage.getItem('jurnalEqLegend') || 'null'); if(lg){ eqLegendHidden.modal = !!lg.modal; eqLegendHidden.peak = !!lg.peak; if(lg.viol !== undefined) eqLegendHidden.viol = !!lg.viol; if(lg.ma !== undefined) eqLegendHidden.ma = !!lg.ma; } }catch(e){}   // v1.1.242: pilihan legenda bertahan antar sesi
+let eqLegendHidden = { tgt:false, modal:false, peak:true, viol:false, ma:true };   // v1.1.248: viol = penanda hari melanggar, ma = rata-rata bergerak (tersembunyi bawaan)
+try{ const lg = JSON.parse(localStorage.getItem('jurnalEqLegend') || 'null'); if(lg){ eqLegendHidden.modal = !!lg.modal; eqLegendHidden.peak = !!lg.peak; if(lg.viol !== undefined) eqLegendHidden.viol = !!lg.viol; if(lg.tgt !== undefined) eqLegendHidden.tgt = !!lg.tgt; if(lg.ma !== undefined) eqLegendHidden.ma = !!lg.ma; } }catch(e){}   // v1.1.242: pilihan legenda bertahan antar sesi
 // Jenis kurva Ringkasan: 'equity' (saldo, termasuk deposit/penarikan), 'pnl' (PNL kumulatif trading saja) atau 'ret' (Return % = PNL kumulatif / modal kumulatif). Tersimpan di localStorage `jurnalEqMode`.
 // Zoom sumbu (v1.1.219, diganti nama v1.1.232): sumbu-Y mengikuti rentang data tanpa memaksa titik nol. null = otomatis (aktif bila data hampir datar terhadap saldo).
 let eqZoomPref = null; try{ const z = localStorage.getItem('jurnalEqZoom'); if(z==='1' || z==='0') eqZoomPref = z; }catch(e){}
@@ -2304,6 +2304,7 @@ function renderEquityChart(){
   const hasPnl = !!DATA.equity && !!DATA.pnl_kumulatif && DATA.pnl_kumulatif.length===DATA.equity.length;
   const retMode = eqMode==='ret' && hasPnl && !!DATA.modal_kumulatif && DATA.modal_kumulatif.length===DATA.equity.length;
   const pnlMode = (eqMode==='pnl' && hasPnl) || retMode;
+  { const nt = document.getElementById('eqNote'); if(nt) nt.textContent = retMode ? 'Return %: PNL kumulatif dibagi modal kumulatif, tidak terpengaruh deposit dan penarikan.' : (pnlMode ? 'PNL kumulatif: hasil trading saja sejak transaksi pertama, tanpa deposit dan penarikan.' : 'Saldo berjalan dari transaksi pertama hingga saat ini, sudah termasuk deposit & penarikan.'); }   // v1.1.253: catatan mengikuti jenis kurva
   const eqFull = retMode ? DATA.equity.map((p,i)=>{ const m = DATA.modal_kumulatif[i]; return [p[0], m > 0 ? DATA.pnl_kumulatif[i]/m*100 : 0]; })
                : pnlMode ? DATA.equity.map((p,i)=>[p[0], DATA.pnl_kumulatif[i]]) : DATA.equity;
   const fv = v => retMode ? (v>0 ? '+' : (v<0 ? '−' : '')) + nf(2,2).format(Math.abs(v)) + '%' : fmtMoney(v);
@@ -2526,6 +2527,14 @@ function renderEquityChart(){
   let showPeak = false;
   if(peakVals){ for(let k=0;k<vals.length;k++){ if(peakVals[k] - vals[k] > 1e-9){ showPeak = true; break; } } }
   const peakLineColor = cssVar('--paper-faint');
+  // v1.1.255: garis target bulan ini = nilai pada awal bulan GMT+8 + target% x saldo sebelum bulan (dasar sama dengan kartu Performa bulanan). Tidak ikut skala vMin/vMax (terpotong bila di luar).
+  let tgtLevel = null, tgtX0 = 0;
+  { const cfg = getPerfCfg(); if(cfg.target && !retMode){
+      const g = gmt8NowParts(), ms = Date.UTC(g.y, g.m, 1) - 8*3600*1000;
+      let ix = -1; for(let i = 0; i < fullTimes.length; i++){ if(fullTimes[i] < ms) ix = i; else break; }
+      const base = ix >= 0 ? DATA.equity[ix][1] : 0;
+      if(base > 0 && ms <= tMax){ tgtLevel = eqFull[ix][1] + cfg.target/100*base; tgtX0 = x(Math.max(ms, tMin)); if(y(tgtLevel) < padT || y(tgtLevel) > padT + plotH) tgtLevel = null; }
+  } }
   const peakPtsStr = showPeak ? times.map((t,k)=>`${x(t).toFixed(1)},${y(peakVals[k]).toFixed(1)}`).join(' ') : '';
   const d = buildSmoothPath(eqPts);
   let modalD = '', areaD = '';
@@ -2622,6 +2631,7 @@ function renderEquityChart(){
       </path>
       ${showPeak ? `<polyline id="eqPeakLine" points="${peakPtsStr}" fill="none" stroke="${peakColor}" stroke-width="1.3" stroke-dasharray="5 3" opacity="0.95" clip-path="url(#eqPlotClip)" style="pointer-events:none;${hid.peak ? 'display:none;' : ''}"/>` : ''}
       ${maStr ? `<polyline id="eqMaLine" points="${maStr}" fill="none" stroke="${cssVar('--paper')}" stroke-width="1.3" stroke-dasharray="1.5 3" stroke-linecap="round" opacity="0.85" clip-path="url(#eqPlotClip)" style="pointer-events:none;${hid.ma ? 'display:none;' : ''}"/>` : ''}
+      ${tgtLevel !== null ? `<g id="eqTgtG" style="pointer-events:none;${hid.tgt ? 'display:none;' : ''}"><line x1="${tgtX0.toFixed(1)}" y1="${y(tgtLevel).toFixed(1)}" x2="${W-padR}" y2="${y(tgtLevel).toFixed(1)}" stroke="${gainColor}" stroke-width="1.2" stroke-dasharray="8 4" opacity="0.8" clip-path="url(#eqPlotClip)"/><text x="${W-padR-3}" y="${(y(tgtLevel)-4).toFixed(1)}" text-anchor="end" font-size="10" fill="${gainColor}">Target bln</text></g>` : ''}
       <g class="eq-axis">${yLabels}${xLabels}</g>
       <line class="eq-strip-base" x1="${padL}" y1="${stripTop}" x2="${W-padR}" y2="${stripTop}" stroke="${cssVar('--line')}" stroke-width="1"/>
       <text class="eq-strip-lbl" x="${padL-6}" y="${stripTop+10}" text-anchor="end">DD</text>
@@ -2646,14 +2656,13 @@ function renderEquityChart(){
     </div>
     <div class="eq-legend">
       <span class="eq-legend-item"><span class="eq-legend-swatch" style="background:${lineColor}"></span>${serName}</span>
+      ${tgtLevel !== null ? `<button type="button" class="eq-legend-item${hid.tgt ? ' off' : ''}" data-eqleg="tgt" aria-pressed="${!hid.tgt}" title="Target bulan ini: saldo awal bulan + target persen (Setelan → Target performa). Ketuk untuk tampil/sembunyi"><span class="eq-legend-swatch" style="background:${gainColor};opacity:0.8"></span>Target bulan</button>` : ''}
       ${modalD ? `<button type="button" class="eq-legend-item${hid.modal ? ' off' : ''}" data-eqleg="modal" aria-pressed="${!hid.modal}" title="Ketuk untuk tampil/sembunyi"><span class="eq-legend-swatch" style="background:${modalColor};opacity:0.7"></span>Modal kumulatif</button>` : ''}
       ${showPeak ? `<button type="button" class="eq-legend-item${hid.peak ? ' off' : ''}" data-eqleg="peak" aria-pressed="${!hid.peak}" title="Puncak saldo dari seluruh riwayat (deposit menggeser puncak), jadi jaraknya ke kurva bisa berbeda dengan angka DD di tooltip yang hanya menghitung hasil trading. Ketuk untuk tampil/sembunyi"><span class="eq-legend-swatch eq-legend-dash" style="border-top-color:${peakColor}"></span>Puncak berjalan</button>` : ''}
       ${maStr ? `<button type="button" class="eq-legend-item${hid.ma ? ' off' : ''}" data-eqleg="ma" aria-pressed="${!hid.ma}" title="Rata-rata ${EQ_MA_N} transaksi terakhir dari seluruh riwayat (deposit/penarikan tidak dihitung). Ketuk untuk tampil/sembunyi"><span class="eq-legend-swatch eq-legend-dots" style="border-top-color:${cssVar('--paper')}"></span>Rata-rata ${EQ_MA_N} transaksi</button>` : ''}
       ${violMarks ? `<button type="button" class="eq-legend-item${hid.viol ? ' off' : ''}" data-eqleg="viol" aria-pressed="${!hid.viol}" title="Hari yang melewati batas rugi/transaksi harian atau ada pelanggaran aturan. Ketuk untuk tampil/sembunyi"><span class="eq-legend-ring"></span>Hari melanggar (${violCount})</button>` : ''}
       ${depCount ? `<span class="eq-legend-item" id="eqLegDep"><span class="eq-legend-tri up">▲</span><span class="eq-legend-tri down">▼</span>Deposit / penarikan</span>` : ''}
-      ${(bestDay || worstDay) ? `<span class="eq-legend-item" id="eqLegAnno"><span class="eq-legend-dia" style="background:${gainColor}"></span><span class="eq-legend-dia" style="background:${lossColor}"></span>Hari terbaik / terburuk</span>` : ''}
-      <span class="eq-legend-item"><span class="eq-legend-dot" style="background:${gainColor}"></span>Tertinggi</span>
-      ${showBottomLabel ? `<span class="eq-legend-item"><span class="eq-legend-dot" style="background:${lossColor}"></span>Terendah</span>` : ''}
+      <span class="eq-legend-item" id="eqLegAnno" title="Titik: saldo tertinggi${showBottomLabel ? ' dan terendah' : ''} pada rentang.${(bestDay || worstDay) ? ' Belah ketupat: hari terbaik dan terburuk.' : ''}"><span class="eq-legend-dot" style="background:${gainColor}"></span>${showBottomLabel ? `<span class="eq-legend-dot" style="background:${lossColor}"></span>` : ''}${(bestDay || worstDay) ? `<span class="eq-legend-dia" style="background:${gainColor}"></span><span class="eq-legend-dia" style="background:${lossColor}"></span>` : ''}Penanda</span>
     </div>
     ${sumHtml}
     <div class="eq-info" id="eqInfo" aria-live="polite"></div>
@@ -2679,7 +2688,7 @@ function renderEquityChart(){
       }
       eqLegendHidden[k] = !eqLegendHidden[k];
       try{ localStorage.setItem('jurnalEqLegend', JSON.stringify(eqLegendHidden)); }catch(e){}
-      const el = document.getElementById({modal:'eqModalLine', peak:'eqPeakLine', ma:'eqMaLine', viol:'eqViolG'}[k]);
+      const el = document.getElementById({modal:'eqModalLine', peak:'eqPeakLine', ma:'eqMaLine', viol:'eqViolG', tgt:'eqTgtG'}[k]);
       if(el) el.style.display = eqLegendHidden[k] ? 'none' : '';
       btn.classList.toggle('off', eqLegendHidden[k]);
       btn.setAttribute('aria-pressed', !eqLegendHidden[k]);
@@ -4389,7 +4398,7 @@ window.renderTrades = renderTrades;
   }));
   sync();
   const zb = document.getElementById('eqZoomBtn');
-  window.syncEqZoom = can => { if(zb){ if(can !== undefined) zb.disabled = !can; zb.textContent = 'Zoom sumbu' + (eqZoomOn && eqZoomPref === null ? ' \u00b7 otomatis' : ''); zb.classList.toggle('active', eqZoomOn); zb.setAttribute('aria-pressed', eqZoomOn ? 'true' : 'false'); } };
+  window.syncEqZoom = can => { if(zb){ if(can !== undefined) zb.disabled = !can; zb.textContent = 'Zoom' + (eqZoomOn && eqZoomPref === null ? ' \u00b7 otomatis' : ''); zb.classList.toggle('active', eqZoomOn); zb.setAttribute('aria-pressed', eqZoomOn ? 'true' : 'false'); } };
   if(zb) zb.addEventListener('click', () => {
     eqZoomPref = eqZoomOn ? '0' : '1';
     try{ localStorage.setItem('jurnalEqZoom', eqZoomPref); }catch(e){}
@@ -6546,10 +6555,13 @@ function renderBackupStatus(){
   sync();
 })();
 
-const APP_VERSION = '1.1.252';
+const APP_VERSION = '1.1.255';
 const APP_BUILD_DATE = '2026-11-26';   // ikut diganti tiap rilis (ISO), tampil di Setelan → Tentang
 const USER_CHANGELOG = [
   { date:'2026-11-26', items:[
+    'Kurva ekuitas kini punya garis target bulan ini (dari Setelan → Target performa): garis hijau putus-putus di tingkat saldo awal bulan ditambah target persen. Bisa disembunyikan dari legenda, dan tidak muncul bila target belum diatur atau pada kurva Return %.',
+    'Kurva ekuitas makin bersih: garis puncak saldo kini tersembunyi di awal (tetap bisa dinyalakan dari legenda, pilihan Anda diingat), dan tombol "Zoom sumbu" dipersingkat menjadi "Zoom".',
+    'Kurva ekuitas lebih ringkas: tiga keterangan penanda (tertinggi, terendah, hari terbaik dan terburuk) digabung menjadi satu "Penanda" di legenda, dan catatan di atas kartu kini menyesuaikan jenis kurva yang dipilih (Ekuitas, PNL kumulatif, atau Return %).',
     'Kurva ekuitas di Ringkasan diperbaiki: (1) tooltip dan garis hover kini memilih titik yang paling dekat dengan kursor, dulu selalu titik di sebelah kanan; (2) waktu kurva dan penanda selalu mengikuti GMT+8 walau zona waktu perangkat berbeda; (3) garis tidak lagi terpotong di ujung kanan pada kurva yang sangat panjang; (4) garis rata-rata 20 transaksi hanya menghitung transaksi (bukan deposit atau penarikan) dan memakai riwayat sebelum periode, jadi langsung ada dari tepi kiri; (5) tooltip di ujung kanan menulis "Akhir rentang" dan label sumbu-X tidak lagi berulang untuk rentang panjang; (6) keterangan ditambahkan bahwa DD saat ini, garis puncak, dan DD periode memakai dasar hitung berbeda.',
     'Layar desktop yang sangat lebar kini terpakai lebih penuh: lebar halaman naik dari 1240 px menjadi 1560 px (monitor 1500 px ke atas) dan 1840 px (1900 px ke atas), sehingga ruang kosong di kiri dan kanan jauh berkurang dan kurva ekuitas lebih lebar. Layar di bawah 1500 px tidak berubah.',
     'Perapihan susunan berkas proyek (folder css, js, icons, docs, sql, tools). Tidak ada perubahan tampilan atau data; aplikasi terpasang akan memuat ulang berkasnya sekali pada pembukaan berikutnya.',
