@@ -2128,3 +2128,13 @@ html[data-theme="light"][data-glass="1"] :is(input:not([type="checkbox"]):not([t
   .rc-fold.rc-collapsed > :not(.recent-head){display:none !important;}
   .rc-fold.rc-collapsed .recent-head{margin-bottom:0;}
 }
+
+/* ---------- v1.1.251: layar desktop sangat lebar ---------- */
+/* Sebelumnya .wrap berhenti di 1240px, jadi di monitor lebar sisa ruang kosong di kiri-kanan sangat besar. Batas dinaikkan bertahap; di bawah 1500px tampilan tidak berubah. */
+@media screen and (min-width:1500px){
+  .wrap{max-width:1560px;}
+  .tab-panel.active[data-panel="grafik"]{grid-template-columns:minmax(360px,440px) minmax(0,1fr);}
+}
+@media screen and (min-width:1900px){
+  .wrap{max-width:1840px;}
+}

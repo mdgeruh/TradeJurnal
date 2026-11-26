@@ -3,6 +3,10 @@
 Perubahan Jurnal XAUUSD, terbaru di atas. Semua rilis 22 Sep – 1 Okt 2026. Versi berbahasa pengguna akhir ada di aplikasi (Setelan → Tentang aplikasi). v1.1.144 ke atas dicatat per versi; sebelumnya diringkas per tema. Status dan jebakan bug: `SUMMARY.md`; rencana dan todo: `roadmap.md`.
 
 ## Rilis terbaru
+### 1.1.251 — 26 Nov
+- **Lebar layar desktop sangat lebar** (`css/style.css`, blok baru di akhir berkas): `.wrap` tetap `max-width:1240px` di 1100–1499px, naik ke `1560px` di ≥1500px dan `1840px` di ≥1900px. Di ≥1500px kolom kiri tab Ringkasan (`data-panel="grafik"`) menjadi `minmax(360px,440px)` (sebelumnya `minmax(340px,400px)`), kolom kurva tetap `1fr`. Penyebab keluhan: di monitor ±1830px (sidebar ciut 68px) konten hanya 1176px sehingga ±260px kosong di tiap sisi. Cetak/PDF tidak terpengaruh (`@media screen`).
+- **Versi:** `?v=` di `index.html`, `V` di `sw.js`, `APP_VERSION` dan entri `USER_CHANGELOG` di `js/app.js`; `dist/jurnal-trading-mandiri.html` dibangun ulang.
+- **Tidak diubah:** logika kurva ekuitas (temuan audit: hover tidak memilih titik terdekat, zona waktu titik kurva, dasharray animasi 3000) belum diperbaiki di rilis ini.
 ### 1.1.250 — 26 Nov
 - **Restrukturisasi folder** (tanpa perubahan perilaku): `style.css` → `css/`; `config/app/kalender/broker/sync/pwa.js` → `js/`; ikon → `icons/`; `README/SUMMARY/CHANGELOG/roadmap/release_note` → `docs/`; `schema.sql`, `migrasi-*.sql`, `query-user-supabase.sql` → `sql/`; `build-standalone.py` → `tools/`; hasil build → `dist/jurnal-trading-mandiri.html`. `sw.js` dan `manifest.webmanifest` tetap di akar (scope PWA). Berkas dan baris kode tidak dipecah.
 - **Jalur diperbarui:** `index.html` (css/js/ikon, `?v=` 1.1.250), `SHELL` di `sw.js`, ikon di `manifest.webmanifest`, ikon notifikasi (`icons/icon-192.png`) dan komentar di `js/app.js`. `buildFullHtmlString()` tidak perlu diubah (membaca jalur dari `index.html`).

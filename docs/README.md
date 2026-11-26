@@ -6,7 +6,7 @@ Dashboard jurnal trading akun **cent XAUUSD**. Tanpa build tool, berkas dikelomp
 
 Dokumen lain: `release_note.md` (catatan rilis pengguna), `roadmap.md` (rencana dan todo), `SUMMARY.md` (status, arsitektur, jebakan bug), `CHANGELOG.md` (riwayat teknis).
 
-## Struktur proyek (v1.1.250)
+## Struktur proyek (v1.1.251)
 ```
 jurnal-trading/
 ├── index.html              halaman tunggal (markup + skrip <head> kecil; memuat css/ dan js/)

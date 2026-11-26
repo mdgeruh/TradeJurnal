@@ -6518,10 +6518,11 @@ function renderBackupStatus(){
   sync();
 })();
 
-const APP_VERSION = '1.1.250';
+const APP_VERSION = '1.1.251';
 const APP_BUILD_DATE = '2026-11-26';   // ikut diganti tiap rilis (ISO), tampil di Setelan → Tentang
 const USER_CHANGELOG = [
   { date:'2026-11-26', items:[
+    'Layar desktop yang sangat lebar kini terpakai lebih penuh: lebar halaman naik dari 1240 px menjadi 1560 px (monitor 1500 px ke atas) dan 1840 px (1900 px ke atas), sehingga ruang kosong di kiri dan kanan jauh berkurang dan kurva ekuitas lebih lebar. Layar di bawah 1500 px tidak berubah.',
     'Perapihan susunan berkas proyek (folder css, js, icons, docs, sql, tools). Tidak ada perubahan tampilan atau data; aplikasi terpasang akan memuat ulang berkasnya sekali pada pembukaan berikutnya.',
     'Perbaikan tab Performa di layar lebar: pil filter Arah (Semua arah/Beli/Jual) yang tampil sebagai batang vertikal raksasa di samping Ringkasan mingguan kini kembali menjadi pil kecil, dan filter Sesi serta Emosi/Trigger/Jenis tampil rapi selebar halaman. Ringkasan mingguan juga selebar penuh.',
     'Kurva ekuitas di Ringkasan kini menandai hari yang melanggar disiplin dengan lingkaran merah di bagian atas grafik: hari yang rugi melewati batas harian, jumlah transaksi melewati batas, atau ada transaksi yang Anda centang melanggar aturan. Arahkan atau ketuk kurva pada hari itu untuk melihat alasannya. Penanda muncul hanya bila batas harian sudah diatur (Setelan → Trading) atau ada pelanggaran aturan yang dicatat, dan bisa disembunyikan dari legenda.',
