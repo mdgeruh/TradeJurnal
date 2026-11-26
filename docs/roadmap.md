@@ -2,7 +2,10 @@
 
 Satu-satunya daftar rencana dan todo proyek (dulu ada di `SUMMARY.md`). Prioritas: **P1** tinggi, **P2** sedang, **P3** rendah. Tidak ada tanggal tetap. Setiap butir yang mengubah kode mengikuti **Alur rilis** di `README.md`; saat selesai, hapus dari sini (centang bila perlu satu rilis), pindahkan tema barunya ke tabel "Sudah selesai", dan catat di `release_note.md` dan `CHANGELOG.md`. Jebakan bug tiap area ada di `SUMMARY.md`.
 
-## Sudah selesai (v1.1.252)
+## Sudah selesai (v1.1.255)
+- Kurva ekuitas: garis target bulan ini dengan legenda (v1.1.255).
+- Kurva ekuitas: garis puncak tersembunyi bawaan, tombol "Zoom" dipersingkat (v1.1.254). Chip mode sengaja tidak digabung (tiga mode berbeda).
+- Rapikan kurva ekuitas: legenda satu "Penanda", catatan kartu mengikuti jenis kurva (v1.1.253). Sudah ada sebelumnya dan tidak perlu dikerjakan: badge "DD ekuitas saat ini" (+ sejak kapan) dan klik hari untuk "Lihat transaksi"; blok merah DD bawaan hanya di strip.
 - Perbaikan kurva ekuitas Ringkasan: hover titik terdekat, waktu GMT+8 konsisten, animasi garis tanpa dasharray tetap, rata-rata 20 transaksi hanya transaksi, label ekor dan sumbu-X (v1.1.252).
 - Lebar desktop sangat lebar: `.wrap` 1560px (≥1500px) dan 1840px (≥1900px) (v1.1.251).
 - Restrukturisasi folder: css/, js/, icons/, docs/, sql/, tools/, dist/ (v1.1.250). Pemecahan `app.js`/`style.css` per modul tetap di daftar Optimalisasi.
@@ -117,6 +120,10 @@ Hampir semua fitur baru hanya diuji di Chromium dengan data sintetis dan Supabas
 - [x] **Pelanggaran Aturan trading per transaksi (v1.1.205):** centang aturan yang dilanggar saat mencatat; Laporan menghitung "biaya melanggar aturan" (PNL melanggar vs patuh). Menyambung kartu Aturan trading; perlu ID aturan yang stabil (kini hanya teks).
 - [x] **Ringkasan mingguan otomatis (v1.1.202):** PNL minggu ini vs lalu, emosi dan trigger paling merugikan, kepatuhan batas harian, plus 2-3 pertanyaan refleksi dengan kolom catatan.
 - Saran urutan: selesaikan **P1 (Supabase asli)** dulu, lalu paket tag setup + pelanggaran aturan.
+
+**Rapikan dan lengkapi kurva ekuitas Ringkasan** (usulan 26 Nov 2026; kurva sudah padat, jadi kurangi dulu baru tambah)
+- [ ] **Tambah (P3): pembanding periode sebelumnya** sebagai garis tipis (hanya periode berjangka, bukan All/Kustom).
+- [ ] **Tambah (P3): filter akun pada kurva** (multi-akun); tab Total tetap gabungan.
 
 ## 3. Nanti (P3)
 **Rute**

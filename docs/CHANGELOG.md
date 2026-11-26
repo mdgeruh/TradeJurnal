@@ -3,6 +3,21 @@
 Perubahan Jurnal XAUUSD, terbaru di atas. Semua rilis 22 Sep – 1 Okt 2026. Versi berbahasa pengguna akhir ada di aplikasi (Setelan → Tentang aplikasi). v1.1.144 ke atas dicatat per versi; sebelumnya diringkas per tema. Status dan jebakan bug: `SUMMARY.md`; rencana dan todo: `roadmap.md`.
 
 ## Rilis terbaru
+### 1.1.255 — 26 Nov
+Kurva ekuitas Ringkasan: **garis target bulan ini** (`tgtLevel`, grup `#eqTgtG`, kunci legenda `tgt` di `jurnalEqLegend`). Tingkat = nilai kurva tepat sebelum awal bulan GMT+8 + `getPerfCfg().target`% x saldo sebelum bulan (dasar sama dengan Performa bulanan; di mode PNL nilai awalnya PNL kumulatif). Tidak masuk `vMin/vMax`; tidak digambar bila target kosong, mode Return %, atau di luar sumbu Y. Deposit di tengah bulan tidak menggeser garis.
+
+### 1.1.254 — 26 Nov
+Kurva ekuitas Ringkasan:
+- **Garis puncak** (`eqLegendHidden.peak`) tersembunyi bawaan (`true`); pilihan tersimpan di `jurnalEqLegend` tetap dihormati, jadi pengguna yang pernah mengubah legenda tidak berubah. DD tetap terbaca dari strip DD dan badge.
+- **Tombol Zoom sumbu** dipersingkat jadi "Zoom" (teks otomatis: "Zoom · otomatis"); penjelasan tetap di `title`.
+- Chip Ekuitas / PNL kumulatif / Return % sengaja **tidak** digabung: tiga mode berbeda, dropdown menambah satu ketukan tanpa menghemat ruang berarti.
+
+### 1.1.253 — 26 Nov
+Rapikan kurva ekuitas Ringkasan (`renderEquityChart`, `index.html`):
+- **Legenda:** item "Hari terbaik / terburuk", "Tertinggi", dan "Terendah" digabung jadi satu `#eqLegAnno` ("Penanda"; titik + belah ketupat, penjelasan di `title`). Legenda berkurang dari ±8 ke ±6 item.
+- **Catatan kartu:** `#eqNote` diisi ulang di awal `renderEquityChart()` menurut `eqMode` (dulu teks statis "termasuk deposit & penarikan" salah di mode PNL/Return).
+- Tidak ada perubahan data/hitungan.
+
 ### 1.1.252 — 26 Nov
 Perbaikan kurva ekuitas Ringkasan (`renderEquityChart` di `js/app.js`), hasil audit kode:
 - **Hover memilih titik terdekat:** `nearestIndex` mengembalikan titik pertama dengan waktu ≥ kursor (tetangga kanan). Kini membandingkan jarak ke titik sebelumnya dan memilih yang lebih dekat. Teruji: di celah 33 px, kursor 20% dari titik A dulu menampilkan titik B, kini titik A.

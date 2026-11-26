@@ -2,7 +2,7 @@
 
 Ringkasan perubahan untuk pengguna, terbaru di atas. Isinya sama dengan **Setelan → Tentang aplikasi → Lihat riwayat** di aplikasi (data `USER_CHANGELOG` di `app.js`). Rincian teknis per versi ada di `CHANGELOG.md`; rencana ke depan di `roadmap.md`.
 
-**Versi saat ini: 1.1.252** (26 Nov 2026)
+**Versi saat ini: 1.1.255** (26 Nov 2026)
 
 ## Sorotan
 - Ringkasan: kurva ekuitas yang jelas (modal, puncak berjalan, drawdown, tooltip), pilihan **Ekuitas / PNL kumulatif**, PNL Minggu/Bulan Ini, lencana DD saat ini.
@@ -12,8 +12,11 @@ Ringkasan perubahan untuk pengguna, terbaru di atas. Isinya sama dengan **Setela
 - **Data aman:** sinkron cloud (Supabase), status dan pengingat cadangan, ekspor HTML mandiri/JSON, ekspor-impor pengaturan.
 - **Aplikasi terpasang (PWA)** di Android dan iOS, terbuka cepat dan bisa offline.
 
-## 26 Nov 2026 (v1.1.248 – v1.1.252)
+## 26 Nov 2026 (v1.1.248 – v1.1.255)
 **Diperbaiki**
+- Kurva ekuitas kini punya garis target bulan ini (dari Setelan → Target performa): garis hijau putus-putus di tingkat saldo awal bulan ditambah target persen. Bisa disembunyikan dari legenda, dan tidak muncul bila target belum diatur atau pada kurva Return %.
+- Kurva ekuitas makin bersih: garis puncak saldo kini tersembunyi di awal (tetap bisa dinyalakan dari legenda, pilihan Anda diingat), dan tombol "Zoom sumbu" dipersingkat menjadi "Zoom".
+- Kurva ekuitas lebih ringkas: tiga keterangan penanda (tertinggi, terendah, hari terbaik dan terburuk) digabung menjadi satu "Penanda" di legenda, dan catatan di atas kartu kini menyesuaikan jenis kurva yang dipilih (Ekuitas, PNL kumulatif, atau Return %).
 - **Kurva ekuitas Ringkasan:** hover kini memilih titik terdekat (dulu selalu titik di kanan); waktu kurva selalu GMT+8 walau zona waktu perangkat berbeda; garis tidak terpotong di ujung kanan pada kurva yang sangat panjang; rata-rata 20 transaksi tidak menghitung deposit/penarikan dan langsung ada dari tepi kiri periode; tooltip ujung kanan menulis "Akhir rentang"; label sumbu-X tidak berulang untuk rentang panjang.
 
 **Diubah**
