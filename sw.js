@@ -3,7 +3,7 @@
 // Anti campur-versi (v1.1.170): berkas CSS/JS dipanggil index.html dengan ?v=<versi> dan di-precache dengan nama bertanda itu;
 // halaman (navigasi) diambil jaringan-dulu agar index.html selalu yang terbaru, baru jatuh ke cache bila offline.
 // Panggilan ke Supabase (domain lain) tidak pernah di-cache.
-const V = '1.1.252';
+const V = '1.1.255';
 const CACHE = 'jurnal-v' + V;
 const SHELL = ['./', 'index.html',
   'css/style.css?v=' + V,

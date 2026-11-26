@@ -1,0 +1,5 @@
+Update v1.1.252 -> v1.1.255
+Timpa berkas di zip ini ke folder proyek v1.1.252 (struktur folder sama). Data tidak terpengaruh.
+Berkas: index.html, sw.js, js/app.js, dist/jurnal-trading-mandiri.html, docs/*.md.
+Setelah dibuka, aplikasi (PWA) membaca versi baru pada pembukaan berikutnya (cache-dulu); muat ulang sekali lagi bila masih 1.1.252.
+Perubahan: v1.1.253 legenda kurva satu "Penanda" + catatan kartu ikut jenis kurva; v1.1.254 garis puncak tersembunyi bawaan + tombol "Zoom"; v1.1.255 garis target bulan ini.

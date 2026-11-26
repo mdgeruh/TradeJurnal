@@ -37,7 +37,7 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1'&&/^https?:$/.test(location.protocol)
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="css/style.css?v=1.1.252">
+<link rel="stylesheet" href="css/style.css?v=1.1.255">
 </head>
 <body>
 <div class="login-gate" id="loginGate" role="dialog" aria-modal="true" aria-labelledby="lgTitle">
@@ -162,7 +162,7 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1'&&/^https?:$/.test(location.protocol)
   <section id="eqSection">
     <div class="section-head">
       <h2>Kurva ekuitas</h2>
-      <div class="section-note">Saldo berjalan dari transaksi pertama hingga saat ini, sudah termasuk deposit &amp; penarikan.</div>
+      <div class="section-note" id="eqNote">Saldo berjalan dari transaksi pertama hingga saat ini, sudah termasuk deposit &amp; penarikan.</div>
     </div>
     <div class="lap-gran-tabs" id="periodChips" role="tablist" aria-label="Periode kurva ekuitas"></div>
     <div class="custom-range" id="customRange">
@@ -175,7 +175,7 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1'&&/^https?:$/.test(location.protocol)
       <button type="button" class="quick-chip" data-eqmode="equity" title="Saldo akun termasuk deposit dan penarikan">Ekuitas</button>
       <button type="button" class="quick-chip" data-eqmode="pnl" title="Hasil trading saja, tanpa deposit dan penarikan">PNL kumulatif</button>
       <button type="button" class="quick-chip" data-eqmode="ret" title="Return % = PNL kumulatif dibagi modal kumulatif. Tidak terpengaruh deposit dan penarikan, cocok membandingkan periode.">Return %</button>
-      <button type="button" class="quick-chip" id="eqZoomBtn" aria-pressed="false" title="Zoom sumbu: sumbu tegak mengikuti rentang data tanpa memaksa titik nol. Otomatis aktif bila kurva hampir datar terhadap saldo.">Zoom sumbu</button>
+      <button type="button" class="quick-chip" id="eqZoomBtn" aria-pressed="false" title="Zoom sumbu: sumbu tegak mengikuti rentang data tanpa memaksa titik nol. Otomatis aktif bila kurva hampir datar terhadap saldo.">Zoom</button>
     </div>
     <div class="eq-dd-badge-row" id="eqDdBadge" aria-live="polite"></div>
     <div class="chart-box" id="chartBox"></div>
@@ -1559,11 +1559,11 @@ if(!has&&ls.getItem('jurnalGateSkip')!=='1'&&/^https?:$/.test(location.protocol)
 </div>
 
 <script id="journal-data" type="application/json">{"summary": {"total": 0, "win": 0, "loss": 0, "winrate": 0, "pl_cent": 0, "pl_rp": 0, "saldo_akhir": 0, "pct_pl": null}, "periods": [], "kurs": 0, "dashboard": {"update": "Update terakhir: -", "saldo": 0, "stats": {"total": 0, "winrate": 0, "pf": 0, "maxdd": 0, "expectancy": 0}, "top_win": [], "top_loss": [], "mm": {"equity": 0, "risk": 0.01, "sl": 150, "pipval": 10, "lot": 0, "tp_pips": 0, "tp_cent": 0}}, "maxdd_note": "", "equity": [], "months": [], "weeks": [], "trades": [], "deposit": {"total_deposit": 0, "total_penarikan": 0, "total_mc": 0, "modal_bersih": 0, "log": []}, "period_ranges": [], "modal_kumulatif": []}</script>
-<script src="js/config.js?v=1.1.252"></script>
-<script src="js/app.js?v=1.1.252"></script>
-<script src="js/kalender.js?v=1.1.252"></script>
-<script src="js/broker.js?v=1.1.252"></script>
-<script src="js/sync.js?v=1.1.252"></script>
-<script src="js/pwa.js?v=1.1.252"></script>
+<script src="js/config.js?v=1.1.255"></script>
+<script src="js/app.js?v=1.1.255"></script>
+<script src="js/kalender.js?v=1.1.255"></script>
+<script src="js/broker.js?v=1.1.255"></script>
+<script src="js/sync.js?v=1.1.255"></script>
+<script src="js/pwa.js?v=1.1.255"></script>
 </body>
 </html>
